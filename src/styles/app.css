@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tailwindcss/utilities";
-/* biome-ignore lint/suspicious/noUnknownAtRules: TODO */
 @plugin "daisyui";
 
 @layer base {

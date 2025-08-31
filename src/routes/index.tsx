@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import chatStore$ from "~/state";
+import chatStore$ from "~/lib/state";
 import { use$ } from "@legendapp/state/react";
 import { useEffect, useRef } from "react";
 import { ModelProperties } from "~/components/ModelProperties";

@@ -4,7 +4,7 @@ import {
 	callLLMStreaming,
 	type ChatMessage,
 	type StreamingLLMResponse,
-} from "./lib/llm";
+} from "./llm";
 
 interface ChatThread {
 	id: string;

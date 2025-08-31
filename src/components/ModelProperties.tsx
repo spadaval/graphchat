@@ -1,5 +1,5 @@
 import { use$ } from "@legendapp/state/react";
-import chatStore$ from "~/state";
+import chatStore$ from "~/lib/state";
 
 export function ModelProperties() {
 	const { modelProperties, updateModelProperty } = use$({
