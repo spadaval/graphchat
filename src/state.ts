@@ -1,11 +1,5 @@
 import { type Observable, observable } from "@legendapp/state";
-import { postV1ChatCompletions } from "./client";
-
-interface ChatMessage {
-	id: number;
-	text: string;
-	role: "user" | "assistant";
-}
+import { callLLM, type ChatMessage } from "./lib/llm";
 
 interface ChatThread {
 	id: string;
@@ -97,32 +91,13 @@ const chatStore$: Observable<ChatStore> = observable<ChatStore>({
 		chatStore$.setTyping(true);
 
 		try {
-			// Prepare messages for API call
-			const messagesForAPI = currentThread.messages
-				.concat(message)
-				.map((msg) => ({
-					role: msg.role,
-					content: msg.text,
-				}));
-
-			// Call the LLM server
-			const response = await postV1ChatCompletions({
-				body: {
-					model: "llama", // You might need to adjust this based on your model
-					messages: messagesForAPI,
-					temperature: 0.7,
-					max_tokens: 1000,
-				},
-			});
-
-			// Extract the assistant's response
-			const assistantContent =
-				response.data?.choices?.[0]?.message?.content ||
-				"Sorry, I couldn't generate a response.";
+			// Call the LLM with all messages including the new user message
+			const allMessages = currentThread.messages.concat(message);
+			const llmResponse = await callLLM(allMessages);
 
 			const assistantMessage: ChatMessage = {
 				id: nextId++,
-				text: assistantContent,
+				text: llmResponse.content,
 				role: "assistant",
 			};
 
@@ -137,7 +112,7 @@ const chatStore$: Observable<ChatStore> = observable<ChatStore>({
 				chatStore$.threads.set(updatedThreads);
 			}
 		} catch (error) {
-			console.error("Error calling LLM server:", error);
+			console.error("Error in saveMessage:", error);
 
 			// Add error message
 			const errorMessage: ChatMessage = {
