@@ -1,0 +1,390 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "LLaMA.cpp HTTP Server",
+    "description": "Fast, lightweight, pure C/C++ HTTP server providing LLM REST APIs",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Default local server"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string", "example": "ok"}
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Server is loading model",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Error"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/completion": {
+      "post": {
+        "summary": "Generate completion",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt": {
+                    "oneOf": [
+                      {"type": "string"},
+                      {"type": "array", "items": {"type": ["string", "number"]}},
+                      {
+                        "type": "object",
+                        "properties": {
+                          "prompt_string": {"type": "string"},
+                          "multimodal_data": {"type": "array", "items": {"type": "string"}}
+                        },
+                        "required": ["prompt_string"]
+                      }
+                    ]
+                  },
+                  "temperature": {"type": "number", "default": 0.8},
+                  "top_k": {"type": "integer", "default": 40},
+                  "top_p": {"type": "number", "default": 0.95},
+                  "n_predict": {"type": "integer", "default": -1},
+                  "stream": {"type": "boolean", "default": false},
+                  "stop": {"type": "array", "items": {"type": "string"}, "default": []},
+                  "repeat_penalty": {"type": "number", "default": 1.1},
+                  "presence_penalty": {"type": "number", "default": 0.0},
+                  "frequency_penalty": {"type": "number", "default": 0.0},
+                  "mirostat": {"type": "integer", "default": 0, "enum": [0, 1, 2]},
+                  "mirostat_tau": {"type": "number", "default": 5.0},
+                  "mirostat_eta": {"type": "number", "default": 0.1},
+                  "seed": {"type": "integer", "default": -1},
+                  "logit_bias": {"oneOf": [
+                    {"type": "array", "items": {"type": "array", "items": {}}},
+                    {"type": "object"}
+                  ]},
+                  "n_probs": {"type": "integer", "default": 0},
+                  "cache_prompt": {"type": "boolean", "default": true},
+                  "return_tokens": {"type": "boolean", "default": false}
+                },
+                "required": ["prompt"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": {"type": "string"},
+                    "tokens": {"type": "array", "items": {"type": "integer"}},
+                    "stop": {"type": "boolean"},
+                    "model": {"type": "string"},
+                    "prompt": {"type": "string"},
+                    "stop_type": {"type": "string", "enum": ["none", "eos", "limit", "word"]},
+                    "stopping_word": {"type": "string"}
+                  }
+                }
+              }
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "500": {"$ref": "#/components/responses/ServerError"}
+        }
+      }
+    },
+    "/tokenize": {
+      "post": {
+        "summary": "Tokenize text",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {"type": "string"},
+                  "add_special": {"type": "boolean", "default": false},
+                  "parse_special": {"type": "boolean", "default": true},
+                  "with_pieces": {"type": "boolean", "default": false}
+                },
+                "required": ["content"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "tokens": {"type": "array", "items": {"type": "integer"}}
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "tokens": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {"type": "integer"},
+                              "piece": {"oneOf": [
+                                {"type": "string"},
+                                {"type": "array", "items": {"type": "integer"}}
+                              ]}
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/chat/completions": {
+      "post": {
+        "summary": "Chat Completions (OpenAI-compatible)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "model": {"type": "string"},
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": {"type": "string", "enum": ["system", "user", "assistant"]},
+                        "content": {"type": "string"}
+                      },
+                      "required": ["role", "content"]
+                    }
+                  },
+                  "temperature": {"type": "number", "default": 0.8},
+                  "top_p": {"type": "number", "default": 0.95},
+                  "n": {"type": "integer", "default": 1},
+                  "stream": {"type": "boolean", "default": false},
+                  "stop": {"oneOf": [
+                    {"type": "string"},
+                    {"type": "array", "items": {"type": "string"}}
+                  ]},
+                  "max_tokens": {"type": "integer", "default": 2048},
+                  "presence_penalty": {"type": "number", "default": 0.0},
+                  "frequency_penalty": {"type": "number", "default": 0.0},
+                  "logit_bias": {"type": "object"},
+                  "user": {"type": "string"}
+                },
+                "required": ["model", "messages"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type": "string"},
+                    "object": {"type": "string"},
+                    "created": {"type": "integer"},
+                    "model": {"type": "string"},
+                    "choices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "index": {"type": "integer"},
+                          "message": {
+                            "type": "object",
+                            "properties": {
+                              "role": {"type": "string"},
+                              "content": {"type": "string"}
+                            }
+                          },
+                          "finish_reason": {"type": "string"}
+                        }
+                      }
+                    },
+                    "usage": {
+                      "type": "object",
+                      "properties": {
+                        "prompt_tokens": {"type": "integer"},
+                        "completion_tokens": {"type": "integer"},
+                        "total_tokens": {"type": "integer"}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/embeddings": {
+      "post": {
+        "summary": "Generate embeddings (OpenAI-compatible)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "model": {"type": "string"},
+                  "input": {"oneOf": [
+                    {"type": "string"},
+                    {"type": "array", "items": {"type": "string"}}
+                  ]},
+                  "encoding_format": {"type": "string", "default": "float"},
+                  "user": {"type": "string"}
+                },
+                "required": ["model", "input"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "object": {"type": "string"},
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "object": {"type": "string"},
+                          "embedding": {"type": "array", "items": {"type": "number"}},
+                          "index": {"type": "integer"}
+                        }
+                      }
+                    },
+                    "model": {"type": "string"},
+                    "usage": {
+                      "type": "object",
+                      "properties": {
+                        "prompt_tokens": {"type": "integer"},
+                        "total_tokens": {"type": "integer"}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "summary": "List models (OpenAI-compatible)",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "object": {"type": "string"},
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {"type": "string"},
+                          "object": {"type": "string"},
+                          "created": {"type": "integer"},
+                          "owned_by": {"type": "string"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {"type": "integer"},
+              "message": {"type": "string"},
+              "type": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"}
+          }
+        }
+      },
+      "ServerError": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"}
+          }
+        }
+      }
+    }
+  }
+}
