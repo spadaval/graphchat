@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import chatStore$ from "~/state";
 import { use$ } from "@legendapp/state/react";
 import { useEffect, useRef } from "react";
+import { ModelProperties } from "~/components/ModelProperties";
 
 export const Route = createFileRoute("/")({
 	component: Home,
@@ -15,6 +16,7 @@ function Home() {
 		setCurrentMessage,
 		saveMessage,
 		isTyping,
+		streamingMessageId,
 		createNewThread,
 		switchThread,
 		getCurrentThread,
@@ -104,6 +106,9 @@ function Home() {
 								}`}
 							>
 								{msg.text}
+								{msg.role === "assistant" && streamingMessageId === msg.id && (
+									<span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
+								)}
 							</div>
 							{msg.role === "user" && (
 								<div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
@@ -160,6 +165,18 @@ function Home() {
 							Send
 						</button>
 					</div>
+				</div>
+			</div>
+
+			{/* Right Pane - Model Properties */}
+			<div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col">
+				<div className="p-4 border-b border-gray-700">
+					<h2 className="text-lg font-semibold text-gray-100">
+						Model Properties
+					</h2>
+				</div>
+				<div className="flex-1 overflow-y-auto p-4">
+					<ModelProperties />
 				</div>
 			</div>
 		</div>
