@@ -1,23 +1,54 @@
 @import "tailwindcss";
+@import "tailwindcss/utilities";
+/* biome-ignore lint/suspicious/noUnknownAtRules: TODO */
 @plugin "daisyui";
-
-
 
 @layer base {
   html {
-    color-scheme: light dark;
+    color-scheme: dark;
   }
 
   * {
-    @apply border-gray-200 dark:border-gray-800;
+    border-color: #1f2937; /* gray-800 */
   }
 
   html,
   body {
-    @apply text-gray-900 bg-gray-50 dark:bg-gray-950 dark:text-gray-200;
+    background-color: #111827; /* gray-900 */
+    color: #f3f4f6; /* gray-100 */
   }
 
   .using-mouse * {
     outline: none !important;
+  }
+
+  /* Darker scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: #111827; /* gray-900 */
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: #374151; /* gray-700 */
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #4b5563; /* gray-600 */
+  }
+
+  /* Dark mode overrides */
+  .dark * {
+    border-color: #374151; /* gray-700 */
+  }
+
+  .dark html,
+  .dark body {
+    background-color: #111827; /* gray-900 */
+    color: #f3f4f6; /* gray-100 */
   }
 }

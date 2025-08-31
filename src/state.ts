@@ -1,4 +1,5 @@
-import { observable } from "@legendapp/state";
+import { type Observable, observable } from "@legendapp/state";
+import { postV1ChatCompletions } from "./client";
 
 interface ChatMessage {
 	id: number;
@@ -39,8 +40,8 @@ const createDefaultThread = (): ChatThread => ({
 	lastMessageAt: new Date(),
 });
 
-const chatStore$ = observable<ChatStore>({
-	threads: [createDefaultThread()],
+const chatStore$: Observable<ChatStore> = observable<ChatStore>({
+	threads: [createDefaultThread()] as ChatThread[],
 	currentThreadId: "thread-1",
 	currentMessage: undefined,
 	isTyping: false,
@@ -65,7 +66,7 @@ const chatStore$ = observable<ChatStore>({
 		const threads = chatStore$.threads.get();
 		return threads.find((thread) => thread.id === currentThreadId) || null;
 	},
-	saveMessage: () => {
+	saveMessage: async () => {
 		const text = chatStore$.currentMessage.get();
 		if (!text) {
 			console.log("No message to save");
@@ -92,15 +93,40 @@ const chatStore$ = observable<ChatStore>({
 
 		chatStore$.currentMessage.set(undefined);
 
-		// Simulate assistant typing
+		// Start assistant typing indicator
 		chatStore$.setTyping(true);
-		setTimeout(() => {
+
+		try {
+			// Prepare messages for API call
+			const messagesForAPI = currentThread.messages
+				.concat(message)
+				.map((msg) => ({
+					role: msg.role,
+					content: msg.text,
+				}));
+
+			// Call the LLM server
+			const response = await postV1ChatCompletions({
+				body: {
+					model: "llama", // You might need to adjust this based on your model
+					messages: messagesForAPI,
+					temperature: 0.7,
+					max_tokens: 1000,
+				},
+			});
+
+			// Extract the assistant's response
+			const assistantContent =
+				response.data?.choices?.[0]?.message?.content ||
+				"Sorry, I couldn't generate a response.";
+
 			const assistantMessage: ChatMessage = {
 				id: nextId++,
-				text: "This is a simulated assistant response.",
+				text: assistantContent,
 				role: "assistant",
 			};
 
+			// Add assistant message to thread
 			const updatedThreads = chatStore$.threads.get();
 			const currentIndex = updatedThreads.findIndex(
 				(t) => t.id === currentThread.id,
@@ -110,9 +136,28 @@ const chatStore$ = observable<ChatStore>({
 				updatedThreads[currentIndex].lastMessageAt = new Date();
 				chatStore$.threads.set(updatedThreads);
 			}
+		} catch (error) {
+			console.error("Error calling LLM server:", error);
 
+			// Add error message
+			const errorMessage: ChatMessage = {
+				id: nextId++,
+				text: "Sorry, I encountered an error while processing your message. Please try again.",
+				role: "assistant",
+			};
+
+			const updatedThreads = chatStore$.threads.get();
+			const currentIndex = updatedThreads.findIndex(
+				(t) => t.id === currentThread.id,
+			);
+			if (currentIndex !== -1) {
+				updatedThreads[currentIndex].messages.push(errorMessage);
+				updatedThreads[currentIndex].lastMessageAt = new Date();
+				chatStore$.threads.set(updatedThreads);
+			}
+		} finally {
 			chatStore$.setTyping(false);
-		}, 2000);
+		}
 	},
 });
 

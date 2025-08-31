@@ -26,7 +26,7 @@ function Home() {
 
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-	}, [messages]);
+	}, []);
 
 	return (
 		<div className="flex h-screen bg-gray-900">
@@ -38,6 +38,7 @@ function Home() {
 				<div className="flex-1 overflow-y-auto">
 					<div className="p-2">
 						<button
+							type="button"
 							onClick={createNewThread}
 							className="w-full p-3 mb-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 						>
@@ -47,6 +48,7 @@ function Home() {
 					<div className="space-y-1">
 						{threads.map((thread) => (
 							<button
+								type="button"
 								key={thread.id}
 								onClick={() => switchThread(thread.id)}
 								className={`w-full p-3 text-left rounded-lg transition-colors duration-200 ${
