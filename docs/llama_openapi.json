@@ -40,6 +40,140 @@
         }
       }
     },
+    "/props": {
+      "get": {
+        "summary": "Get server global properties",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PropsResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Change server global properties",
+        "description": "Requires server to be started with --props flag",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Options for changing properties (none yet)"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Properties updated successfully"
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/slots": {
+      "get": {
+        "summary": "Get current slots processing state",
+        "description": "Disabled by default, enable with --slots flag. Use ?fail_on_no_slot=1 to return 503 when no slots available",
+        "parameters": [
+          {
+            "name": "fail_on_no_slot",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [1]
+            },
+            "description": "Return 503 if no available slots"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Slot" }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No available slots (when fail_on_no_slot=1)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/slots/{id_slot}": {
+      "post": {
+        "summary": "Manage slot actions",
+        "parameters": [
+          {
+            "name": "id_slot",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Slot ID"
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["save", "restore", "erase"]
+            },
+            "description": "Action to perform on the slot"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filename": {
+                    "type": "string",
+                    "description": "Name of the file for save/restore actions"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Action completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/SlotSaveResponse" },
+                    { "$ref": "#/components/schemas/SlotRestoreResponse" },
+                    { "$ref": "#/components/schemas/SlotEraseResponse" }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
     "/completion": {
       "post": {
         "summary": "Generate completion",
@@ -408,6 +542,202 @@
               "type": { "type": "string" }
             }
           }
+        }
+      },
+      "PropsResponse": {
+        "type": "object",
+        "properties": {
+          "default_generation_settings": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "id_task": { "type": "integer" },
+              "n_ctx": { "type": "integer" },
+              "speculative": { "type": "boolean" },
+              "is_processing": { "type": "boolean" },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "n_predict": { "type": "integer" },
+                  "seed": { "type": "integer" },
+                  "temperature": { "type": "number" },
+                  "dynatemp_range": { "type": "number" },
+                  "dynatemp_exponent": { "type": "number" },
+                  "top_k": { "type": "integer" },
+                  "top_p": { "type": "number" },
+                  "min_p": { "type": "number" },
+                  "xtc_probability": { "type": "number" },
+                  "xtc_threshold": { "type": "number" },
+                  "typical_p": { "type": "number" },
+                  "repeat_last_n": { "type": "integer" },
+                  "repeat_penalty": { "type": "number" },
+                  "presence_penalty": { "type": "number" },
+                  "frequency_penalty": { "type": "number" },
+                  "dry_multiplier": { "type": "number" },
+                  "dry_base": { "type": "number" },
+                  "dry_allowed_length": { "type": "integer" },
+                  "dry_penalty_last_n": { "type": "integer" },
+                  "dry_sequence_breakers": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "mirostat": { "type": "integer" },
+                  "mirostat_tau": { "type": "number" },
+                  "mirostat_eta": { "type": "number" },
+                  "stop": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "max_tokens": { "type": "integer" },
+                  "n_keep": { "type": "integer" },
+                  "n_discard": { "type": "integer" },
+                  "ignore_eos": { "type": "boolean" },
+                  "stream": { "type": "boolean" },
+                  "n_probs": { "type": "integer" },
+                  "min_keep": { "type": "integer" },
+                  "grammar": { "type": "string" },
+                  "samplers": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "speculative.n_max": { "type": "integer" },
+                  "speculative.n_min": { "type": "integer" },
+                  "speculative.p_min": { "type": "number" },
+                  "timings_per_token": { "type": "boolean" }
+                }
+              },
+              "prompt": { "type": "string" },
+              "next_token": {
+                "type": "object",
+                "properties": {
+                  "has_next_token": { "type": "boolean" },
+                  "has_new_line": { "type": "boolean" },
+                  "n_remain": { "type": "integer" },
+                  "n_decoded": { "type": "integer" },
+                  "stopping_word": { "type": "string" }
+                }
+              }
+            }
+          },
+          "total_slots": { "type": "integer" },
+          "model_path": { "type": "string" },
+          "chat_template": { "type": "string" },
+          "modalities": {
+            "type": "object",
+            "properties": {
+              "vision": { "type": "boolean" }
+            }
+          },
+          "build_info": { "type": "string" }
+        }
+      },
+      "Slot": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "id_task": { "type": "integer" },
+          "n_ctx": { "type": "integer" },
+          "speculative": { "type": "boolean" },
+          "is_processing": { "type": "boolean" },
+          "params": {
+            "type": "object",
+            "properties": {
+              "n_predict": { "type": "integer" },
+              "seed": { "type": "integer" },
+              "temperature": { "type": "number" },
+              "dynatemp_range": { "type": "number" },
+              "dynatemp_exponent": { "type": "number" },
+              "top_k": { "type": "integer" },
+              "top_p": { "type": "number" },
+              "min_p": { "type": "number" },
+              "xtc_probability": { "type": "number" },
+              "xtc_threshold": { "type": "number" },
+              "typical_p": { "type": "number" },
+              "repeat_last_n": { "type": "integer" },
+              "repeat_penalty": { "type": "number" },
+              "presence_penalty": { "type": "number" },
+              "frequency_penalty": { "type": "number" },
+              "dry_multiplier": { "type": "number" },
+              "dry_base": { "type": "number" },
+              "dry_allowed_length": { "type": "integer" },
+              "dry_penalty_last_n": { "type": "integer" },
+              "dry_sequence_breakers": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "mirostat": { "type": "integer" },
+              "mirostat_tau": { "type": "number" },
+              "mirostat_eta": { "type": "number" },
+              "stop": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "max_tokens": { "type": "integer" },
+              "n_keep": { "type": "integer" },
+              "n_discard": { "type": "integer" },
+              "ignore_eos": { "type": "boolean" },
+              "stream": { "type": "boolean" },
+              "n_probs": { "type": "integer" },
+              "min_keep": { "type": "integer" },
+              "grammar": { "type": "string" },
+              "samplers": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "speculative.n_max": { "type": "integer" },
+              "speculative.n_min": { "type": "integer" },
+              "speculative.p_min": { "type": "number" },
+              "timings_per_token": { "type": "boolean" }
+            }
+          },
+          "prompt": { "type": "string" },
+          "next_token": {
+            "type": "object",
+            "properties": {
+              "has_next_token": { "type": "boolean" },
+              "has_new_line": { "type": "boolean" },
+              "n_remain": { "type": "integer" },
+              "n_decoded": { "type": "integer" },
+              "stopping_word": { "type": "string" }
+            }
+          }
+        }
+      },
+      "SlotSaveResponse": {
+        "type": "object",
+        "properties": {
+          "id_slot": { "type": "integer" },
+          "filename": { "type": "string" },
+          "n_saved": { "type": "integer" },
+          "n_written": { "type": "integer" },
+          "timings": {
+            "type": "object",
+            "properties": {
+              "save_ms": { "type": "number" }
+            }
+          }
+        }
+      },
+      "SlotRestoreResponse": {
+        "type": "object",
+        "properties": {
+          "id_slot": { "type": "integer" },
+          "filename": { "type": "string" },
+          "n_restored": { "type": "integer" },
+          "n_read": { "type": "integer" },
+          "timings": {
+            "type": "object",
+            "properties": {
+              "restore_ms": { "type": "number" }
+            }
+          }
+        }
+      },
+      "SlotEraseResponse": {
+        "type": "object",
+        "properties": {
+          "id_slot": { "type": "integer" },
+          "n_erased": { "type": "integer" }
         }
       }
     },

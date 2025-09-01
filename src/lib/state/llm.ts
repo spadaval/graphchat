@@ -1,13 +1,9 @@
 import { observable } from "@legendapp/state";
 import { err, ok, type Result } from "neverthrow";
 import { postV1ChatCompletions } from "../../client";
-import {
-  type AppResult,
-  createAPIError,
-  createLLMError,
-  createNetworkError,
-} from "../errors";
-import { safePromise } from "../utils-neverthrow";
+import { client } from "../../client/client.gen";
+import { type AppResult, createLLMError, createNetworkError } from "../errors";
+import { safePromise } from "../neverthrow-utils";
 
 export interface MessageVariant {
   id: string;
@@ -153,7 +149,7 @@ export function parseStreamingResponse(
 }
 
 /**
- * Calls the LLM server with streaming enabled
+ * Calls the LLM server with streaming enabled using the generated client
  */
 export async function* callLLMStreaming(
   messages: ChatMessage[],
@@ -167,111 +163,42 @@ export async function* callLLMStreaming(
         msg.variants.find((v) => v.id === msg.currentVariantId)?.text || "",
     }));
 
-    // Call the LLM server with streaming enabled
-    const fetchResult = await safePromise(
-      fetch("http://localhost:8080/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "llama",
-          messages: messagesForAPI,
-          temperature: modelProperties.temperature,
-          top_p: modelProperties.top_p,
-          max_tokens: modelProperties.n_predict,
-          presence_penalty: modelProperties.presence_penalty,
-          frequency_penalty: modelProperties.frequency_penalty,
-          stream: modelProperties.stream,
-        }),
-      }),
-      "Failed to initiate streaming request",
-    );
+    // Use the generated client's SSE functionality for streaming
+    const sseClient = await client.sse.post({
+      url: "/v1/chat/completions",
+      body: {
+        model: "llama",
+        messages: messagesForAPI,
+        temperature: modelProperties.temperature,
+        top_p: modelProperties.top_p,
+        max_tokens: modelProperties.n_predict,
+        presence_penalty: modelProperties.presence_penalty,
+        frequency_penalty: modelProperties.frequency_penalty,
+        stream: true, // Enable streaming
+      },
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-    if (fetchResult.isErr()) {
-      yield err(
-        createNetworkError(
-          "Failed to connect to LLM server",
-          "http://localhost:8080/v1/chat/completions",
-          fetchResult.error.cause,
-        ),
-      );
-      return;
-    }
-
-    const response = fetchResult.value;
-
-    if (!response.ok) {
-      yield err(
-        createAPIError(
-          `HTTP error! status: ${response.status}`,
-          response.status,
-          "http://localhost:8080/v1/chat/completions",
-        ),
-      );
-      return;
-    }
-
-    if (!response.body) {
-      yield err(createNetworkError("Response body is null"));
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    try {
-      while (true) {
-        const readResult = await safePromise(
-          reader.read(),
-          "Failed to read from response stream",
-        );
-
-        if (readResult.isErr()) {
-          yield err(
-            createNetworkError(
-              "Failed to read from response stream",
-              undefined,
-              readResult.error.cause,
-            ),
-          );
-          break;
-        }
-
-        const { done, value } = readResult.value;
-
-        if (done) {
-          // Yield final done signal
-          yield ok({ content: "", done: true });
-          break;
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || ""; // Keep incomplete line in buffer
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6);
-            const parsedResponse = parseStreamingResponse(data);
-
-            if (parsedResponse.isOk()) {
-              if (parsedResponse.value.done) {
-                // Stream is complete
-                yield ok(parsedResponse.value);
-                return;
-              } else {
-                yield ok(parsedResponse.value);
-              }
-            }
-            // If parsing failed, we skip this chunk but don't yield an error
-            // to avoid breaking the stream
-          }
-        }
+    // Handle the SSE events
+    for await (const event of sseClient) {
+      if (event.data === "[DONE]") {
+        yield ok({ content: "", done: true });
+        break;
       }
-    } finally {
-      reader.releaseLock();
+
+      try {
+        const parsed = JSON.parse(event.data);
+        const content = parsed.choices?.[0]?.delta?.content || "";
+
+        if (content) {
+          yield ok({ content, done: false });
+        }
+      } catch (parseError) {
+        // Skip malformed chunks but don't break the stream
+        console.warn("Failed to parse streaming data:", event.data, parseError);
+      }
     }
   } catch (error) {
     console.error("Error calling LLM server with streaming:", error);

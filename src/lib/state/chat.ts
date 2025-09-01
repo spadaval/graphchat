@@ -1,5 +1,5 @@
 import { observable } from "@legendapp/state";
-import { logError } from "../utils-neverthrow";
+import { logError } from "../neverthrow-utils";
 import {
   type ChatMessage,
   callLLM,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { getProps } from "../client";
 import { createNetworkError } from "../lib/errors";
-import { logError, safePromise } from "../lib/utils-neverthrow";
+import { logError, safePromise } from "../lib/neverthrow-utils";
 
 interface ServerInfo {
   model_name: string;
@@ -30,23 +31,23 @@ export function ServerInfo() {
 
   useEffect(() => {
     const fetchServerInfo = async () => {
-      const fetchResult = await safePromise(
-        fetch("http://localhost:8080/props"),
+      const apiCallResult = await safePromise(
+        getProps(),
         "Failed to fetch server info",
       );
 
-      if (fetchResult.isErr()) {
-        logError(fetchResult, "ServerInfo fetch");
-        setError(fetchResult.error.message);
+      if (apiCallResult.isErr()) {
+        logError(apiCallResult, "ServerInfo fetch");
+        setError(apiCallResult.error.message);
         setLoading(false);
         return;
       }
 
-      const response = fetchResult.value;
+      const response = apiCallResult.value;
 
-      if (!response.ok) {
+      if (response.error) {
         const apiError = createNetworkError(
-          `Failed to fetch server info: ${response.status} ${response.statusText}`,
+          `Failed to fetch server info: ${response.error.message}`,
           "http://localhost:8080/props",
         );
         setError(apiError.message);
@@ -54,22 +55,9 @@ export function ServerInfo() {
         return;
       }
 
-      const jsonResult = await safePromise(
-        response.json(),
-        "Failed to parse server info JSON",
-      );
-
-      jsonResult.match(
-        (data) => {
-          setServerInfo(data);
-          setError(null);
-        },
-        (parseError) => {
-          logError(jsonResult, "ServerInfo JSON parsing");
-          setError(parseError.message);
-        },
-      );
-
+      // The generated client returns data directly when successful
+      setServerInfo(response.data);
+      setError(null);
       setLoading(false);
     };
 
