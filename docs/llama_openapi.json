@@ -23,7 +23,7 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "status": {"type": "string", "example": "ok"}
+                    "status": { "type": "string", "example": "ok" }
                   }
                 }
               }
@@ -33,7 +33,7 @@
             "description": "Server is loading model",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/Error"}
+                "schema": { "$ref": "#/components/schemas/Error" }
               }
             }
           }
@@ -52,38 +52,57 @@
                 "properties": {
                   "prompt": {
                     "oneOf": [
-                      {"type": "string"},
-                      {"type": "array", "items": {"type": ["string", "number"]}},
+                      { "type": "string" },
+                      {
+                        "type": "array",
+                        "items": { "type": ["string", "number"] }
+                      },
                       {
                         "type": "object",
                         "properties": {
-                          "prompt_string": {"type": "string"},
-                          "multimodal_data": {"type": "array", "items": {"type": "string"}}
+                          "prompt_string": { "type": "string" },
+                          "multimodal_data": {
+                            "type": "array",
+                            "items": { "type": "string" }
+                          }
                         },
                         "required": ["prompt_string"]
                       }
                     ]
                   },
-                  "temperature": {"type": "number", "default": 0.8},
-                  "top_k": {"type": "integer", "default": 40},
-                  "top_p": {"type": "number", "default": 0.95},
-                  "n_predict": {"type": "integer", "default": -1},
-                  "stream": {"type": "boolean", "default": false},
-                  "stop": {"type": "array", "items": {"type": "string"}, "default": []},
-                  "repeat_penalty": {"type": "number", "default": 1.1},
-                  "presence_penalty": {"type": "number", "default": 0.0},
-                  "frequency_penalty": {"type": "number", "default": 0.0},
-                  "mirostat": {"type": "integer", "default": 0, "enum": [0, 1, 2]},
-                  "mirostat_tau": {"type": "number", "default": 5.0},
-                  "mirostat_eta": {"type": "number", "default": 0.1},
-                  "seed": {"type": "integer", "default": -1},
-                  "logit_bias": {"oneOf": [
-                    {"type": "array", "items": {"type": "array", "items": {}}},
-                    {"type": "object"}
-                  ]},
-                  "n_probs": {"type": "integer", "default": 0},
-                  "cache_prompt": {"type": "boolean", "default": true},
-                  "return_tokens": {"type": "boolean", "default": false}
+                  "temperature": { "type": "number", "default": 0.8 },
+                  "top_k": { "type": "integer", "default": 40 },
+                  "top_p": { "type": "number", "default": 0.95 },
+                  "n_predict": { "type": "integer", "default": -1 },
+                  "stream": { "type": "boolean", "default": false },
+                  "stop": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "default": []
+                  },
+                  "repeat_penalty": { "type": "number", "default": 1.1 },
+                  "presence_penalty": { "type": "number", "default": 0.0 },
+                  "frequency_penalty": { "type": "number", "default": 0.0 },
+                  "mirostat": {
+                    "type": "integer",
+                    "default": 0,
+                    "enum": [0, 1, 2]
+                  },
+                  "mirostat_tau": { "type": "number", "default": 5.0 },
+                  "mirostat_eta": { "type": "number", "default": 0.1 },
+                  "seed": { "type": "integer", "default": -1 },
+                  "logit_bias": {
+                    "oneOf": [
+                      {
+                        "type": "array",
+                        "items": { "type": "array", "items": {} }
+                      },
+                      { "type": "object" }
+                    ]
+                  },
+                  "n_probs": { "type": "integer", "default": 0 },
+                  "cache_prompt": { "type": "boolean", "default": true },
+                  "return_tokens": { "type": "boolean", "default": false }
                 },
                 "required": ["prompt"]
               }
@@ -98,20 +117,26 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "content": {"type": "string"},
-                    "tokens": {"type": "array", "items": {"type": "integer"}},
-                    "stop": {"type": "boolean"},
-                    "model": {"type": "string"},
-                    "prompt": {"type": "string"},
-                    "stop_type": {"type": "string", "enum": ["none", "eos", "limit", "word"]},
-                    "stopping_word": {"type": "string"}
+                    "content": { "type": "string" },
+                    "tokens": {
+                      "type": "array",
+                      "items": { "type": "integer" }
+                    },
+                    "stop": { "type": "boolean" },
+                    "model": { "type": "string" },
+                    "prompt": { "type": "string" },
+                    "stop_type": {
+                      "type": "string",
+                      "enum": ["none", "eos", "limit", "word"]
+                    },
+                    "stopping_word": { "type": "string" }
                   }
                 }
               }
             }
           },
-          "400": {"$ref": "#/components/responses/BadRequest"},
-          "500": {"$ref": "#/components/responses/ServerError"}
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "500": { "$ref": "#/components/responses/ServerError" }
         }
       }
     },
@@ -125,10 +150,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "content": {"type": "string"},
-                  "add_special": {"type": "boolean", "default": false},
-                  "parse_special": {"type": "boolean", "default": true},
-                  "with_pieces": {"type": "boolean", "default": false}
+                  "content": { "type": "string" },
+                  "add_special": { "type": "boolean", "default": false },
+                  "parse_special": { "type": "boolean", "default": true },
+                  "with_pieces": { "type": "boolean", "default": false }
                 },
                 "required": ["content"]
               }
@@ -145,7 +170,10 @@
                     {
                       "type": "object",
                       "properties": {
-                        "tokens": {"type": "array", "items": {"type": "integer"}}
+                        "tokens": {
+                          "type": "array",
+                          "items": { "type": "integer" }
+                        }
                       }
                     },
                     {
@@ -156,11 +184,16 @@
                           "items": {
                             "type": "object",
                             "properties": {
-                              "id": {"type": "integer"},
-                              "piece": {"oneOf": [
-                                {"type": "string"},
-                                {"type": "array", "items": {"type": "integer"}}
-                              ]}
+                              "id": { "type": "integer" },
+                              "piece": {
+                                "oneOf": [
+                                  { "type": "string" },
+                                  {
+                                    "type": "array",
+                                    "items": { "type": "integer" }
+                                  }
+                                ]
+                              }
                             }
                           }
                         }
@@ -184,31 +217,36 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "model": {"type": "string"},
+                  "model": { "type": "string" },
                   "messages": {
                     "type": "array",
                     "items": {
                       "type": "object",
                       "properties": {
-                        "role": {"type": "string", "enum": ["system", "user", "assistant"]},
-                        "content": {"type": "string"}
+                        "role": {
+                          "type": "string",
+                          "enum": ["system", "user", "assistant"]
+                        },
+                        "content": { "type": "string" }
                       },
                       "required": ["role", "content"]
                     }
                   },
-                  "temperature": {"type": "number", "default": 0.8},
-                  "top_p": {"type": "number", "default": 0.95},
-                  "n": {"type": "integer", "default": 1},
-                  "stream": {"type": "boolean", "default": false},
-                  "stop": {"oneOf": [
-                    {"type": "string"},
-                    {"type": "array", "items": {"type": "string"}}
-                  ]},
-                  "max_tokens": {"type": "integer", "default": 2048},
-                  "presence_penalty": {"type": "number", "default": 0.0},
-                  "frequency_penalty": {"type": "number", "default": 0.0},
-                  "logit_bias": {"type": "object"},
-                  "user": {"type": "string"}
+                  "temperature": { "type": "number", "default": 0.8 },
+                  "top_p": { "type": "number", "default": 0.95 },
+                  "n": { "type": "integer", "default": 1 },
+                  "stream": { "type": "boolean", "default": false },
+                  "stop": {
+                    "oneOf": [
+                      { "type": "string" },
+                      { "type": "array", "items": { "type": "string" } }
+                    ]
+                  },
+                  "max_tokens": { "type": "integer", "default": 2048 },
+                  "presence_penalty": { "type": "number", "default": 0.0 },
+                  "frequency_penalty": { "type": "number", "default": 0.0 },
+                  "logit_bias": { "type": "object" },
+                  "user": { "type": "string" }
                 },
                 "required": ["model", "messages"]
               }
@@ -223,33 +261,33 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "id": {"type": "string"},
-                    "object": {"type": "string"},
-                    "created": {"type": "integer"},
-                    "model": {"type": "string"},
+                    "id": { "type": "string" },
+                    "object": { "type": "string" },
+                    "created": { "type": "integer" },
+                    "model": { "type": "string" },
                     "choices": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "index": {"type": "integer"},
+                          "index": { "type": "integer" },
                           "message": {
                             "type": "object",
                             "properties": {
-                              "role": {"type": "string"},
-                              "content": {"type": "string"}
+                              "role": { "type": "string" },
+                              "content": { "type": "string" }
                             }
                           },
-                          "finish_reason": {"type": "string"}
+                          "finish_reason": { "type": "string" }
                         }
                       }
                     },
                     "usage": {
                       "type": "object",
                       "properties": {
-                        "prompt_tokens": {"type": "integer"},
-                        "completion_tokens": {"type": "integer"},
-                        "total_tokens": {"type": "integer"}
+                        "prompt_tokens": { "type": "integer" },
+                        "completion_tokens": { "type": "integer" },
+                        "total_tokens": { "type": "integer" }
                       }
                     }
                   }
@@ -270,13 +308,15 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "model": {"type": "string"},
-                  "input": {"oneOf": [
-                    {"type": "string"},
-                    {"type": "array", "items": {"type": "string"}}
-                  ]},
-                  "encoding_format": {"type": "string", "default": "float"},
-                  "user": {"type": "string"}
+                  "model": { "type": "string" },
+                  "input": {
+                    "oneOf": [
+                      { "type": "string" },
+                      { "type": "array", "items": { "type": "string" } }
+                    ]
+                  },
+                  "encoding_format": { "type": "string", "default": "float" },
+                  "user": { "type": "string" }
                 },
                 "required": ["model", "input"]
               }
@@ -291,24 +331,27 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "object": {"type": "string"},
+                    "object": { "type": "string" },
                     "data": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "object": {"type": "string"},
-                          "embedding": {"type": "array", "items": {"type": "number"}},
-                          "index": {"type": "integer"}
+                          "object": { "type": "string" },
+                          "embedding": {
+                            "type": "array",
+                            "items": { "type": "number" }
+                          },
+                          "index": { "type": "integer" }
                         }
                       }
                     },
-                    "model": {"type": "string"},
+                    "model": { "type": "string" },
                     "usage": {
                       "type": "object",
                       "properties": {
-                        "prompt_tokens": {"type": "integer"},
-                        "total_tokens": {"type": "integer"}
+                        "prompt_tokens": { "type": "integer" },
+                        "total_tokens": { "type": "integer" }
                       }
                     }
                   }
@@ -330,16 +373,16 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "object": {"type": "string"},
+                    "object": { "type": "string" },
                     "data": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "id": {"type": "string"},
-                          "object": {"type": "string"},
-                          "created": {"type": "integer"},
-                          "owned_by": {"type": "string"}
+                          "id": { "type": "string" },
+                          "object": { "type": "string" },
+                          "created": { "type": "integer" },
+                          "owned_by": { "type": "string" }
                         }
                       }
                     }
@@ -360,9 +403,9 @@
           "error": {
             "type": "object",
             "properties": {
-              "code": {"type": "integer"},
-              "message": {"type": "string"},
-              "type": {"type": "string"}
+              "code": { "type": "integer" },
+              "message": { "type": "string" },
+              "type": { "type": "string" }
             }
           }
         }
@@ -373,7 +416,7 @@
         "description": "Bad request",
         "content": {
           "application/json": {
-            "schema": {"$ref": "#/components/schemas/Error"}
+            "schema": { "$ref": "#/components/schemas/Error" }
           }
         }
       },
@@ -381,7 +424,7 @@
         "description": "Internal server error",
         "content": {
           "application/json": {
-            "schema": {"$ref": "#/components/schemas/Error"}
+            "schema": { "$ref": "#/components/schemas/Error" }
           }
         }
       }

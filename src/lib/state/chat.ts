@@ -1,14 +1,12 @@
 import { observable } from "@legendapp/state";
-import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
-import { syncObservable } from "@legendapp/state/sync";
+import { logError } from "../utils-neverthrow";
 import {
   type ChatMessage,
   callLLM,
+  callLLMStreaming,
   type MessageVariant,
   modelProps$,
-  callLLMStreaming,
 } from "./llm";
-import { logError } from "../utils-neverthrow";
 
 // Global configuration
 

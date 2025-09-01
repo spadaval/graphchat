@@ -1,5 +1,5 @@
-import { Result, fromPromise } from "neverthrow";
-import { AppError, toAppError } from "./errors";
+import { fromPromise, type Result } from "neverthrow";
+import { type AppError, toAppError } from "./errors";
 
 /**
  * Wraps a promise-returning function with neverthrow error handling

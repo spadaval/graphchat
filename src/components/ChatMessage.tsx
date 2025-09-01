@@ -1,10 +1,10 @@
-import type { ChatMessage as ChatMessageType } from "../lib/state/llm";
-import { nextVariant, regenerateMessage } from "../lib/state/chat";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
+import { nextVariant, regenerateMessage } from "../lib/state/chat";
+import type { ChatMessage as ChatMessageType } from "../lib/state/llm";
 import "highlight.js/styles/github-dark.css";
-import { User, Bot, RotateCcw, RefreshCw } from "lucide-react";
+import { Bot, RefreshCw, RotateCcw, User } from "lucide-react";
 
 type CodeProps = React.DetailedHTMLProps<
   React.HTMLAttributes<HTMLElement>,

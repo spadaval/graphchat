@@ -1,20 +1,18 @@
-import { createFileRoute } from "@tanstack/react-router";
-import chatStore$, {
-  ChatThread,
-  setCurrentUserMessage,
-  nextVariant,
-  regenerateMessage,
-  sendMessage,
-  getCurrentThread,
-  switchThread,
-  createNewThread,
-} from "~/lib/state/chat";
 import { use$ } from "@legendapp/state/react";
-import { useEffect, useState } from "react";
-import { ModelProperties } from "~/components/ModelProperties";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { ChatMessage } from "~/components/ChatMessage";
+import { ModelProperties } from "~/components/ModelProperties";
 import { ServerInfo } from "~/components/ServerInfo";
-import { ChatMessage as ChatMessageType } from "~/lib/state/llm";
+import chatStore$, {
+  type ChatThread,
+  createNewThread,
+  getCurrentThread,
+  sendMessage,
+  setCurrentUserMessage,
+  switchThread,
+} from "~/lib/state/chat";
+import type { ChatMessage as ChatMessageType } from "~/lib/state/llm";
 
 // Types
 interface SamplePrompt {

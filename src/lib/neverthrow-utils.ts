@@ -1,5 +1,5 @@
-import { Result, err, ok, fromPromise } from "neverthrow";
-import { AppError, toAppError } from "./errors";
+import { err, fromPromise, ok, type Result } from "neverthrow";
+import { type AppError, toAppError } from "./errors";
 
 /**
  * Utility functions for common neverthrow patterns

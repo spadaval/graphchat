@@ -1,14 +1,13 @@
 import { observable } from "@legendapp/state";
+import { err, ok, type Result } from "neverthrow";
 import { postV1ChatCompletions } from "../../client";
-import { Result, ok, err } from "neverthrow";
 import {
-  AppResult,
+  type AppResult,
   createAPIError,
-  createNetworkError,
-  createParsingError,
   createLLMError,
+  createNetworkError,
 } from "../errors";
-import { safePromise, logError } from "../utils-neverthrow";
+import { safePromise } from "../utils-neverthrow";
 
 export interface MessageVariant {
   id: string;

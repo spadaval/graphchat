@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Result } from "neverthrow";
 import { createNetworkError } from "../lib/errors";
-import { safePromise, logError } from "../lib/utils-neverthrow";
+import { logError, safePromise } from "../lib/utils-neverthrow";
 
 interface ServerInfo {
   model_name: string;

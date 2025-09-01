@@ -1,4 +1,4 @@
-import { Result } from "neverthrow";
+import type { Result } from "neverthrow";
 
 /**
  * Base error class for GraphChat application

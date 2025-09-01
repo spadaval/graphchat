@@ -2,9 +2,8 @@
  * Examples of how to use the migrated neverthrow-based functions
  */
 
-import { callLLM, callLLMStreaming } from "./state/llm";
-import { modelProps$ } from "./state/llm";
 import { logError } from "./neverthrow-utils";
+import { callLLM, callLLMStreaming, modelProps$ } from "./state/llm";
 
 /**
  * Example: Using callLLM with neverthrow
@@ -91,7 +90,7 @@ export function exampleErrorHandling() {
 
   // Using match for different outcomes
   result.match(
-    (success) => {
+    (_success) => {
       // Handle success
     },
     (error) => {
