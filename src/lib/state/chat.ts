@@ -8,6 +8,7 @@ import {
   modelProps$,
   callLLMStreaming,
 } from "./llm";
+import { logError } from "../utils-neverthrow";
 
 // Global configuration
 
@@ -154,33 +155,35 @@ export const regenerateMessage = async (messageId: number) => {
   // Get all messages up to this point
   const messagesUpToThis = thread.messages.slice(0, messageIndex);
 
-  try {
-    const response = await callLLM(messagesUpToThis, modelProps$.get());
+  const responseResult = await callLLM(messagesUpToThis, modelProps$.get());
 
-    if (response.error) {
-      console.error("Error regenerating message:", response.error);
-      return;
-    }
+  // Log any errors but don't return early - we want to handle errors gracefully
+  logError(responseResult, "Regenerating message");
 
-    // Create a new variant with the regenerated content
-    const newVariant = {
-      id: crypto.randomUUID(),
-      text: response.content,
-      createdAt: new Date(),
-    };
+  responseResult.match(
+    (response) => {
+      // Create a new variant with the regenerated content
+      const newVariant = {
+        id: crypto.randomUUID(),
+        text: response.content,
+        createdAt: new Date(),
+      };
 
-    // Update the thread with the new message variant
-    const updatedThread = { ...thread };
-    updatedThread.messages = [...thread.messages];
-    const updatedMessage = { ...message };
-    updatedMessage.variants = [...message.variants, newVariant];
-    updatedMessage.currentVariantId = newVariant.id;
-    updatedThread.messages[messageIndex] = updatedMessage;
+      // Update the thread with the new message variant
+      const updatedThread = { ...thread };
+      updatedThread.messages = [...thread.messages];
+      const updatedMessage = { ...message };
+      updatedMessage.variants = [...message.variants, newVariant];
+      updatedMessage.currentVariantId = newVariant.id;
+      updatedThread.messages[messageIndex] = updatedMessage;
 
-    chatStore$.threads.set(currentThreadId, updatedThread);
-  } catch (error) {
-    console.error("Error regenerating message:", error);
-  }
+      chatStore$.threads.set(currentThreadId, updatedThread);
+    },
+    (error) => {
+      // Error is already logged by logError, but we could show a user notification here
+      console.error("Failed to regenerate message:", error.message);
+    },
+  );
 };
 
 export const createNewThread = (initialMessage?: string) => {
@@ -203,7 +206,7 @@ export const getCurrentThread = (): ChatThread | undefined => {
 
 export const sendMessage = async (text?: string) => {
   if (!text) {
-	text = chatStore$.currentUserMessage.get();
+    text = chatStore$.currentUserMessage.get();
     console.log("No message to save");
     return;
   }
@@ -217,32 +220,41 @@ export const sendMessage = async (text?: string) => {
 
   const currentThread$ = chatStore$.threads.get(currentThreadId);
 
-  
   currentThread$.messages.push(message);
   chatStore$.currentUserMessage.set("");
 
   const assistantMessage = createChatMessage("", "assistant");
   currentThread$.messages.push(assistantMessage);
 
-  try {
-    const response = callLLMStreaming(
-      currentThread$.messages.get(),
-      modelProps$.get(),
+  const response = callLLMStreaming(
+    currentThread$.messages.get(),
+    modelProps$.get(),
+  );
+  console.log("response", response);
+
+  const messageToUpdate =
+    currentThread$.messages[currentThread$.messages.length - 1];
+  const variantToUpdate =
+    messageToUpdate.variants[messageToUpdate.variants.length - 1];
+
+  for await (const chunkResult of response) {
+    chunkResult.match(
+      (chunk) => {
+        if (chunk.done) {
+          // Stream is complete
+          return;
+        }
+        // Append content to the message
+        variantToUpdate.text.set(variantToUpdate.text.get() + chunk.content);
+      },
+      (error) => {
+        // Handle streaming error
+        console.error("Streaming error:", error.message);
+        variantToUpdate.text.set(
+          `${variantToUpdate.text.get()}\n\n[Error: ${error.message}]`,
+        );
+      },
     );
-	console.log("response", response);
-	
-
-	const messageToUpdate = currentThread$.messages[currentThread$.messages.length - 1];
-	const variantToUpdate = messageToUpdate.variants[messageToUpdate.variants.length - 1];
-
-	for await (const chunk of response) {
-		if (chunk.done) {
-			break;
-		}
-		variantToUpdate.text.set(variantToUpdate.text.get() + chunk.content);		
-	}
-  } catch (error) {
-    console.error("Error in sendMessage:", error);
   }
 };
 
