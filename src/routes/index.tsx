@@ -4,10 +4,10 @@ import chatStore$, {
   setCurrentUserMessage,
   nextVariant,
   regenerateMessage,
-  createThreadWithMessage,
   sendMessage,
   getCurrentThread,
   switchThread,
+  createNewThread,
 } from "~/lib/state/chat";
 import { use$ } from "@legendapp/state/react";
 import { useEffect, useState } from "react";
@@ -126,11 +126,7 @@ function ChatHeader({ title }: { title: string }) {
   );
 }
 
-function EmptyState({
-  createNewThread,
-}: {
-  createNewThread: (text?: string) => void;
-}) {
+function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center h-full px-4 py-12 text-center">
       <h2 className="text-2xl font-semibold text-gray-100 mb-6">
@@ -143,7 +139,7 @@ function EmptyState({
             key={prompt.id}
             onClick={(e) => {
               e.preventDefault();
-              createNewThread(prompt.text);
+              sendMessage(prompt.text);
             }}
             className="p-4 text-left rounded-lg border border-gray-700 hover:border-blue-500 hover:bg-gray-800 transition-colors duration-200 text-gray-200"
           >
@@ -157,7 +153,7 @@ function EmptyState({
 
 function MessagesList({ messages }: { messages: ChatMessageType[] }) {
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
       {messages.map((msg) => (
         <ChatMessage key={msg.id} message={msg} isStreaming={false} />
       ))}
@@ -173,21 +169,15 @@ function MessagesList({ messages }: { messages: ChatMessageType[] }) {
 function ChatArea({
   currentThread,
   messages,
-  createNewThread,
 }: {
   currentThread: ChatThread | undefined;
   messages: ChatMessageType[];
-  createNewThread: (text?: string) => void;
 }) {
   return (
-    <div className="flex-1 flex flex-col min-w-0 relative">
+    <div className="flex-1 flex flex-col min-w-0 relative min-h-0 overflow-hidden">
       <ChatHeader title={currentThread?.title || "Chat"} />
 
-      {!currentThread ? (
-        <EmptyState createNewThread={createNewThread} />
-      ) : (
-        <MessagesList messages={messages} />
-      )}
+      {!currentThread ? <EmptyState /> : <MessagesList messages={messages} />}
     </div>
   );
 }
@@ -310,7 +300,7 @@ function MainLayout({
   return (
     <div className="flex h-screen bg-gray-950">
       {sidebar}
-      <div className="flex-1 flex flex-col">{children}</div>
+      <div className="flex-1 flex flex-col min-h-0">{children}</div>
       {modelServer}
     </div>
   );
@@ -328,7 +318,7 @@ function Home() {
     <MainLayout
       sidebar={
         <ChatThreadsSidebar
-          createNewThread={() => createThreadWithMessage("")}
+          createNewThread={() => createNewThread()}
           threads={threadsArray}
           currentThreadId={currentThreadId}
           switchThread={switchThread}
@@ -338,11 +328,7 @@ function Home() {
         <ModelServerSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       }
     >
-      <ChatArea
-        currentThread={currentThread}
-        messages={messages}
-        createNewThread={(text) => createThreadWithMessage(text || "")}
-      />
+      <ChatArea currentThread={currentThread} messages={messages} />
       <MessageInput
         currentUserMessage={currentUserMessage}
         setCurrentUserMessage={setCurrentUserMessage}

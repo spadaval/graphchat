@@ -187,13 +187,7 @@ export const createNewThread = (initialMessage?: string) => {
   const thread = newThread(initialMessage?.slice(0, 100), initialMessage);
   chatStore$.threads.set(thread.id, thread);
   chatStore$.currentThreadId.set(thread.id);
-  return thread;
-};
-
-export const createThreadWithMessage = (message: string) => {
-  createNewThread(message);
-  // Small timeout to ensure the thread is created before sending
-  setTimeout(() => sendMessage(), 0);
+  return thread.id;
 };
 
 export const switchThread = (threadId: string) => {
@@ -207,49 +201,48 @@ export const getCurrentThread = (): ChatThread | undefined => {
   return threads.get(currentThreadId);
 };
 
-export const sendMessage = async () => {
-  const text = chatStore$.currentUserMessage.get();
+export const sendMessage = async (text?: string) => {
   if (!text) {
+	text = chatStore$.currentUserMessage.get();
     console.log("No message to save");
     return;
   }
 
   const message = createChatMessage(text, "user");
 
-  let currentThread = getCurrentThread();
-  if (!currentThread) {
-    currentThread = createNewThread();
-  } else {
-    currentThread.messages.push(message);
+  let currentThreadId = chatStore$.currentThreadId.get();
+  if (!currentThreadId) {
+    currentThreadId = createNewThread();
   }
+
+  const currentThread$ = chatStore$.threads.get(currentThreadId);
+
+  
+  currentThread$.messages.push(message);
   chatStore$.currentUserMessage.set("");
 
   const assistantMessage = createChatMessage("", "assistant");
-  currentThread.messages.push(assistantMessage);
+  currentThread$.messages.push(assistantMessage);
 
   try {
-    const response = await callLLMStreaming(
-      currentThread.messages,
+    const response = callLLMStreaming(
+      currentThread$.messages.get(),
       modelProps$.get(),
     );
+	console.log("response", response);
+	
+
+	const messageToUpdate = currentThread$.messages[currentThread$.messages.length - 1];
+	const variantToUpdate = messageToUpdate.variants[messageToUpdate.variants.length - 1];
+
+	for await (const chunk of response) {
+		if (chunk.done) {
+			break;
+		}
+		variantToUpdate.text.set(variantToUpdate.text.get() + chunk.content);		
+	}
   } catch (error) {
     console.error("Error in sendMessage:", error);
-
-    // Add error message
-    const errorMessage = createChatMessage(
-      "I'm sorry, I encountered an error while processing your message.",
-      "assistant",
-    );
-
-    // Update threads with the error message
-    const currentThreads = chatStore$.threads.get();
-    const currentThreadFromMap = currentThreads.get(currentThread.id);
-    if (currentThreadFromMap) {
-      const updatedThread = { ...currentThreadFromMap };
-      updatedThread.messages = [...currentThreadFromMap.messages, errorMessage];
-      updatedThread.lastMessageAt = new Date();
-      chatStore$.threads.set(currentThread.id, updatedThread);
-    }
   }
 };
 
