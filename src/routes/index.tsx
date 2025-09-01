@@ -1,5 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import chatStore$, { ChatThread } from "~/lib/state/chat";
+import chatStore$, {
+  ChatThread,
+  setCurrentUserMessage,
+  nextVariant,
+  regenerateMessage,
+  createNewThread,
+  sendMessage,
+  getCurrentThread,
+} from "~/lib/state/chat";
 import { use$ } from "@legendapp/state/react";
 import { useEffect, useState } from "react";
 import { ModelProperties } from "~/components/ModelProperties";
@@ -25,6 +33,33 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
+function SidebarHeader() {
+  return (
+    <div className="p-4 border-b border-gray-700">
+      <h2 className="text-lg font-semibold text-gray-100">Chat Threads</h2>
+    </div>
+  );
+}
+
+function SidebarContent({ createNewThread }: { createNewThread: () => void }) {
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <div className="p-2">
+        <button
+          type="button"
+          onClick={() => createNewThread()}
+          className="w-full p-3 mb-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+        >
+          + New Chat
+        </button>
+      </div>
+      <div className="p-4 text-gray-400 text-center">
+        Start a new chat to begin
+      </div>
+    </div>
+  );
+}
+
 function ChatThreadsSidebar({
   createNewThread,
 }: {
@@ -32,23 +67,60 @@ function ChatThreadsSidebar({
 }) {
   return (
     <div className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
-      <div className="p-4 border-b border-gray-700">
-        <h2 className="text-lg font-semibold text-gray-100">Chat Threads</h2>
-      </div>
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-2">
+      <SidebarHeader />
+      <SidebarContent createNewThread={createNewThread} />
+    </div>
+  );
+}
+
+function ChatHeader({ title }: { title: string }) {
+  return (
+    <div className="p-4 border-b border-gray-800 bg-gray-900">
+      <h1 className="text-xl font-semibold text-gray-100">{title}</h1>
+    </div>
+  );
+}
+
+function EmptyState({
+  createNewThread,
+}: {
+  createNewThread: (text?: string) => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full px-4 py-12 text-center">
+      <h2 className="text-2xl font-semibold text-gray-100 mb-6">
+        How can I help you today?
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl">
+        {SAMPLE_PROMPTS.map((prompt) => (
           <button
             type="button"
-            onClick={() => createNewThread()}
-            className="w-full p-3 mb-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+            key={prompt.id}
+            onClick={(e) => {
+              e.preventDefault();
+              createNewThread(prompt.text);
+            }}
+            className="p-4 text-left rounded-lg border border-gray-700 hover:border-blue-500 hover:bg-gray-800 transition-colors duration-200 text-gray-200"
           >
-            + New Chat
+            {prompt.text}
           </button>
-        </div>
-        <div className="p-4 text-gray-400 text-center">
-          Start a new chat to begin
-        </div>
+        ))}
       </div>
+    </div>
+  );
+}
+
+function MessagesList({ messages }: { messages: ChatMessageType[] }) {
+  return (
+    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {messages.map((msg) => (
+        <ChatMessage key={msg.id} message={msg} isStreaming={false} />
+      ))}
+      {messages.length === 0 && (
+        <div className="text-center text-gray-400 py-8">
+          No messages yet. Start a conversation!
+        </div>
+      )}
     </div>
   );
 }
@@ -64,39 +136,12 @@ function ChatArea({
 }) {
   return (
     <div className="flex-1 flex flex-col min-w-0 relative">
-      <div className="p-4 border-b border-gray-800 bg-gray-900">
-        <h1 className="text-xl font-semibold text-gray-100">
-          {currentThread?.title || "Chat"}
-        </h1>
-      </div>
+      <ChatHeader title={currentThread?.title || "Chat"} />
 
-      {!messages.length ? (
-        <div className="flex flex-col items-center justify-center h-full px-4 py-12 text-center">
-          <h2 className="text-2xl font-semibold text-gray-100 mb-6">
-            How can I help you today?
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl">
-            {SAMPLE_PROMPTS.map((prompt) => (
-              <button
-                type="button"
-                key={prompt.id}
-                onClick={(e) => {
-                  e.preventDefault();
-                  createNewThread(prompt.text);
-                }}
-                className="p-4 text-left rounded-lg border border-gray-700 hover:border-blue-500 hover:bg-gray-800 transition-colors duration-200 text-gray-200"
-              >
-                {prompt.text}
-              </button>
-            ))}
-          </div>
-        </div>
+      {!currentThread ? (
+        <EmptyState createNewThread={createNewThread} />
       ) : (
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((msg) => (
-            <ChatMessage key={msg.id} message={msg} isStreaming={false} />
-          ))}
-        </div>
+        <MessagesList messages={messages} />
       )}
     </div>
   );
@@ -144,6 +189,55 @@ function MessageInput({
   );
 }
 
+function TabNavigation({
+  activeTab,
+  setActiveTab,
+}: {
+  activeTab: "model" | "server";
+  setActiveTab: (tab: "model" | "server") => void;
+}) {
+  return (
+    <div className="border-b border-gray-800 flex">
+      <button
+        type="button"
+        className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
+          activeTab === "model"
+            ? "text-blue-400 border-b-2 border-blue-500"
+            : "text-gray-400 hover:text-gray-200"
+        }`}
+        onClick={() => setActiveTab("model")}
+      >
+        Model
+      </button>
+      <button
+        type="button"
+        className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
+          activeTab === "server"
+            ? "text-blue-400 border-b-2 border-blue-500"
+            : "text-gray-400 hover:text-gray-200"
+        }`}
+        onClick={() => setActiveTab("server")}
+      >
+        Server
+      </button>
+    </div>
+  );
+}
+
+function TabContent({ activeTab }: { activeTab: "model" | "server" }) {
+  return (
+    <div className="flex-1 overflow-y-auto">
+      {activeTab === "model" ? (
+        <div className="p-4">
+          <ModelProperties />
+        </div>
+      ) : (
+        <ServerInfo />
+      )}
+    </div>
+  );
+}
+
 function ModelServerSidebar({
   activeTab,
   setActiveTab,
@@ -153,75 +247,54 @@ function ModelServerSidebar({
 }) {
   return (
     <div className="w-80 bg-gray-900 border-l border-gray-800 flex flex-col">
-      <div className="border-b border-gray-800 flex">
-        <button
-          type="button"
-          className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
-            activeTab === "model"
-              ? "text-blue-400 border-b-2 border-blue-500"
-              : "text-gray-400 hover:text-gray-200"
-          }`}
-          onClick={() => setActiveTab("model")}
-        >
-          Model
-        </button>
-        <button
-          type="button"
-          className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
-            activeTab === "server"
-              ? "text-blue-400 border-b-2 border-blue-500"
-              : "text-gray-400 hover:text-gray-200"
-          }`}
-          onClick={() => setActiveTab("server")}
-        >
-          Server
-        </button>
-      </div>
+      <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+      <TabContent activeTab={activeTab} />
+    </div>
+  );
+}
 
-      <div className="flex-1 overflow-y-auto">
-        {activeTab === "model" ? (
-          <div className="p-4">
-            <ModelProperties />
-          </div>
-        ) : (
-          <ServerInfo />
-        )}
-      </div>
+function MainLayout({
+  children,
+  sidebar,
+  modelServer,
+}: {
+  children: React.ReactNode;
+  sidebar: React.ReactNode;
+  modelServer: React.ReactNode;
+}) {
+  return (
+    <div className="flex h-screen bg-gray-950">
+      {sidebar}
+      <div className="flex-1 flex flex-col">{children}</div>
+      {modelServer}
     </div>
   );
 }
 
 function Home() {
   const [activeTab, setActiveTab] = useState<"model" | "server">("model");
-  const {
-    currentUserMessage,
-    setCurrentUserMessage,
-    sendMessage,
-    getCurrentThread,
-    createNewThread,
-  } = use$(chatStore$);
+  const { currentUserMessage } = use$(chatStore$);
 
   const currentThread = getCurrentThread();
   const messages = currentThread?.messages || [];
 
   return (
-    <div className="flex h-screen bg-gray-950">
-      <ChatThreadsSidebar createNewThread={createNewThread} />
-
-      <div className="flex-1 flex flex-col">
-        <ChatArea
-          currentThread={currentThread}
-          messages={messages}
-          createNewThread={createNewThread}
-        />
-        <MessageInput
-          currentUserMessage={currentUserMessage}
-          setCurrentUserMessage={setCurrentUserMessage}
-          sendMessage={sendMessage}
-        />
-      </div>
-
-      <ModelServerSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-    </div>
+    <MainLayout
+      sidebar={<ChatThreadsSidebar createNewThread={createNewThread} />}
+      modelServer={
+        <ModelServerSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      }
+    >
+      <ChatArea
+        currentThread={currentThread}
+        messages={messages}
+        createNewThread={createNewThread}
+      />
+      <MessageInput
+        currentUserMessage={currentUserMessage}
+        setCurrentUserMessage={setCurrentUserMessage}
+        sendMessage={sendMessage}
+      />
+    </MainLayout>
   );
 }

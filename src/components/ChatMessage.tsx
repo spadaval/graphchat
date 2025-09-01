@@ -1,6 +1,5 @@
-import { use$ } from "@legendapp/state/react";
 import type { ChatMessage as ChatMessageType } from "../lib/state/llm";
-import chatStore$ from "../lib/state/chat";
+import { nextVariant, regenerateMessage } from "../lib/state/chat";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
@@ -122,7 +121,6 @@ const MessageActions = ({
 );
 
 export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
-  const { nextVariant, regenerateMessage } = use$(chatStore$);
   const currentVariant =
     message.variants.find((v) => v.id === message.currentVariantId) ||
     message.variants[0];
