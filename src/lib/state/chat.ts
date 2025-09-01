@@ -6,6 +6,7 @@ import {
   callLLM,
   type MessageVariant,
   modelProps$,
+  callLLMStreaming,
 } from "./llm";
 
 // Global configuration
@@ -19,7 +20,7 @@ export interface ChatThread {
 }
 
 interface ChatStore {
-  threads: ChatThread[];
+  threads: Map<string, ChatThread>;
   currentThreadId: string | undefined;
   currentUserMessage: string;
 }
@@ -58,7 +59,7 @@ const newThread = (title?: string, initialMessage?: string): ChatThread => ({
 });
 
 const chatStore: ChatStore = {
-  threads: [] as ChatThread[],
+  threads: new Map<string, ChatThread>(),
   currentThreadId: undefined,
   currentUserMessage: "",
 };
@@ -72,12 +73,11 @@ export const setCurrentUserMessage = (message: string) => {
 
 export const nextVariant = (messageId: number) => {
   const currentThreadId = chatStore$.currentThreadId.get();
-  const threads = chatStore$.threads.get();
-  const thread = threads.find((t) => t.id === currentThreadId);
-  if (!thread) return;
+  if (!currentThreadId) return;
 
-  const threadIndex = threads.findIndex((t) => t.id === thread.id);
-  if (threadIndex === -1) return;
+  const threads = chatStore$.threads.get();
+  const thread = threads.get(currentThreadId);
+  if (!thread) return;
 
   const messageIndex = thread.messages.findIndex((m) => m.id === messageId);
   if (messageIndex === -1) return;
@@ -92,19 +92,24 @@ export const nextVariant = (messageId: number) => {
   const nextVariantIndex = (currentVariantIndex + 1) % message.variants.length;
   const nextVariantId = message.variants[nextVariantIndex].id;
 
-  chatStore$.threads[threadIndex].messages[messageIndex].currentVariantId.set(
-    nextVariantId,
-  );
+  // Update the thread with the new message variant
+  const updatedThread = { ...thread };
+  updatedThread.messages = [...thread.messages];
+  updatedThread.messages[messageIndex] = {
+    ...message,
+    currentVariantId: nextVariantId,
+  };
+
+  chatStore$.threads.set(currentThreadId, updatedThread);
 };
 
 export const previousVariant = (messageId: number) => {
   const currentThreadId = chatStore$.currentThreadId.get();
-  const threads = chatStore$.threads.get();
-  const thread = threads.find((t) => t.id === currentThreadId);
-  if (!thread) return;
+  if (!currentThreadId) return;
 
-  const threadIndex = threads.findIndex((t) => t.id === thread.id);
-  if (threadIndex === -1) return;
+  const threads = chatStore$.threads.get();
+  const thread = threads.get(currentThreadId);
+  if (!thread) return;
 
   const messageIndex = thread.messages.findIndex((m) => m.id === messageId);
   if (messageIndex === -1) return;
@@ -121,19 +126,24 @@ export const previousVariant = (messageId: number) => {
     message.variants.length;
   const prevVariantId = message.variants[prevVariantIndex].id;
 
-  chatStore$.threads[threadIndex].messages[messageIndex].currentVariantId.set(
-    prevVariantId,
-  );
+  // Update the thread with the new message variant
+  const updatedThread = { ...thread };
+  updatedThread.messages = [...thread.messages];
+  updatedThread.messages[messageIndex] = {
+    ...message,
+    currentVariantId: prevVariantId,
+  };
+
+  chatStore$.threads.set(currentThreadId, updatedThread);
 };
 
 export const regenerateMessage = async (messageId: number) => {
   const currentThreadId = chatStore$.currentThreadId.get();
-  const threads = chatStore$.threads.get();
-  const thread = threads.find((t) => t.id === currentThreadId);
-  if (!thread) return;
+  if (!currentThreadId) return;
 
-  const threadIndex = threads.findIndex((t) => t.id === thread.id);
-  if (threadIndex === -1) return;
+  const threads = chatStore$.threads.get();
+  const thread = threads.get(currentThreadId);
+  if (!thread) return;
 
   const messageIndex = thread.messages.findIndex((m) => m.id === messageId);
   if (messageIndex === -1) return;
@@ -159,22 +169,25 @@ export const regenerateMessage = async (messageId: number) => {
       createdAt: new Date(),
     };
 
-    // Update the message with the new variant
-    chatStore$.threads[threadIndex].messages[messageIndex].variants.push(
-      newVariant,
-    );
-    chatStore$.threads[threadIndex].messages[messageIndex].currentVariantId.set(
-      newVariant.id,
-    );
+    // Update the thread with the new message variant
+    const updatedThread = { ...thread };
+    updatedThread.messages = [...thread.messages];
+    const updatedMessage = { ...message };
+    updatedMessage.variants = [...message.variants, newVariant];
+    updatedMessage.currentVariantId = newVariant.id;
+    updatedThread.messages[messageIndex] = updatedMessage;
+
+    chatStore$.threads.set(currentThreadId, updatedThread);
   } catch (error) {
     console.error("Error regenerating message:", error);
   }
 };
 
 export const createNewThread = (initialMessage?: string) => {
-  const thread = newThread(initialMessage);
-  chatStore$.threads.set((prev) => [...prev, thread]);
+  const thread = newThread(initialMessage?.slice(0, 100), initialMessage);
+  chatStore$.threads.set(thread.id, thread);
   chatStore$.currentThreadId.set(thread.id);
+  return thread;
 };
 
 export const createThreadWithMessage = (message: string) => {
@@ -189,11 +202,9 @@ export const switchThread = (threadId: string) => {
 
 export const getCurrentThread = (): ChatThread | undefined => {
   const currentThreadId = chatStore$.currentThreadId.get();
+  if (!currentThreadId) return undefined;
   const threads = chatStore$.threads.get();
-  const found = threads.find(
-    (thread: ChatThread) => thread.id === currentThreadId,
-  );
-  return found || undefined;
+  return threads.get(currentThreadId);
 };
 
 export const sendMessage = async () => {
@@ -203,38 +214,24 @@ export const sendMessage = async () => {
     return;
   }
 
-  const currentThread = getCurrentThread();
-  if (!currentThread) return;
-
   const message = createChatMessage(text, "user");
 
-  // Update the current thread's messages
-  const threadIndex = chatStore$.threads
-    .get()
-    .findIndex((t) => t.id === currentThread.id);
-  if (threadIndex !== -1) {
-    chatStore$.threads[threadIndex].messages.push(message);
-    chatStore$.threads[threadIndex].lastMessageAt.set(new Date());
+  let currentThread = getCurrentThread();
+  if (!currentThread) {
+    currentThread = createNewThread();
+  } else {
+    currentThread.messages.push(message);
   }
-
   chatStore$.currentUserMessage.set("");
 
+  const assistantMessage = createChatMessage("", "assistant");
+  currentThread.messages.push(assistantMessage);
+
   try {
-    // Call the LLM with all messages including the new user message
-    const allMessages = currentThread.messages.concat(message);
-    const response = await callLLM(allMessages, modelProps$.get());
-
-    // Create assistant message with the response
-    const assistantMessage = createChatMessage(response.content, "assistant");
-
-    // Add assistant message to thread
-    const currentIndex = chatStore$.threads
-      .get()
-      .findIndex((t) => t.id === currentThread.id);
-    if (currentIndex !== -1) {
-      chatStore$.threads[currentIndex].messages.push(assistantMessage);
-      chatStore$.threads[currentIndex].lastMessageAt.set(new Date());
-    }
+    const response = await callLLMStreaming(
+      currentThread.messages,
+      modelProps$.get(),
+    );
   } catch (error) {
     console.error("Error in sendMessage:", error);
 
@@ -245,12 +242,13 @@ export const sendMessage = async () => {
     );
 
     // Update threads with the error message
-    const errorIndex = chatStore$.threads
-      .get()
-      .findIndex((t) => t.id === currentThread.id);
-    if (errorIndex !== -1) {
-      chatStore$.threads.get()[errorIndex].messages.push(errorMessage);
-      chatStore$.threads[errorIndex].lastMessageAt.set(new Date());
+    const currentThreads = chatStore$.threads.get();
+    const currentThreadFromMap = currentThreads.get(currentThread.id);
+    if (currentThreadFromMap) {
+      const updatedThread = { ...currentThreadFromMap };
+      updatedThread.messages = [...currentThreadFromMap.messages, errorMessage];
+      updatedThread.lastMessageAt = new Date();
+      chatStore$.threads.set(currentThread.id, updatedThread);
     }
   }
 };

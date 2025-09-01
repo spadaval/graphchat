@@ -4,9 +4,10 @@ import chatStore$, {
   setCurrentUserMessage,
   nextVariant,
   regenerateMessage,
-  createNewThread,
+  createThreadWithMessage,
   sendMessage,
   getCurrentThread,
+  switchThread,
 } from "~/lib/state/chat";
 import { use$ } from "@legendapp/state/react";
 import { useEffect, useState } from "react";
@@ -41,7 +42,17 @@ function SidebarHeader() {
   );
 }
 
-function SidebarContent({ createNewThread }: { createNewThread: () => void }) {
+function SidebarContent({
+  createNewThread,
+  threads,
+  currentThreadId,
+  switchThread,
+}: {
+  createNewThread: () => void;
+  threads: ChatThread[];
+  currentThreadId: string | undefined;
+  switchThread: (threadId: string) => void;
+}) {
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="p-2">
@@ -53,22 +64,56 @@ function SidebarContent({ createNewThread }: { createNewThread: () => void }) {
           + New Chat
         </button>
       </div>
-      <div className="p-4 text-gray-400 text-center">
-        Start a new chat to begin
-      </div>
+
+      {threads.length === 0 ? (
+        <div className="p-4 text-gray-400 text-center">
+          Start a new chat to begin
+        </div>
+      ) : (
+        <div className="px-2">
+          {threads.map((thread) => (
+            <button
+              key={thread.id}
+              type="button"
+              onClick={() => switchThread(thread.id)}
+              className={`w-full p-3 mb-1 text-left rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${
+                thread.id === currentThreadId
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-700 hover:bg-gray-600 text-gray-200"
+              }`}
+            >
+              <div className="truncate text-sm">{thread.title}</div>
+              <div className="text-xs opacity-70 mt-1">
+                {thread.messages.length} messages
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 function ChatThreadsSidebar({
   createNewThread,
+  threads,
+  currentThreadId,
+  switchThread,
 }: {
   createNewThread: () => void;
+  threads: ChatThread[];
+  currentThreadId: string | undefined;
+  switchThread: (threadId: string) => void;
 }) {
   return (
     <div className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
       <SidebarHeader />
-      <SidebarContent createNewThread={createNewThread} />
+      <SidebarContent
+        createNewThread={createNewThread}
+        threads={threads}
+        currentThreadId={currentThreadId}
+        switchThread={switchThread}
+      />
     </div>
   );
 }
@@ -273,14 +318,22 @@ function MainLayout({
 
 function Home() {
   const [activeTab, setActiveTab] = useState<"model" | "server">("model");
-  const { currentUserMessage } = use$(chatStore$);
+  const { currentUserMessage, threads, currentThreadId } = use$(chatStore$);
 
   const currentThread = getCurrentThread();
   const messages = currentThread?.messages || [];
+  const threadsArray = Array.from(threads.values());
 
   return (
     <MainLayout
-      sidebar={<ChatThreadsSidebar createNewThread={createNewThread} />}
+      sidebar={
+        <ChatThreadsSidebar
+          createNewThread={() => createThreadWithMessage("")}
+          threads={threadsArray}
+          currentThreadId={currentThreadId}
+          switchThread={switchThread}
+        />
+      }
       modelServer={
         <ModelServerSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       }
@@ -288,7 +341,7 @@ function Home() {
       <ChatArea
         currentThread={currentThread}
         messages={messages}
-        createNewThread={createNewThread}
+        createNewThread={(text) => createThreadWithMessage(text || "")}
       />
       <MessageInput
         currentUserMessage={currentUserMessage}

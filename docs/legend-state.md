@@ -1,29 +1,62 @@
 # Legend State
 
-Legend-State is a super fast all-in-one local and remote state library that helps you write less code to make faster apps.
+Legend-State is a high-performance state management library for React apps that provides automatic reactivity and persistence.
 
-## Observables
+## Core Concepts
 
-You can put anything in an observable: primitives, deeply nested objects, arrays, functions, etc… Observables work just like normal objects so you can interact with them without any extra complication. Just call get() to get a value and set(...) to modify it.
+### Observables
+Observables wrap any data type (primitives, objects, arrays) and track changes automatically. They work like normal objects but provide reactive updates.
 
-Array methods are also supported (e.g. push, pop, shift, unshift, etc…).
-
-Observables are proxies that track changes to the underlying data.
-They are mutable. Cloning objects is unnecessary and wasteful.
-
-Observables are just wrappers around the underlying data, so if you modify the raw data you’re actually modifying the observable data without notifying of changes. Then if you set it back onto the observable, that just sets it to itself so nothing happens.
 ```typescript
-// ❌ This sets it to itself, nothing happens
+import { observable } from "@legendapp/state"
+
+const state$ = observable({
+    fname: 'Annyong',
+    lname: 'Bluth',
+    // Computed properties
+    name: () => state$.fname.get() + ' ' + state$.lname.get(),
+    // Actions
+    setName: (name: string) => {
+        const [fname, lname] = name.split(' ');
+        state$.assign({ fname, lname })
+    }
+})
+```
+
+**Key Points:**
+- Use `get()` to read values, `set()` to update
+- Supports all array methods (push, pop, etc.)
+- Mutable - no need to clone objects
+- Use `$` suffix for observable variables
+
+### Direct Updates
+Always update observables directly, not the raw data:
+
+```typescript
+// ❌ Wrong - modifies raw data without triggering updates
 const value = state$.get()
 value.key = 'newValue'
 state$.set(value)
 
-// ✅ Set the value directly in the observable
+// ✅ Correct - update directly
 state$.key.set('newValue')
-
-// ✅ Assign the key/value to the observable
 state$.assign({ key: 'newValue' })
 ```
+
+## React Integration
+
+The `use$` hook automatically subscribes to observables and only re-renders when values change:
+
+```typescript
+import { use$ } from "@legendapp/state/react"
+
+function NameDisplay() {
+    const name = use$(state$.name)  // Reactive subscription
+    return <div>{name}</div>
+}
+```
+
+Works with observables or functions that consume observables.
 
 > Note: Use the $ suffix on variables as a naming convention to indicate an observable. Do not use it for regular variables. 
 
