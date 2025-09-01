@@ -29,8 +29,8 @@ export const Route = createRootRouteWithContext<{
       },
       ...seo({
         title:
-          'TanStack Start | Type-Safe, Client-First, Full-Stack React Framework',
-        description: `TanStack Start is a type-safe, client-first, full-stack React framework. `,
+          'GraphChat',
+        description: `GraphChat is an AI chat app`,
       }),
     ],
     links: [

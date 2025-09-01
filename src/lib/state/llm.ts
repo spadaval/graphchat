@@ -1,9 +1,19 @@
-import { postCompletion, postV1ChatCompletions } from "../client";
+import { observable } from "@legendapp/state";
+import { postV1ChatCompletions } from "../../client";
+
+export interface MessageVariant {
+	id: string;
+	text: string;
+	createdAt: Date;
+}
 
 export interface ChatMessage {
 	id: number;
-	text: string;
 	role: "user" | "assistant";
+	variants: MessageVariant[];
+	currentVariantId: string;
+	createdAt: Date;
+	isGenerating: boolean;
 }
 
 export interface LLMResponse {
@@ -36,6 +46,25 @@ export interface ModelProperties {
 	return_tokens: boolean;
 }
 
+export const modelProps$ = observable<ModelProperties>({
+	temperature: 0.8,
+	top_k: 40,
+	top_p: 0.9,
+	n_predict: 5000,
+	stream: true,
+	stop: [],
+	repeat_penalty: 1.1,
+	presence_penalty: 0.0,
+	frequency_penalty: 0.0,
+	mirostat: 0,
+	mirostat_tau: 5.0,
+	mirostat_eta: 0.1,
+	seed: -1,
+	n_probs: 0,
+	cache_prompt: true,
+	return_tokens: false,
+});
+
 /**
  * Calls the LLM server with the provided messages and returns the response
  */
@@ -47,7 +76,8 @@ export async function callLLM(
 		// Prepare messages for API call
 		const messagesForAPI = messages.map((msg) => ({
 			role: msg.role,
-			content: msg.text,
+			content:
+				msg.variants.find((v) => v.id === msg.currentVariantId)?.text || "",
 		}));
 
 		// Call the LLM server
@@ -84,6 +114,30 @@ export async function callLLM(
 }
 
 /**
+ * Parses streaming response data from the LLM server
+ */
+export function parseStreamingResponse(
+	data: string,
+): StreamingLLMResponse | null {
+	if (data === "[DONE]") {
+		return { content: "", done: true };
+	}
+
+	try {
+		const parsed = JSON.parse(data);
+		const content = parsed.choices?.[0]?.delta?.content || "";
+
+		if (content) {
+			return { content, done: false };
+		}
+	} catch (parseError) {
+		console.warn("Failed to parse streaming data:", data, parseError);
+	}
+
+	return null;
+}
+
+/**
  * Calls the LLM server with streaming enabled
  */
 export async function* callLLMStreaming(
@@ -94,7 +148,8 @@ export async function* callLLMStreaming(
 		// Prepare messages for API call
 		const messagesForAPI = messages.map((msg) => ({
 			role: msg.role,
-			content: msg.text,
+			content:
+				msg.variants.find((v) => v.id === msg.currentVariantId)?.text || "",
 		}));
 
 		// Call the LLM server with streaming enabled
@@ -144,22 +199,16 @@ export async function* callLLMStreaming(
 				for (const line of lines) {
 					if (line.startsWith("data: ")) {
 						const data = line.slice(6);
+						const parsedResponse = parseStreamingResponse(data);
 
-						if (data === "[DONE]") {
-							// Stream is complete
-							yield { content: "", done: true };
-							return;
-						}
-
-						try {
-							const parsed = JSON.parse(data);
-							const content = parsed.choices?.[0]?.delta?.content || "";
-
-							if (content) {
-								yield { content, done: false };
+						if (parsedResponse) {
+							if (parsedResponse.done) {
+								// Stream is complete
+								yield parsedResponse;
+								return;
+							} else {
+								yield parsedResponse;
 							}
-						} catch (parseError) {
-							console.warn("Failed to parse streaming data:", data, parseError);
 						}
 					}
 				}

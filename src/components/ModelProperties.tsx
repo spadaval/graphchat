@@ -1,11 +1,8 @@
 import { use$ } from "@legendapp/state/react";
-import chatStore$ from "~/lib/state";
+import { modelProps$ } from "~/lib/state/llm";
 
 export function ModelProperties() {
-	const { modelProperties, updateModelProperty } = use$({
-		modelProperties: chatStore$.modelProperties,
-		updateModelProperty: chatStore$.updateModelProperty,
-	});
+	const modelProperties = use$(modelProps$);
 
 	return (
 		<div className="space-y-4">
@@ -15,7 +12,7 @@ export function ModelProperties() {
 
 			{/* Temperature */}
 			<div className="space-y-2">
-				<label className="block text-sm font-medium text-gray-200">
+				<label htmlFor="temperature" className="block text-sm font-medium text-gray-200">
 					Temperature
 				</label>
 				<input
@@ -23,16 +20,16 @@ export function ModelProperties() {
 					min="0"
 					max="2"
 					step="0.1"
-					value={modelProperties.temperature.get()}
+					value={modelProperties.temperature}
 					onChange={(e) =>
-						updateModelProperty("temperature", parseFloat(e.target.value))
+						modelProps$.assign({ temperature: parseFloat(e.target.value) })
 					}
 					className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
 				/>
 				<div className="flex justify-between text-xs text-gray-400">
 					<span>0.0</span>
 					<span className="text-gray-200">
-						{modelProperties.temperature.get()}
+						{modelProperties.temperature}
 					</span>
 					<span>2.0</span>
 				</div>
@@ -40,58 +37,58 @@ export function ModelProperties() {
 
 			{/* Top K */}
 			<div className="space-y-2">
-				<label className="block text-sm font-medium text-gray-200">Top K</label>
+				<label htmlFor="top-k" className="block text-sm font-medium text-gray-200">Top K</label>
 				<input
 					type="range"
 					min="1"
 					max="100"
 					step="1"
-					value={modelProperties.top_k.get()}
+					value={modelProperties.top_k}
 					onChange={(e) =>
-						updateModelProperty("top_k", parseInt(e.target.value))
+						modelProps$.assign({ top_k: parseInt(e.target.value) })
 					}
 					className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
 				/>
 				<div className="flex justify-between text-xs text-gray-400">
 					<span>1</span>
-					<span className="text-gray-200">{modelProperties.top_k.get()}</span>
+					<span className="text-gray-200">{modelProperties.top_k}</span>
 					<span>100</span>
 				</div>
 			</div>
 
 			{/* Top P */}
 			<div className="space-y-2">
-				<label className="block text-sm font-medium text-gray-200">Top P</label>
+				<label htmlFor="top-p" className="block text-sm font-medium text-gray-200">Top P</label>
 				<input
 					type="range"
 					min="0"
 					max="1"
 					step="0.05"
-					value={modelProperties.top_p.get()}
+					value={modelProperties.top_p}
 					onChange={(e) =>
-						updateModelProperty("top_p", parseFloat(e.target.value))
+						modelProps$.assign({ top_p: parseFloat(e.target.value) })
 					}
 					className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
 				/>
 				<div className="flex justify-between text-xs text-gray-400">
 					<span>0.0</span>
-					<span className="text-gray-200">{modelProperties.top_p.get()}</span>
+					<span className="text-gray-200">{modelProperties.top_p}</span>
 					<span>1.0</span>
 				</div>
 			</div>
 
 			{/* Max Tokens */}
 			<div className="space-y-2">
-				<label className="block text-sm font-medium text-gray-200">
+				<label htmlFor="max-tokens" className="block text-sm font-medium text-gray-200">
 					Max Tokens
 				</label>
 				<input
 					type="number"
 					min="1"
 					max="4096"
-					value={modelProperties.n_predict.get()}
+					value={modelProperties.n_predict}
 					onChange={(e) =>
-						updateModelProperty("n_predict", parseInt(e.target.value) || 128)
+						modelProps$.assign({ n_predict: parseInt(e.target.value, 10) || 128 })
 					}
 					className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
 				/>
@@ -99,7 +96,7 @@ export function ModelProperties() {
 
 			{/* Repeat Penalty */}
 			<div className="space-y-2">
-				<label className="block text-sm font-medium text-gray-200">
+				<label htmlFor="repeat-penalty" className="block text-sm font-medium text-gray-200">
 					Repeat Penalty
 				</label>
 				<input
@@ -107,16 +104,16 @@ export function ModelProperties() {
 					min="1.0"
 					max="2.0"
 					step="0.1"
-					value={modelProperties.repeat_penalty.get()}
+					value={modelProperties.repeat_penalty}
 					onChange={(e) =>
-						updateModelProperty("repeat_penalty", parseFloat(e.target.value))
+						modelProps$.assign({ repeat_penalty: parseFloat(e.target.value) })
 					}
 					className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
 				/>
 				<div className="flex justify-between text-xs text-gray-400">
 					<span>1.0</span>
 					<span className="text-gray-200">
-						{modelProperties.repeat_penalty.get()}
+						{modelProperties.repeat_penalty}
 					</span>
 					<span>2.0</span>
 				</div>
@@ -124,24 +121,24 @@ export function ModelProperties() {
 
 			{/* Presence Penalty */}
 			<div className="space-y-2">
-				<label className="block text-sm font-medium text-gray-200">
+				<label htmlFor="presence-penalty" className="block text-sm font-medium text-gray-200">
 					Presence Penalty
-				</label>
+				</label>	
 				<input
 					type="range"
 					min="-2.0"
 					max="2.0"
 					step="0.1"
-					value={modelProperties.presence_penalty.get()}
+					value={modelProperties.presence_penalty}
 					onChange={(e) =>
-						updateModelProperty("presence_penalty", parseFloat(e.target.value))
+						modelProps$.assign({ presence_penalty: parseFloat(e.target.value) })
 					}
 					className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
 				/>
 				<div className="flex justify-between text-xs text-gray-400">
 					<span>-2.0</span>
 					<span className="text-gray-200">
-						{modelProperties.presence_penalty.get()}
+						{modelProperties.presence_penalty}
 					</span>
 					<span>2.0</span>
 				</div>
@@ -149,7 +146,7 @@ export function ModelProperties() {
 
 			{/* Frequency Penalty */}
 			<div className="space-y-2">
-				<label className="block text-sm font-medium text-gray-200">
+				<label htmlFor="frequency-penalty" className="block text-sm font-medium text-gray-200">
 					Frequency Penalty
 				</label>
 				<input
@@ -157,16 +154,16 @@ export function ModelProperties() {
 					min="-2.0"
 					max="2.0"
 					step="0.1"
-					value={modelProperties.frequency_penalty.get()}
+					value={modelProperties.frequency_penalty}
 					onChange={(e) =>
-						updateModelProperty("frequency_penalty", parseFloat(e.target.value))
+						modelProps$.assign({ frequency_penalty: parseFloat(e.target.value) })
 					}
 					className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
 				/>
 				<div className="flex justify-between text-xs text-gray-400">
 					<span>-2.0</span>
 					<span className="text-gray-200">
-						{modelProperties.frequency_penalty.get()}
+						{modelProperties.frequency_penalty}
 					</span>
 					<span>2.0</span>
 				</div>
@@ -174,16 +171,13 @@ export function ModelProperties() {
 
 			{/* Mirostat Mode */}
 			<div className="space-y-2">
-				<label className="block text-sm font-medium text-gray-200">
+				<label htmlFor="mirostat-mode" className="block text-sm font-medium text-gray-200">
 					Mirostat Mode
 				</label>
 				<select
-					value={modelProperties.mirostat.get()}
+					value={modelProperties.mirostat}
 					onChange={(e) =>
-						updateModelProperty(
-							"mirostat",
-							parseInt(e.target.value) as 0 | 1 | 2,
-						)
+						modelProps$.assign({ mirostat: parseInt(e.target.value) as 0 | 1 | 2 })
 					}
 					className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
 				>
@@ -194,9 +188,9 @@ export function ModelProperties() {
 			</div>
 
 			{/* Mirostat Tau */}
-			{modelProperties.mirostat.get() > 0 && (
+			{modelProperties.mirostat > 0 && (
 				<div className="space-y-2">
-					<label className="block text-sm font-medium text-gray-200">
+					<label htmlFor="mirostat-tau" className="block text-sm font-medium text-gray-200">
 						Mirostat Tau
 					</label>
 					<input
@@ -204,16 +198,16 @@ export function ModelProperties() {
 						min="0"
 						max="10"
 						step="0.1"
-						value={modelProperties.mirostat_tau.get()}
+						value={modelProperties.mirostat_tau}
 						onChange={(e) =>
-							updateModelProperty("mirostat_tau", parseFloat(e.target.value))
+							modelProps$.assign({ mirostat_tau: parseFloat(e.target.value) })
 						}
 						className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
 					/>
 					<div className="flex justify-between text-xs text-gray-400">
 						<span>0.0</span>
 						<span className="text-gray-200">
-							{modelProperties.mirostat_tau.get()}
+							{modelProperties.mirostat_tau}
 						</span>
 						<span>10.0</span>
 					</div>
@@ -221,9 +215,9 @@ export function ModelProperties() {
 			)}
 
 			{/* Mirostat Eta */}
-			{modelProperties.mirostat.get() > 0 && (
+			{modelProperties.mirostat > 0 && (
 				<div className="space-y-2">
-					<label className="block text-sm font-medium text-gray-200">
+					<label htmlFor="mirostat-eta" className="block text-sm font-medium text-gray-200">
 						Mirostat Eta
 					</label>
 					<input
@@ -231,16 +225,16 @@ export function ModelProperties() {
 						min="0"
 						max="1"
 						step="0.01"
-						value={modelProperties.mirostat_eta.get()}
+						value={modelProperties.mirostat_eta}
 						onChange={(e) =>
-							updateModelProperty("mirostat_eta", parseFloat(e.target.value))
+							modelProps$.assign({ mirostat_eta: parseFloat(e.target.value) })
 						}
 						className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
 					/>
 					<div className="flex justify-between text-xs text-gray-400">
 						<span>0.00</span>
 						<span className="text-gray-200">
-							{modelProperties.mirostat_eta.get()}
+							{modelProperties.mirostat_eta}
 						</span>
 						<span>1.00</span>
 					</div>
@@ -251,9 +245,8 @@ export function ModelProperties() {
 			<div className="flex items-center space-x-2">
 				<input
 					type="checkbox"
-					id="streaming"
-					checked={modelProperties.stream.get()}
-					onChange={(e) => updateModelProperty("stream", e.target.checked)}
+					checked={modelProperties.stream}
+					onChange={(e) => modelProps$.assign({ stream: e.target.checked })}
 					className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
 				/>
 				<label
@@ -268,10 +261,9 @@ export function ModelProperties() {
 			<div className="flex items-center space-x-2">
 				<input
 					type="checkbox"
-					id="cache-prompt"
-					checked={modelProperties.cache_prompt.get()}
+					checked={modelProperties.cache_prompt}
 					onChange={(e) =>
-						updateModelProperty("cache_prompt", e.target.checked)
+						modelProps$.assign({ cache_prompt: e.target.checked })
 					}
 					className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
 				/>
@@ -287,10 +279,9 @@ export function ModelProperties() {
 			<div className="flex items-center space-x-2">
 				<input
 					type="checkbox"
-					id="return-tokens"
-					checked={modelProperties.return_tokens.get()}
+					checked={modelProperties.return_tokens}
 					onChange={(e) =>
-						updateModelProperty("return_tokens", e.target.checked)
+						modelProps$.assign({ return_tokens: e.target.checked })
 					}
 					className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
 				/>
