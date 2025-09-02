@@ -1,4 +1,7 @@
 import { observable } from "@legendapp/state";
+import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
+
+import { syncObservable } from "@legendapp/state/sync";
 import {
   type ChatMessage,
   callLLM,
@@ -6,7 +9,6 @@ import {
   type MessageVariant,
   modelProps$,
 } from "./llm";
-
 // Global configuration
 
 export interface ChatThread {
@@ -18,7 +20,7 @@ export interface ChatThread {
 }
 
 interface ChatStore {
-  threads: Map<string, ChatThread>;
+  threads: Record<string, ChatThread>;
   currentThreadId: string | undefined;
   currentUserMessage: string;
 }
@@ -57,7 +59,7 @@ const newThread = (title?: string, initialMessage?: string): ChatThread => ({
 });
 
 const chatStore: ChatStore = {
-  threads: new Map<string, ChatThread>(),
+  threads: {} as Record<string, ChatThread>,
   currentThreadId: undefined,
   currentUserMessage: "",
 };
@@ -74,7 +76,7 @@ export const nextVariant = (messageId: number) => {
   if (!currentThreadId) return;
 
   const threads = chatStore$.threads.get();
-  const thread = threads.get(currentThreadId);
+  const thread = threads[currentThreadId];
   if (!thread) return;
 
   const messageIndex = thread.messages.findIndex((m) => m.id === messageId);
@@ -98,7 +100,7 @@ export const nextVariant = (messageId: number) => {
     currentVariantId: nextVariantId,
   };
 
-  chatStore$.threads.set(currentThreadId, updatedThread);
+  chatStore$.threads.set({ [currentThreadId]: updatedThread });
 };
 
 export const previousVariant = (messageId: number) => {
@@ -106,7 +108,7 @@ export const previousVariant = (messageId: number) => {
   if (!currentThreadId) return;
 
   const threads = chatStore$.threads.get();
-  const thread = threads.get(currentThreadId);
+  const thread = threads[currentThreadId];
   if (!thread) return;
 
   const messageIndex = thread.messages.findIndex((m) => m.id === messageId);
@@ -132,7 +134,7 @@ export const previousVariant = (messageId: number) => {
     currentVariantId: prevVariantId,
   };
 
-  chatStore$.threads.set(currentThreadId, updatedThread);
+  chatStore$.threads.set({ [currentThreadId]: updatedThread });
 };
 
 export const regenerateMessage = async (messageId: number) => {
@@ -140,7 +142,7 @@ export const regenerateMessage = async (messageId: number) => {
   if (!currentThreadId) return;
 
   const threads = chatStore$.threads.get();
-  const thread = threads.get(currentThreadId);
+  const thread = threads[currentThreadId];
   if (!thread) return;
 
   const messageIndex = thread.messages.findIndex((m) => m.id === messageId);
@@ -171,7 +173,7 @@ export const regenerateMessage = async (messageId: number) => {
       updatedMessage.currentVariantId = newVariant.id;
       updatedThread.messages[messageIndex] = updatedMessage;
 
-      chatStore$.threads.set(currentThreadId, updatedThread);
+      chatStore$.threads.set({ [currentThreadId]: updatedThread });
     },
     (error) => {
       // Error is already logged by logError, but we could show a user notification here
@@ -182,7 +184,7 @@ export const regenerateMessage = async (messageId: number) => {
 
 export const createNewThread = (initialMessage?: string) => {
   const thread = newThread(initialMessage?.slice(0, 100), initialMessage);
-  chatStore$.threads.set(thread.id, thread);
+  chatStore$.threads.set({ [thread.id]: thread });
   chatStore$.currentThreadId.set(thread.id);
   return thread.id;
 };
@@ -195,7 +197,8 @@ export const getCurrentThread = (): ChatThread | undefined => {
   const currentThreadId = chatStore$.currentThreadId.get();
   if (!currentThreadId) return undefined;
   const threads = chatStore$.threads.get();
-  return threads.get(currentThreadId);
+  console.log(threads);
+  return threads[currentThreadId];
 };
 
 export const sendMessage = async (text?: string) => {
@@ -212,7 +215,7 @@ export const sendMessage = async (text?: string) => {
     currentThreadId = createNewThread();
   }
 
-  const currentThread$ = chatStore$.threads.get(currentThreadId);
+  const currentThread$ = chatStore$.threads[currentThreadId];
 
   currentThread$.messages.push(message);
   chatStore$.currentUserMessage.set("");
@@ -255,10 +258,9 @@ export const sendMessage = async (text?: string) => {
 export default chatStore$;
 
 // Persist state
-// disabled for testing
-// syncObservable(chatStore$, {
-// 	persist: {
-// 		name: "chatStore",
-// 		plugin: ObservablePersistLocalStorage,
-// 	},
-// });
+syncObservable(chatStore$, {
+  persist: {
+    name: "chatStore",
+    plugin: ObservablePersistLocalStorage,
+  },
+});

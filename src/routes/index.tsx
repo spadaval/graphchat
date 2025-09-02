@@ -310,7 +310,7 @@ function Home() {
 
   const currentThread = getCurrentThread();
   const messages = currentThread?.messages || [];
-  const threadsArray = Array.from(threads.values());
+  const threadsArray = Object.values(threads);
 
   return (
     <MainLayout
