@@ -1,9 +1,8 @@
 import { observable } from "@legendapp/state";
-import { err, ok, type Result } from "neverthrow";
+import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { postV1ChatCompletions } from "../../client";
 import { client } from "../../client/client.gen";
-import { type AppResult, createLLMError, createNetworkError } from "../errors";
-import { safePromise } from "../neverthrow-utils";
+import { type AppError, type AppResult, createLLMError } from "../errors";
 
 export interface MessageVariant {
   id: string;
@@ -82,8 +81,8 @@ export async function callLLM(
       msg.variants.find((v) => v.id === msg.currentVariantId)?.text || "",
   }));
 
-  // Call the LLM server
-  const apiCallResult = await safePromise(
+  // Call the LLM server using ResultAsync
+  const resultAsync = ResultAsync.fromPromise(
     postV1ChatCompletions({
       body: {
         model: "llama",
@@ -96,29 +95,28 @@ export async function callLLM(
         stream: false, // Non-streaming call
       },
     }),
-    "Failed to call LLM API",
-  );
+    (error) =>
+      createLLMError("Failed to call LLM API", "llama", error as Error),
+  )
+    .andThen((response) => {
+      // Extract the assistant's response
+      const assistantContent =
+        response.data?.choices?.[0]?.message?.content ||
+        "Sorry, I couldn't generate a response.";
 
-  if (apiCallResult.isErr()) {
-    return err(
+      return ok({
+        content: assistantContent,
+      });
+    })
+    .mapErr((error) =>
       createLLMError(
         "Failed to get response from LLM server",
         "llama",
-        apiCallResult.error.cause,
+        error.cause,
       ),
     );
-  }
 
-  const response = apiCallResult.value;
-
-  // Extract the assistant's response
-  const assistantContent =
-    response.data?.choices?.[0]?.message?.content ||
-    "Sorry, I couldn't generate a response.";
-
-  return ok({
-    content: assistantContent,
-  });
+  return resultAsync;
 }
 
 /**
@@ -154,17 +152,17 @@ export function parseStreamingResponse(
 export async function* callLLMStreaming(
   messages: ChatMessage[],
   modelProperties: ModelProperties,
-): AsyncGenerator<Result<StreamingLLMResponse, Error>, void, unknown> {
-  try {
-    // Prepare messages for API call
-    const messagesForAPI = messages.map((msg) => ({
-      role: msg.role,
-      content:
-        msg.variants.find((v) => v.id === msg.currentVariantId)?.text || "",
-    }));
+): AsyncGenerator<Result<StreamingLLMResponse, AppError>, void, unknown> {
+  // Prepare messages for API call
+  const messagesForAPI = messages.map((msg) => ({
+    role: msg.role,
+    content:
+      msg.variants.find((v) => v.id === msg.currentVariantId)?.text || "",
+  }));
 
-    // Use the generated client's SSE functionality for streaming
-    const sseClient = await client.sse.post({
+  // Use ResultAsync to handle the SSE client creation
+  const sseResultAsync = ResultAsync.fromPromise(
+    client.sse.post({
       url: "/v1/chat/completions",
       body: {
         model: "llama",
@@ -179,36 +177,38 @@ export async function* callLLMStreaming(
       headers: {
         "Content-Type": "application/json",
       },
-    });
+    }),
+    (error) =>
+      createLLMError(
+        "Failed to initialize streaming connection",
+        "llama",
+        error as Error,
+      ),
+  );
 
-    // Handle the SSE events
-    for await (const event of sseClient) {
-      if (event.data === "[DONE]") {
-        yield ok({ content: "", done: true });
-        break;
-      }
+  const sseResult = await sseResultAsync;
 
-      try {
-        const parsed = JSON.parse(event.data);
-        const content = parsed.choices?.[0]?.delta?.content || "";
-
-        if (content) {
-          yield ok({ content, done: false });
-        }
-      } catch (parseError) {
-        // Skip malformed chunks but don't break the stream
-        console.warn("Failed to parse streaming data:", event.data, parseError);
-      }
-    }
-  } catch (error) {
-    console.error("Error calling LLM server with streaming:", error);
-    // Yield the error instead of throwing
+  if (sseResult.isErr()) {
     yield err(
       createLLMError(
-        "Streaming error occurred",
+        "Failed to initialize streaming connection",
         "llama",
-        error instanceof Error ? error : undefined,
+        sseResult.error,
       ),
     );
+    return;
+  }
+
+  const sseClient = sseResult.value;
+
+  // Handle the SSE events
+  for await (const event of sseClient.stream) {
+    console.log(event);
+    if (event === "[DONE]") {
+      yield ok({ content: "", done: true });
+      break;
+    }
+
+    yield ok({ content: event.choices[0].delta.content ?? "", done: false });
   }
 }

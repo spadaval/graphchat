@@ -263,7 +263,97 @@
                       "type": "string",
                       "enum": ["none", "eos", "limit", "word"]
                     },
-                    "stopping_word": { "type": "string" }
+                    "stopping_word": { "type": "string" },
+                    "generation_settings": {
+                      "type": "object",
+                      "properties": {
+                        "n_predict": { "type": "integer" },
+                        "seed": { "type": "integer" },
+                        "temperature": { "type": "number" },
+                        "dynatemp_range": { "type": "number" },
+                        "dynatemp_exponent": { "type": "number" },
+                        "top_k": { "type": "integer" },
+                        "top_p": { "type": "number" },
+                        "min_p": { "type": "number" },
+                        "xtc_probability": { "type": "number" },
+                        "xtc_threshold": { "type": "number" },
+                        "typical_p": { "type": "number" },
+                        "repeat_last_n": { "type": "integer" },
+                        "repeat_penalty": { "type": "number" },
+                        "presence_penalty": { "type": "number" },
+                        "frequency_penalty": { "type": "number" },
+                        "dry_multiplier": { "type": "number" },
+                        "dry_base": { "type": "number" },
+                        "dry_allowed_length": { "type": "integer" },
+                        "dry_penalty_last_n": { "type": "integer" },
+                        "dry_sequence_breakers": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        },
+                        "mirostat": { "type": "integer" },
+                        "mirostat_tau": { "type": "number" },
+                        "mirostat_eta": { "type": "number" },
+                        "stop": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        },
+                        "max_tokens": { "type": "integer" },
+                        "n_keep": { "type": "integer" },
+                        "n_discard": { "type": "integer" },
+                        "ignore_eos": { "type": "boolean" },
+                        "stream": { "type": "boolean" },
+                        "n_probs": { "type": "integer" },
+                        "min_keep": { "type": "integer" },
+                        "grammar": { "type": "string" },
+                        "samplers": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        },
+                        "speculative.n_max": { "type": "integer" },
+                        "speculative.n_min": { "type": "integer" },
+                        "speculative.p_min": { "type": "number" },
+                        "timings_per_token": { "type": "boolean" }
+                      }
+                    },
+                    "timings": {
+                      "type": "object",
+                      "properties": {
+                        "predicted_per_second": { "type": "number" }
+                      }
+                    },
+                    "tokens_cached": { "type": "integer" },
+                    "tokens_evaluated": { "type": "integer" },
+                    "truncated": { "type": "boolean" },
+                    "completion_probabilities": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "integer" },
+                          "logprob": { "type": "number" },
+                          "token": { "type": "string" },
+                          "bytes": {
+                            "type": "array",
+                            "items": { "type": "integer" }
+                          },
+                          "top_logprobs": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": { "type": "integer" },
+                                "logprob": { "type": "number" },
+                                "token": { "type": "string" },
+                                "bytes": {
+                                  "type": "array",
+                                  "items": { "type": "integer" }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -341,6 +431,307 @@
         }
       }
     },
+    "/embeddings": {
+      "post": {
+        "summary": "Generate embeddings (non-OpenAI-compatible)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": { "type": "string" },
+                  "embd_normalize": {
+                    "type": "number",
+                    "enum": [-1, 0, 1, 2]
+                  }
+                },
+                "required": ["content"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "index": { "type": "integer" },
+                      "embedding": {
+                        "oneOf": [
+                          {
+                            "type": "array",
+                            "items": { "type": "number" }
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": "array",
+                              "items": { "type": "number" }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reranking": {
+      "post": {
+        "summary": "Rerank documents according to a given query",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": { "type": "string" },
+                  "documents": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                },
+                "required": ["query", "documents"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "index": { "type": "integer" },
+                      "score": { "type": "number" },
+                      "document": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/infill": {
+      "post": {
+        "summary": "For code infilling",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "input_prefix": { "type": "string" },
+                  "input_suffix": { "type": "string" },
+                  "input_extra": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "filename": { "type": "string" },
+                        "text": { "type": "string" }
+                      }
+                    }
+                  },
+                  "prompt": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": { "type": "string" },
+                    "tokens": {
+                      "type": "array",
+                      "items": { "type": "integer" }
+                    },
+                    "stop": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/detokenize": {
+      "post": {
+        "summary": "Convert tokens to text",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tokens": {
+                    "type": "array",
+                    "items": { "type": "integer" }
+                  }
+                },
+                "required": ["tokens"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/apply-template": {
+      "post": {
+        "summary": "Apply chat template to a conversation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": ["system", "user", "assistant"]
+                        },
+                        "content": { "type": "string" }
+                      },
+                      "required": ["role", "content"]
+                    }
+                  }
+                },
+                "required": ["messages"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "prompt": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lora-adapters": {
+      "get": {
+        "summary": "Get list of all LoRA adapters",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "integer" },
+                      "path": { "type": "string" },
+                      "scale": { "type": "number" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Set list of LoRA adapters",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "integer" },
+                    "scale": { "type": "number" }
+                  },
+                  "required": ["id", "scale"]
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Adapters updated successfully"
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "summary": "Prometheus compatible metrics exporter",
+        "responses": {
+          "200": {
+            "description": "Metrics data",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/chat/completions": {
       "post": {
         "summary": "Chat Completions (OpenAI-compatible)",
@@ -361,7 +752,27 @@
                           "type": "string",
                           "enum": ["system", "user", "assistant"]
                         },
-                        "content": { "type": "string" }
+                        "content": {
+                          "oneOf": [
+                            { "type": "string" },
+                            {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "type": { "type": "string" },
+                                  "text": { "type": "string" },
+                                  "image_url": {
+                                    "type": "object",
+                                    "properties": {
+                                      "url": { "type": "string" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
                       },
                       "required": ["role", "content"]
                     }
@@ -380,7 +791,19 @@
                   "presence_penalty": { "type": "number", "default": 0.0 },
                   "frequency_penalty": { "type": "number", "default": 0.0 },
                   "logit_bias": { "type": "object" },
-                  "user": { "type": "string" }
+                  "user": { "type": "string" },
+                  "response_format": {
+                    "type": "object",
+                    "properties": {
+                      "type": { "type": "string" },
+                      "schema": { "type": "object" }
+                    }
+                  },
+                  "chat_template_kwargs": { "type": "object" },
+                  "reasoning_format": { "type": "string" },
+                  "thinking_forced_open": { "type": "boolean" },
+                  "parse_tool_calls": { "type": "boolean" },
+                  "parallel_tool_calls": { "type": "boolean" }
                 },
                 "required": ["model", "messages"]
               }
@@ -516,7 +939,18 @@
                           "id": { "type": "string" },
                           "object": { "type": "string" },
                           "created": { "type": "integer" },
-                          "owned_by": { "type": "string" }
+                          "owned_by": { "type": "string" },
+                          "meta": {
+                            "type": "object",
+                            "properties": {
+                              "vocab_type": { "type": "integer" },
+                              "n_vocab": { "type": "integer" },
+                              "n_ctx_train": { "type": "integer" },
+                              "n_embd": { "type": "integer" },
+                              "n_params": { "type": "integer" },
+                              "size": { "type": "integer" }
+                            }
+                          }
                         }
                       }
                     }

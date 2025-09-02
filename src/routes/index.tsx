@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { ChatMessage } from "~/components/ChatMessage";
 import { ModelProperties } from "~/components/ModelProperties";
-import { ServerInfo } from "~/components/ServerInfo";
+import { ServerInfoComponent } from "~/components/ServerInfo";
 import chatStore$, {
   type ChatThread,
   createNewThread,
@@ -265,7 +265,7 @@ function TabContent({ activeTab }: { activeTab: "model" | "server" }) {
           <ModelProperties />
         </div>
       ) : (
-        <ServerInfo />
+        <ServerInfoComponent />
       )}
     </div>
   );

@@ -1,5 +1,4 @@
 import { observable } from "@legendapp/state";
-import { logError } from "../neverthrow-utils";
 import {
   type ChatMessage,
   callLLM,
@@ -154,9 +153,6 @@ export const regenerateMessage = async (messageId: number) => {
   const messagesUpToThis = thread.messages.slice(0, messageIndex);
 
   const responseResult = await callLLM(messagesUpToThis, modelProps$.get());
-
-  // Log any errors but don't return early - we want to handle errors gracefully
-  logError(responseResult, "Regenerating message");
 
   responseResult.match(
     (response) => {

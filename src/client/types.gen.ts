@@ -72,6 +72,86 @@ export type PropsResponse = {
     build_info?: string;
 };
 
+export type Slot = {
+    id?: number;
+    id_task?: number;
+    n_ctx?: number;
+    speculative?: boolean;
+    is_processing?: boolean;
+    params?: {
+        n_predict?: number;
+        seed?: number;
+        temperature?: number;
+        dynatemp_range?: number;
+        dynatemp_exponent?: number;
+        top_k?: number;
+        top_p?: number;
+        min_p?: number;
+        xtc_probability?: number;
+        xtc_threshold?: number;
+        typical_p?: number;
+        repeat_last_n?: number;
+        repeat_penalty?: number;
+        presence_penalty?: number;
+        frequency_penalty?: number;
+        dry_multiplier?: number;
+        dry_base?: number;
+        dry_allowed_length?: number;
+        dry_penalty_last_n?: number;
+        dry_sequence_breakers?: Array<string>;
+        mirostat?: number;
+        mirostat_tau?: number;
+        mirostat_eta?: number;
+        stop?: Array<string>;
+        max_tokens?: number;
+        n_keep?: number;
+        n_discard?: number;
+        ignore_eos?: boolean;
+        stream?: boolean;
+        n_probs?: number;
+        min_keep?: number;
+        grammar?: string;
+        samplers?: Array<string>;
+        'speculative.n_max'?: number;
+        'speculative.n_min'?: number;
+        'speculative.p_min'?: number;
+        timings_per_token?: boolean;
+    };
+    prompt?: string;
+    next_token?: {
+        has_next_token?: boolean;
+        has_new_line?: boolean;
+        n_remain?: number;
+        n_decoded?: number;
+        stopping_word?: string;
+    };
+};
+
+export type SlotSaveResponse = {
+    id_slot?: number;
+    filename?: string;
+    n_saved?: number;
+    n_written?: number;
+    timings?: {
+        save_ms?: number;
+    };
+};
+
+export type SlotRestoreResponse = {
+    id_slot?: number;
+    filename?: string;
+    n_restored?: number;
+    n_read?: number;
+    timings?: {
+        restore_ms?: number;
+    };
+};
+
+export type SlotEraseResponse = {
+    id_slot?: number;
+    n_erased?: number;
+};
+
 export type GetHealthData = {
     body?: never;
     path?: never;
@@ -147,6 +227,80 @@ export type PostPropsResponses = {
     200: unknown;
 };
 
+export type GetSlotsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Return 503 if no available slots
+         */
+        fail_on_no_slot?: 1;
+    };
+    url: '/slots';
+};
+
+export type GetSlotsErrors = {
+    /**
+     * No available slots (when fail_on_no_slot=1)
+     */
+    503: _Error;
+};
+
+export type GetSlotsError = GetSlotsErrors[keyof GetSlotsErrors];
+
+export type GetSlotsResponses = {
+    /**
+     * Successful response
+     */
+    200: Array<Slot>;
+};
+
+export type GetSlotsResponse = GetSlotsResponses[keyof GetSlotsResponses];
+
+export type PostSlotsByIdSlotData = {
+    body?: {
+        /**
+         * Name of the file for save/restore actions
+         */
+        filename?: string;
+    };
+    path: {
+        /**
+         * Slot ID
+         */
+        id_slot: number;
+    };
+    query: {
+        /**
+         * Action to perform on the slot
+         */
+        action: 'save' | 'restore' | 'erase';
+    };
+    url: '/slots/{id_slot}';
+};
+
+export type PostSlotsByIdSlotErrors = {
+    /**
+     * Bad request
+     */
+    400: _Error;
+    /**
+     * Internal server error
+     */
+    500: _Error;
+};
+
+export type PostSlotsByIdSlotError = PostSlotsByIdSlotErrors[keyof PostSlotsByIdSlotErrors];
+
+export type PostSlotsByIdSlotResponses = {
+    /**
+     * Action completed successfully
+     */
+    200: SlotSaveResponse | SlotRestoreResponse | SlotEraseResponse;
+};
+
+export type PostSlotsByIdSlotResponse = PostSlotsByIdSlotResponses[keyof PostSlotsByIdSlotResponses];
+
 export type PostCompletionData = {
     body: {
         prompt: string | Array<unknown> | {
@@ -203,6 +357,63 @@ export type PostCompletionResponses = {
         prompt?: string;
         stop_type?: 'none' | 'eos' | 'limit' | 'word';
         stopping_word?: string;
+        generation_settings?: {
+            n_predict?: number;
+            seed?: number;
+            temperature?: number;
+            dynatemp_range?: number;
+            dynatemp_exponent?: number;
+            top_k?: number;
+            top_p?: number;
+            min_p?: number;
+            xtc_probability?: number;
+            xtc_threshold?: number;
+            typical_p?: number;
+            repeat_last_n?: number;
+            repeat_penalty?: number;
+            presence_penalty?: number;
+            frequency_penalty?: number;
+            dry_multiplier?: number;
+            dry_base?: number;
+            dry_allowed_length?: number;
+            dry_penalty_last_n?: number;
+            dry_sequence_breakers?: Array<string>;
+            mirostat?: number;
+            mirostat_tau?: number;
+            mirostat_eta?: number;
+            stop?: Array<string>;
+            max_tokens?: number;
+            n_keep?: number;
+            n_discard?: number;
+            ignore_eos?: boolean;
+            stream?: boolean;
+            n_probs?: number;
+            min_keep?: number;
+            grammar?: string;
+            samplers?: Array<string>;
+            'speculative.n_max'?: number;
+            'speculative.n_min'?: number;
+            'speculative.p_min'?: number;
+            timings_per_token?: boolean;
+        };
+        timings?: {
+            predicted_per_second?: number;
+        };
+        tokens_cached?: number;
+        tokens_evaluated?: number;
+        truncated?: boolean;
+        completion_probabilities?: Array<{
+            id?: number;
+            logprob?: number;
+            token?: string;
+            bytes?: Array<number>;
+            top_logprobs?: Array<{
+                id?: number;
+                logprob?: number;
+                token?: string;
+                bytes?: Array<number>;
+            }>;
+        }>;
     };
 };
 
@@ -236,12 +447,187 @@ export type PostTokenizeResponses = {
 
 export type PostTokenizeResponse = PostTokenizeResponses[keyof PostTokenizeResponses];
 
+export type PostEmbeddingsData = {
+    body: {
+        content: string;
+        embd_normalize?: -1 | 0 | 1 | 2;
+    };
+    path?: never;
+    query?: never;
+    url: '/embeddings';
+};
+
+export type PostEmbeddingsResponses = {
+    /**
+     * Successful response
+     */
+    200: Array<{
+        index?: number;
+        embedding?: Array<number> | Array<Array<number>>;
+    }>;
+};
+
+export type PostEmbeddingsResponse = PostEmbeddingsResponses[keyof PostEmbeddingsResponses];
+
+export type PostRerankingData = {
+    body: {
+        query: string;
+        documents: Array<string>;
+    };
+    path?: never;
+    query?: never;
+    url: '/reranking';
+};
+
+export type PostRerankingResponses = {
+    /**
+     * Successful response
+     */
+    200: Array<{
+        index?: number;
+        score?: number;
+        document?: string;
+    }>;
+};
+
+export type PostRerankingResponse = PostRerankingResponses[keyof PostRerankingResponses];
+
+export type PostInfillData = {
+    body: {
+        input_prefix?: string;
+        input_suffix?: string;
+        input_extra?: Array<{
+            filename?: string;
+            text?: string;
+        }>;
+        prompt?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/infill';
+};
+
+export type PostInfillResponses = {
+    /**
+     * Successful response
+     */
+    200: {
+        content?: string;
+        tokens?: Array<number>;
+        stop?: boolean;
+    };
+};
+
+export type PostInfillResponse = PostInfillResponses[keyof PostInfillResponses];
+
+export type PostDetokenizeData = {
+    body: {
+        tokens: Array<number>;
+    };
+    path?: never;
+    query?: never;
+    url: '/detokenize';
+};
+
+export type PostDetokenizeResponses = {
+    /**
+     * Successful response
+     */
+    200: {
+        content?: string;
+    };
+};
+
+export type PostDetokenizeResponse = PostDetokenizeResponses[keyof PostDetokenizeResponses];
+
+export type PostApplyTemplateData = {
+    body: {
+        messages: Array<{
+            role: 'system' | 'user' | 'assistant';
+            content: string;
+        }>;
+    };
+    path?: never;
+    query?: never;
+    url: '/apply-template';
+};
+
+export type PostApplyTemplateResponses = {
+    /**
+     * Successful response
+     */
+    200: {
+        prompt?: string;
+    };
+};
+
+export type PostApplyTemplateResponse = PostApplyTemplateResponses[keyof PostApplyTemplateResponses];
+
+export type GetLoraAdaptersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/lora-adapters';
+};
+
+export type GetLoraAdaptersResponses = {
+    /**
+     * Successful response
+     */
+    200: Array<{
+        id?: number;
+        path?: string;
+        scale?: number;
+    }>;
+};
+
+export type GetLoraAdaptersResponse = GetLoraAdaptersResponses[keyof GetLoraAdaptersResponses];
+
+export type PostLoraAdaptersData = {
+    body: Array<{
+        id: number;
+        scale: number;
+    }>;
+    path?: never;
+    query?: never;
+    url: '/lora-adapters';
+};
+
+export type PostLoraAdaptersResponses = {
+    /**
+     * Adapters updated successfully
+     */
+    200: unknown;
+};
+
+export type GetMetricsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/metrics';
+};
+
+export type GetMetricsResponses = {
+    /**
+     * Metrics data
+     */
+    200: string;
+};
+
+export type GetMetricsResponse = GetMetricsResponses[keyof GetMetricsResponses];
+
 export type PostV1ChatCompletionsData = {
     body: {
         model: string;
         messages: Array<{
             role: 'system' | 'user' | 'assistant';
-            content: string;
+            content: string | Array<{
+                type?: string;
+                text?: string;
+                image_url?: {
+                    url?: string;
+                };
+            }>;
         }>;
         temperature?: number;
         top_p?: number;
@@ -255,6 +641,19 @@ export type PostV1ChatCompletionsData = {
             [key: string]: unknown;
         };
         user?: string;
+        response_format?: {
+            type?: string;
+            schema?: {
+                [key: string]: unknown;
+            };
+        };
+        chat_template_kwargs?: {
+            [key: string]: unknown;
+        };
+        reasoning_format?: string;
+        thinking_forced_open?: boolean;
+        parse_tool_calls?: boolean;
+        parallel_tool_calls?: boolean;
     };
     path?: never;
     query?: never;
@@ -339,6 +738,14 @@ export type GetV1ModelsResponses = {
             object?: string;
             created?: number;
             owned_by?: string;
+            meta?: {
+                vocab_type?: number;
+                n_vocab?: number;
+                n_ctx_train?: number;
+                n_embd?: number;
+                n_params?: number;
+                size?: number;
+            };
         }>;
     };
 };

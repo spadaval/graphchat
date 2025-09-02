@@ -1,68 +1,28 @@
 import { useEffect, useState } from "react";
-import { getProps } from "../client";
-import { createNetworkError } from "../lib/errors";
-import { logError, safePromise } from "../lib/neverthrow-utils";
+import { fetchServerInfo, type ServerInfo } from "../lib/server";
 
-interface ServerInfo {
-  model_name: string;
-  model_path: string;
-  model_type: string;
-  model_size: string;
-  model_params: number;
-  context_size: number;
-  gpu_layers: number;
-  slots_idle: number;
-  slots_processing: number;
-  slots_pending: number;
-  slots_idle_percent: number;
-  slots_processing_percent: number;
-  slots_pending_percent: number;
-  cpu_usage: number;
-  ram_usage: number;
-  vram_usage: number;
-  system_info: string;
-  timestamp: number;
-}
-
-export function ServerInfo() {
+export function ServerInfoComponent() {
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchServerInfo = async () => {
-      const apiCallResult = await safePromise(
-        getProps(),
-        "Failed to fetch server info",
-      );
-
-      if (apiCallResult.isErr()) {
-        logError(apiCallResult, "ServerInfo fetch");
-        setError(apiCallResult.error.message);
-        setLoading(false);
-        return;
-      }
-
-      const response = apiCallResult.value;
-
-      if (response.error) {
-        const apiError = createNetworkError(
-          `Failed to fetch server info: ${response.error.message}`,
-          "http://localhost:8080/props",
+    const loadServerInfo = async () => {
+      try {
+        const data = await fetchServerInfo();
+        setServerInfo(data);
+        setError(null);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch server info",
         );
-        setError(apiError.message);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      // The generated client returns data directly when successful
-      setServerInfo(response.data);
-      setError(null);
-      setLoading(false);
     };
 
-    fetchServerInfo();
-    const interval = setInterval(fetchServerInfo, 5000); // Refresh every 5 seconds
+    loadServerInfo();
+    const interval = setInterval(loadServerInfo, 5000); // Refresh every 5 seconds
 
     return () => clearInterval(interval);
   }, []);
