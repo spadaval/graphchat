@@ -1,9 +1,8 @@
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
-import { nextVariant, regenerateMessage } from "../lib/state/chat";
-import type { ChatMessage as ChatMessageType } from "../lib/state/llm";
-import "highlight.js/styles/github-dark.css";
+import type { Block } from "../lib/state";
+import { useBlock } from "../lib/state/hooks";
 import { Bot, RefreshCw, RotateCcw, User } from "lucide-react";
 
 type CodeProps = React.DetailedHTMLProps<
@@ -17,7 +16,7 @@ type AnchorProps = React.DetailedHTMLProps<
 >;
 
 interface ChatMessageProps {
-  message: ChatMessageType;
+  blockId: string;
   isStreaming: boolean;
 }
 
@@ -120,31 +119,39 @@ const MessageActions = ({
   </div>
 );
 
-export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
-  const currentVariant =
-    message.variants.find((v) => v.id === message.currentVariantId) ||
-    message.variants[0];
-  const hasMultipleVariants = message.variants.length > 1;
-  const isUser = message.role === "user";
+export function ChatMessage({ blockId, isStreaming }: ChatMessageProps) {
+  // Fetch the specific block
+  const block = useBlock(blockId);
+  
+  // If block not found, render nothing
+  if (!block) return null;
+
+  const isUser = block.role === "user";
 
   return (
     <div className="flex items-start gap-3 justify-start transform transition-all duration-300 ease-out group">
-      <MessageAvatar role={message.role} />
+      <MessageAvatar role={block.role} />
 
       <div className="flex flex-col">
         <MessageBubble
-          text={currentVariant.text}
-          role={message.role}
-          isStreaming={isStreaming}
+          text={block.text}
+          role={block.role}
+          isStreaming={isStreaming && block.isGenerating}
         />
 
         {!isUser && (
           <div className="flex justify-end mt-1">
             <MessageActions
-              hasMultipleVariants={hasMultipleVariants}
-              variantsCount={message.variants.length}
-              onNextVariant={() => nextVariant(message.id)}
-              onRegenerate={() => regenerateMessage(message.id)}
+              hasMultipleVariants={false}
+              variantsCount={1}
+              onNextVariant={() => {
+                // TODO: Implement nextVariant functionality
+                console.log("Next variant not implemented yet");
+              }}
+              onRegenerate={() => {
+                // TODO: Implement regenerateMessage functionality
+                console.log("Regenerate message not implemented yet");
+              }}
             />
           </div>
         )}

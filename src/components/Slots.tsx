@@ -8,7 +8,9 @@ export function SlotsComponent() {
     queryFn: async () => {
       const response = await getSlots();
       if (response.error) {
-        throw new Error(response.error.message || "Failed to fetch slots");
+        // Use type assertion to access the message property
+        const errorMessage = (response.error as any).error?.message || "Failed to fetch slots";
+        throw new Error(errorMessage);
       }
       return response.data;
     },
@@ -24,7 +26,27 @@ export function SlotsComponent() {
   }
 
   if (error) {
-    return <div className="p-4 text-center text-red-500">Error: {error.message}</div>;
+    // Bypass TypeScript error by using any
+    const errorAny: any = error;
+    let errorMessage = 'Failed to fetch slots';
+    
+    if (errorAny instanceof Error) {
+      errorMessage = errorAny.message;
+    } else if (typeof errorAny === 'string') {
+      errorMessage = errorAny;
+    } else if (errorAny && typeof errorAny === 'object') {
+      // Try to extract message from the _Error type
+      if (errorAny.error && typeof errorAny.error === 'object' && errorAny.error !== null) {
+        if (typeof errorAny.error.message === 'string') {
+          errorMessage = errorAny.error.message;
+        } else {
+          errorMessage = JSON.stringify(errorAny.error);
+        }
+      } else {
+        errorMessage = JSON.stringify(errorAny);
+      }
+    }
+    return <div className="p-4 text-center text-red-500">Error: {errorMessage}</div>;
   }
 
   if (!slots || slots.length === 0) {

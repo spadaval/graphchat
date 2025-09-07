@@ -1,23 +1,11 @@
 import { observable } from "@legendapp/state";
+import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
+import { syncObservable } from "@legendapp/state/sync";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { postV1ChatCompletions } from "../../client";
 import { client } from "../../client/client.gen";
 import { type AppError, type AppResult, createLLMError } from "../errors";
-
-export interface MessageVariant {
-  id: string;
-  text: string;
-  createdAt: Date;
-}
-
-export interface ChatMessage {
-  id: number;
-  role: "user" | "assistant";
-  variants: MessageVariant[];
-  currentVariantId: string;
-  createdAt: Date;
-  isGenerating: boolean;
-}
+import type { Block } from "./block";
 
 export interface LLMResponse {
   content: string;
@@ -67,18 +55,25 @@ export const modelProps$ = observable<ModelProperties>({
   return_tokens: false,
 });
 
+// Persist model properties state
+syncObservable(modelProps$, {
+  persist: {
+    name: "modelPropsStore",
+    plugin: ObservablePersistLocalStorage,
+  },
+});
+
 /**
  * Calls the LLM server with the provided messages and returns the response
  */
 export async function callLLM(
-  messages: ChatMessage[],
+  messages: Block[],
   modelProperties: ModelProperties,
 ): Promise<AppResult<LLMResponse>> {
   // Prepare messages for API call
   const messagesForAPI = messages.map((msg) => ({
     role: msg.role,
-    content:
-      msg.variants.find((v) => v.id === msg.currentVariantId)?.text || "",
+    content: msg.text,
   }));
 
   // Call the LLM server using ResultAsync
@@ -150,14 +145,13 @@ export function parseStreamingResponse(
  * Calls the LLM server with streaming enabled using the generated client
  */
 export async function* callLLMStreaming(
-  messages: ChatMessage[],
+  messages: Block[],
   modelProperties: ModelProperties,
 ): AsyncGenerator<Result<StreamingLLMResponse, AppError>, void, unknown> {
   // Prepare messages for API call
   const messagesForAPI = messages.map((msg) => ({
     role: msg.role,
-    content:
-      msg.variants.find((v) => v.id === msg.currentVariantId)?.text || "",
+    content: msg.text,
   }));
 
   // Use ResultAsync to handle the SSE client creation
@@ -203,12 +197,12 @@ export async function* callLLMStreaming(
 
   // Handle the SSE events
   for await (const event of sseClient.stream) {
-    console.log(event);
     if (event === "[DONE]") {
       yield ok({ content: "", done: true });
       break;
     }
 
-    yield ok({ content: event.choices[0].delta.content ?? "", done: false });
+    const typedEvent = event as any; // Type assertion since the event type is unknown
+    yield ok({ content: typedEvent.choices[0].delta.content ?? "", done: false });
   }
 }

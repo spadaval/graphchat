@@ -1,5 +1,5 @@
 import { use$ } from "@legendapp/state/react";
-import { modelProps$ } from "~/lib/state/llm";
+import { modelProps$ } from "~/lib/state";
 
 export function ModelProperties() {
   const modelProperties = use$(modelProps$);

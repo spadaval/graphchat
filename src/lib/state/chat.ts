@@ -1,65 +1,53 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
-
 import { syncObservable } from "@legendapp/state/sync";
-import {
-  type ChatMessage,
-  callLLM,
-  callLLMStreaming,
-  type MessageVariant,
-  modelProps$,
-} from "./llm";
+import { callLLM, callLLMStreaming, modelProps$, type ModelProperties } from "./llm";
+import { blocks$, createBlock, type Block } from "./block";
+import { BlockId, ChatId } from "./types";
+
 // Global configuration
 
 export interface ChatThread {
-  id: string;
+  id: ChatId;
   title: string;
-  messages: ChatMessage[];
+  messages: BlockId[];
   createdAt: Date;
   lastMessageAt: Date;
 }
 
 interface ChatStore {
-  threads: Record<string, ChatThread>;
-  currentThreadId: string | undefined;
+  threads: Record<ChatId, ChatThread>;
+  currentThreadId: ChatId | undefined;
   currentUserMessage: string;
 }
 
 // Create a global observable for the chat store
-let nextId = 0;
 let nextThreadId = 1;
 
-const createMessageVariant = (text: string): MessageVariant => ({
-  id: crypto.randomUUID(),
-  text,
-  createdAt: new Date(),
-});
-
-const createChatMessage = (
-  text: string,
-  role: "user" | "assistant" = "user",
-): ChatMessage => {
-  const variant = createMessageVariant(text);
-  return {
-    id: nextId++,
-    role,
-    variants: [variant],
-    currentVariantId: variant.id,
+const newThread = (title?: string, initialMessage?: string): ChatThread => {
+  const thread: ChatThread = {
+    id: `thread-${nextThreadId++}`,
+    title: title || "New Chat",
+    messages: [],
     createdAt: new Date(),
-    isGenerating: false,
+    lastMessageAt: new Date(),
   };
+  
+  // If there's an initial message, create it and add to thread
+  if (initialMessage) {
+    // Create a block for the initial message
+    const block = createBlock(initialMessage, "user");
+    blocks$.assign({ [block.id]: block });
+    // Directly update the thread properties instead of reassigning
+    thread.messages.push(block.id);
+    thread.lastMessageAt = new Date();
+  }
+  
+  return thread;
 };
 
-const newThread = (title?: string, initialMessage?: string): ChatThread => ({
-  id: `thread-${nextThreadId++}`,
-  title: title || "New Chat",
-  messages: initialMessage ? [createChatMessage(initialMessage)] : [],
-  createdAt: new Date(),
-  lastMessageAt: new Date(),
-});
-
 const chatStore: ChatStore = {
-  threads: {} as Record<string, ChatThread>,
+  threads: {} as Record<ChatId, ChatThread>,
   currentThreadId: undefined,
   currentUserMessage: "",
 };
@@ -71,97 +59,12 @@ export const setCurrentUserMessage = (message: string) => {
   chatStore$.currentUserMessage.set(message);
 };
 
-export const nextVariant = (messageId: number) => {
-  const currentThreadId = chatStore$.currentThreadId.get();
-  if (!currentThreadId) return;
-
-  const threads = chatStore$.threads.get();
-  const thread = threads[currentThreadId];
-  if (!thread) return;
-
-  const messageIndex = thread.messages.findIndex((m) => m.id === messageId);
-  if (messageIndex === -1) return;
-
-  const message = thread.messages[messageIndex];
-  if (message.variants.length <= 1) return;
-
-  const currentVariantId = message.currentVariantId;
-  const currentVariantIndex = message.variants.findIndex(
-    (v) => v.id === currentVariantId,
-  );
-  const nextVariantIndex = (currentVariantIndex + 1) % message.variants.length;
-  const nextVariantId = message.variants[nextVariantIndex].id;
-
-  // Update the message variant directly
-  chatStore$.threads[currentThreadId].messages[messageIndex].currentVariantId.set(nextVariantId);
-};
-
-export const previousVariant = (messageId: number) => {
-  const currentThreadId = chatStore$.currentThreadId.get();
-  if (!currentThreadId) return;
-
-  const threads = chatStore$.threads.get();
-  const thread = threads[currentThreadId];
-  if (!thread) return;
-
-  const messageIndex = thread.messages.findIndex((m) => m.id === messageId);
-  if (messageIndex === -1) return;
-
-  const message = thread.messages[messageIndex];
-  if (message.variants.length <= 1) return;
-
-  const currentVariantId = message.currentVariantId;
-  const currentVariantIndex = message.variants.findIndex(
-    (v) => v.id === currentVariantId,
-  );
-  const prevVariantIndex =
-    (currentVariantIndex - 1 + message.variants.length) %
-    message.variants.length;
-  const prevVariantId = message.variants[prevVariantIndex].id;
-
-  // Update the message variant directly
-  chatStore$.threads[currentThreadId].messages[messageIndex].currentVariantId.set(prevVariantId);
-};
-
-export const regenerateMessage = async (messageId: number) => {
-  const currentThreadId = chatStore$.currentThreadId.get();
-  if (!currentThreadId) return;
-
-  const threads = chatStore$.threads.get();
-  const thread = threads[currentThreadId];
-  if (!thread) return;
-
-  const messageIndex = thread.messages.findIndex((m) => m.id === messageId);
-  if (messageIndex === -1) return;
-
-  const message = thread.messages[messageIndex];
-  if (message.role !== "assistant") return;
-
-  // Get all messages up to this point
-  const messagesUpToThis = thread.messages.slice(0, messageIndex);
-
-  const responseResult = await callLLM(messagesUpToThis, modelProps$.get());
-
-  responseResult.match(
-    (response) => {
-      // Create a new variant with the regenerated content
-      const newVariant = {
-        id: crypto.randomUUID(),
-        text: response.content,
-        createdAt: new Date(),
-      };
-
-      // Update the message directly by pushing the new variant
-      const message$ = chatStore$.threads[currentThreadId].messages[messageIndex];
-      message$.variants.push(newVariant);
-      message$.currentVariantId.set(newVariant.id);
-    },
-    (error) => {
-      // Error is already logged by logError, but we could show a user notification here
-      console.error("Failed to regenerate message:", error.message);
-    },
-  );
-};
+// TODO: Reimplement these functions for the new block-based system
+// These functions need to be redesigned since we're no longer storing message objects directly
+// We'll need to work with blocks as needed
+// export const nextVariant = (messageId: number) => { ... }
+// export const previousVariant = (messageId: number) => { ... }
+// export const regenerateMessage = async (messageId: number) => { ... }
 
 export const createNewThread = (initialMessage?: string) => {
   const thread = newThread(initialMessage?.slice(0, 100), initialMessage);
@@ -200,12 +103,63 @@ export const deleteAllThreads = () => {
   chatStore$.currentThreadId.set(undefined);
 };
 
+// Helper function to get messages for a thread (converted from blocks)
+// TODO: This function should be deprecated in favor of working directly with blocks
+export const getThreadMessages = (threadId: string): Block[] => {
+  const threads = chatStore$.threads.get();
+  const thread = threads[threadId];
+  if (!thread) return [];
+  
+  // Get blocks directly
+  return thread.messages
+    .map((blockId) => {
+      const block = blocks$.get()[blockId];
+      return block || null;
+    })
+    .filter((block): block is Block => block !== null);
+};
+
 export const getCurrentThread = (): ChatThread | undefined => {
   const currentThreadId = chatStore$.currentThreadId.get();
   if (!currentThreadId) return undefined;
   const threads = chatStore$.threads.get();
-  console.log(threads);
   return threads[currentThreadId];
+};
+
+// Backward compatibility function that returns a thread with actual messages
+// Note: This function returns a modified thread type for backward compatibility
+export interface ChatThreadWithMessages extends Omit<ChatThread, 'messages'> {
+  messages: Block[];
+}
+
+/**
+ * @deprecated This method is deprecated and will be removed in a future version.
+ * Please use `getCurrentThread` instead.
+ */
+export const getCurrentThreadWithMessages = (): ChatThreadWithMessages | undefined => {
+  const currentThreadId = chatStore$.currentThreadId.get();
+  if (!currentThreadId) return undefined;
+  const threads = chatStore$.threads.get();
+  const thread = threads[currentThreadId];
+  if (!thread) return undefined;
+  
+  // Create a new thread object with actual messages instead of IDs
+  return {
+    ...thread,
+    messages: getThreadMessages(currentThreadId)
+  };
+};
+
+// Helper function to get blocks for LLM
+const getBlocksForLLM = (blockIds: BlockId[]): Block[] => {
+  return blockIds.map((blockId) => {
+    const block = blocks$.get()[blockId];
+    if (!block) {
+      // Return a placeholder block if block not found
+      return createBlock("", "user");
+    }
+    return block;
+  });
 };
 
 export const sendMessage = async (text?: string) => {
@@ -215,7 +169,9 @@ export const sendMessage = async (text?: string) => {
     return;
   }
 
-  const message = createChatMessage(text, "user");
+  // Create a block for the user message
+  const userBlock = createBlock(text, "user");
+  blocks$.assign({ [userBlock.id]: userBlock });
 
   let currentThreadId = chatStore$.currentThreadId.get();
   if (!currentThreadId) {
@@ -224,39 +180,46 @@ export const sendMessage = async (text?: string) => {
 
   const currentThread$ = chatStore$.threads[currentThreadId];
 
-  currentThread$.messages.push(message);
+  // Add the user block ID to the thread
+  currentThread$.messages.push(userBlock.id);
   chatStore$.currentUserMessage.set("");
 
-  const assistantMessage = createChatMessage("", "assistant");
-  currentThread$.messages.push(assistantMessage);
+  // Create a block for the assistant response
+  const assistantBlock = createBlock("", "assistant");
+  blocks$.assign({ [assistantBlock.id]: assistantBlock });
+  currentThread$.messages.push(assistantBlock.id);
 
-  const response = callLLMStreaming(
-    currentThread$.messages.get(),
-    modelProps$.get(),
-  );
-  console.log("response", response);
+  // Get all blocks for the thread to send to the LLM
+  const threadBlocks = currentThread$.messages.get();
+  const blocksForLLM = getBlocksForLLM(threadBlocks);
 
-  const messageToUpdate =
-    currentThread$.messages[currentThread$.messages.length - 1];
-  const variantToUpdate =
-    messageToUpdate.variants[messageToUpdate.variants.length - 1];
+  // Set the last block as generating by directly updating the observable
+  const lastBlockIndex = blocksForLLM.length - 1;
+  if (lastBlockIndex >= 0) {
+    const lastBlockId = threadBlocks[lastBlockIndex];
+    blocks$[lastBlockId].isGenerating.set(true);
+  }
 
-  for await (const chunkResult of response) {
+  // Stream the response and update the assistant block
+  const responseStream = callLLMStreaming(blocksForLLM, modelProps$.get());
+  
+  let accumulatedContent = "";
+  
+  for await (const chunkResult of responseStream) {
     chunkResult.match(
       (chunk) => {
         if (chunk.done) {
           // Stream is complete
           return;
         }
-        // Append content to the message
-        variantToUpdate.text.set(variantToUpdate.text.get() + chunk.content);
+        // Accumulate content and update the assistant block directly
+        accumulatedContent += chunk.content;
+        blocks$[assistantBlock.id].text.set(accumulatedContent);
       },
       (error) => {
         // Handle streaming error
         console.error("Streaming error:", error.message);
-        variantToUpdate.text.set(
-          `${variantToUpdate.text.get()}\n\n[Error: ${error.message}]`,
-        );
+        blocks$[assistantBlock.id].text.set(`${accumulatedContent}\n\n[Error: ${error.message}]`);
       },
     );
   }

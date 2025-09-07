@@ -23,10 +23,11 @@ export interface ServerInfo {
   timestamp: number;
 }
 
-/**
+/** 
  * Fetches server information from the API
  */
 export async function fetchServerInfo(): Promise<ServerInfo | null> {
+  // Call getProps without throwOnError so we can handle errors gracefully
   const apiCallResult = await ResultAsync.fromPromise(getProps(), (error) =>
     toAppError(error),
   );
@@ -37,9 +38,12 @@ export async function fetchServerInfo(): Promise<ServerInfo | null> {
 
   const response = apiCallResult.value;
 
-  if (response.error) {
+  // Check if response has an error property with the correct structure
+  if (response && typeof response === 'object' && 'error' in response && response.error) {
+    const errorObj = response.error as { error?: { message?: string } } | null;
+    const errorMessage = errorObj?.error?.message || "Unknown error";
     const apiError = createNetworkError(
-      `Failed to fetch server info: ${response.error.message || "Unknown error"}`,
+      `Failed to fetch server info: ${errorMessage}`,
       "http://localhost:8080/props",
     );
     throw new Error(apiError.message);
