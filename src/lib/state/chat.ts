@@ -193,6 +193,30 @@ export const switchThread = (threadId: string) => {
   chatStore$.currentThreadId.set(threadId);
 };
 
+export const deleteThread = (threadId: string) => {
+  const threads = chatStore$.threads.get();
+  const newThreads = { ...threads };
+  delete newThreads[threadId];
+  
+  // If we're deleting the current thread, switch to another thread or unset current thread
+  const currentThreadId = chatStore$.currentThreadId.get();
+  if (currentThreadId === threadId) {
+    const threadIds = Object.keys(newThreads);
+    if (threadIds.length > 0) {
+      chatStore$.currentThreadId.set(threadIds[0]);
+    } else {
+      chatStore$.currentThreadId.set(undefined);
+    }
+  }
+  
+  chatStore$.threads.set(newThreads);
+};
+
+export const deleteAllThreads = () => {
+  chatStore$.threads.set({});
+  chatStore$.currentThreadId.set(undefined);
+};
+
 export const getCurrentThread = (): ChatThread | undefined => {
   const currentThreadId = chatStore$.currentThreadId.get();
   if (!currentThreadId) return undefined;

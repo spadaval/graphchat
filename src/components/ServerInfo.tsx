@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchServerInfo, type ServerInfo } from "../lib/server";
+import { SlotsComponent } from "./Slots";
 
 export function ServerInfoComponent() {
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
@@ -114,51 +115,7 @@ export function ServerInfoComponent() {
         </div>
       </div>
 
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-gray-200">Slots</h3>
-        <div className="space-y-2">
-          <div>
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-gray-400">Idle</span>
-              <span className="text-gray-300">{serverInfo.slots_idle}</span>
-            </div>
-            <div className="h-1.5 w-full bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-500"
-                style={{ width: `${serverInfo.slots_idle_percent}%` }}
-              />
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-gray-400">Processing</span>
-              <span className="text-gray-300">
-                {serverInfo.slots_processing}
-              </span>
-            </div>
-            <div className="h-1.5 w-full bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500"
-                style={{ width: `${serverInfo.slots_processing_percent}%` }}
-              />
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-gray-400">Pending</span>
-              <span className="text-gray-300">{serverInfo.slots_pending}</span>
-            </div>
-            <div className="h-1.5 w-full bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-yellow-500"
-                style={{ width: `${serverInfo.slots_pending_percent}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <SlotsComponent />
 
       <div className="pt-2 text-xs text-gray-500 text-center">
         Last updated:{" "}
