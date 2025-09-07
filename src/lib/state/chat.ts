@@ -92,15 +92,8 @@ export const nextVariant = (messageId: number) => {
   const nextVariantIndex = (currentVariantIndex + 1) % message.variants.length;
   const nextVariantId = message.variants[nextVariantIndex].id;
 
-  // Update the thread with the new message variant
-  const updatedThread = { ...thread };
-  updatedThread.messages = [...thread.messages];
-  updatedThread.messages[messageIndex] = {
-    ...message,
-    currentVariantId: nextVariantId,
-  };
-
-  chatStore$.threads.set({ [currentThreadId]: updatedThread });
+  // Update the message variant directly
+  chatStore$.threads[currentThreadId].messages[messageIndex].currentVariantId.set(nextVariantId);
 };
 
 export const previousVariant = (messageId: number) => {
@@ -126,15 +119,8 @@ export const previousVariant = (messageId: number) => {
     message.variants.length;
   const prevVariantId = message.variants[prevVariantIndex].id;
 
-  // Update the thread with the new message variant
-  const updatedThread = { ...thread };
-  updatedThread.messages = [...thread.messages];
-  updatedThread.messages[messageIndex] = {
-    ...message,
-    currentVariantId: prevVariantId,
-  };
-
-  chatStore$.threads.set({ [currentThreadId]: updatedThread });
+  // Update the message variant directly
+  chatStore$.threads[currentThreadId].messages[messageIndex].currentVariantId.set(prevVariantId);
 };
 
 export const regenerateMessage = async (messageId: number) => {
@@ -165,15 +151,10 @@ export const regenerateMessage = async (messageId: number) => {
         createdAt: new Date(),
       };
 
-      // Update the thread with the new message variant
-      const updatedThread = { ...thread };
-      updatedThread.messages = [...thread.messages];
-      const updatedMessage = { ...message };
-      updatedMessage.variants = [...message.variants, newVariant];
-      updatedMessage.currentVariantId = newVariant.id;
-      updatedThread.messages[messageIndex] = updatedMessage;
-
-      chatStore$.threads.set({ [currentThreadId]: updatedThread });
+      // Update the message directly by pushing the new variant
+      const message$ = chatStore$.threads[currentThreadId].messages[messageIndex];
+      message$.variants.push(newVariant);
+      message$.currentVariantId.set(newVariant.id);
     },
     (error) => {
       // Error is already logged by logError, but we could show a user notification here
@@ -184,7 +165,7 @@ export const regenerateMessage = async (messageId: number) => {
 
 export const createNewThread = (initialMessage?: string) => {
   const thread = newThread(initialMessage?.slice(0, 100), initialMessage);
-  chatStore$.threads.set({ [thread.id]: thread });
+  chatStore$.threads[thread.id].set(thread);
   chatStore$.currentThreadId.set(thread.id);
   return thread.id;
 };
@@ -194,26 +175,28 @@ export const switchThread = (threadId: string) => {
 };
 
 export const deleteThread = (threadId: string) => {
-  const threads = chatStore$.threads.get();
-  const newThreads = { ...threads };
-  delete newThreads[threadId];
+  // Delete the thread directly
+  chatStore$.threads[threadId].delete();
   
   // If we're deleting the current thread, switch to another thread or unset current thread
   const currentThreadId = chatStore$.currentThreadId.get();
   if (currentThreadId === threadId) {
-    const threadIds = Object.keys(newThreads);
+    const threads = chatStore$.threads.get();
+    const threadIds = Object.keys(threads);
     if (threadIds.length > 0) {
       chatStore$.currentThreadId.set(threadIds[0]);
     } else {
       chatStore$.currentThreadId.set(undefined);
     }
   }
-  
-  chatStore$.threads.set(newThreads);
 };
 
 export const deleteAllThreads = () => {
-  chatStore$.threads.set({});
+  // Get all thread keys and delete each one directly
+  const threads = chatStore$.threads.get();
+  Object.keys(threads).forEach(threadId => {
+    chatStore$.threads[threadId].delete();
+  });
   chatStore$.currentThreadId.set(undefined);
 };
 
