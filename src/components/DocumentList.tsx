@@ -6,14 +6,14 @@ import type { DocumentId } from "~/lib/state/types";
 interface DocumentListProps {
   documents: Document[];
   onCreateNew: () => void;
-  onEdit: (document: Document) => void;
+  onSelect: (documentId: DocumentId) => void;
   onDelete: (id: DocumentId) => void;
 }
 
 export function DocumentList({
   documents,
   onCreateNew,
-  onEdit,
+  onSelect,
   onDelete,
 }: DocumentListProps) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,7 +40,7 @@ export function DocumentList({
   const handleEditKeyDown = (event: React.KeyboardEvent, doc: Document) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      onEdit(doc);
+      onSelect(doc.id);
     }
   };
 
@@ -76,7 +76,7 @@ export function DocumentList({
                   <div className="flex justify-between items-start">
                     <h3
                       className="font-medium text-zinc-100 cursor-pointer hover:text-zinc-300"
-                      onClick={() => onEdit(doc)}
+                      onClick={() => onSelect(doc.id)}
                       onKeyDown={(e) => handleEditKeyDown(e, doc)}
                     >
                       {doc.title}

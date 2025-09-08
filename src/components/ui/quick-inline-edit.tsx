@@ -1,19 +1,20 @@
 import { useState, useRef, useEffect } from "react";
+import { use$ } from "@legendapp/state/react";
+import type { Observable } from "@legendapp/state";
 import { Input } from "~/components/ui/input";
 
 interface QuickInlineEditProps {
-  value: string;
-  onChange: (value: string) => void;
+  value$: Observable<string>;
   placeholder?: string;
   className?: string;
 }
 
 export function QuickInlineEdit({
-  value,
-  onChange,
+  value$,
   placeholder = "Untitled",
   className = "",
 }: QuickInlineEditProps) {
+  const value = use$(value$);
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -39,7 +40,7 @@ export function QuickInlineEdit({
   const handleSave = () => {
     setIsEditing(false);
     if (editValue.trim() !== value) {
-      onChange(editValue.trim() || placeholder);
+      value$.set(editValue.trim() || placeholder);
     }
   };
 

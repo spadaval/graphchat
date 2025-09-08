@@ -65,6 +65,7 @@ export const setCurrentUserMessage = (message: string) => {
 
 export const createNewThread = (initialMessage?: string) => {
   // Use first 30 characters of the initial message as the thread title, or default to "New Chat"
+  console.log("initialMessage", initialMessage);
   const title = initialMessage
     ? initialMessage.trim().substring(0, 30) +
       (initialMessage.trim().length > 30 ? "..." : "")

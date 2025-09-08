@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { DocumentList } from "~/components/DocumentList";
 import { DocumentEditor } from "~/components/DocumentEditor";
 import type { Document } from "~/lib/state";
@@ -6,6 +5,7 @@ import type { DocumentId } from "~/lib/state/types";
 import {
   createDocument,
   deleteDocument,
+  documentStore$,
   setCurrentDocument,
   updateDocument,
   useCurrentDocument,
@@ -15,39 +15,21 @@ import {
 export function DocumentEditorPage() {
   const documents = useDocuments();
   const currentDocument = useCurrentDocument();
-  const [isSaving, setIsSaving] = useState(false);
 
   const handleCreateNew = () => {
-    const id = createDocument("Untitled Document");
+    // Create a new empty document and set it as the current document
+    const id = createDocument("Untitled Document", "");
     setCurrentDocument(id);
-  };
-
-  const handleEdit = (document: Document) => {
-    setCurrentDocument(document.id);
-  };
-
-  const handleDelete = (id: DocumentId) => {
-    if (confirm("Are you sure you want to delete this document?")) {
-      deleteDocument(id);
-    }
-  };
-
-  const handleSave = (title: string, content: string, tags: string[]) => {
-    if (!currentDocument) {
-      // Creating a new document (tags parameter is ignored since we removed tagging)
-      createDocument(title, content);
-    } else {
-      // Updating existing document (tags parameter is ignored since we removed tagging)
-      setIsSaving(true);
-      updateDocument(currentDocument.id, { title, content });
-      
-      setTimeout(() => setIsSaving(false), 500);
-    }
   };
 
   const handleCancel = () => {
     setCurrentDocument(undefined as unknown as DocumentId);
   };
+
+  // Get the observable for the current document if it exists
+  const currentDocument$ = currentDocument 
+    ? documentStore$.documents[currentDocument.id] 
+    : null;
 
   return (
     <div className="flex h-screen bg-zinc-950">
@@ -56,18 +38,23 @@ export function DocumentEditorPage() {
         <DocumentList
           documents={documents}
           onCreateNew={handleCreateNew}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
+          onSelect={setCurrentDocument}
+          onDelete={deleteDocument}
         />
       </div>
       
       {/* Main editor area */}
       <div className="flex-1 flex flex-col">
-        {currentDocument ? (
+        {currentDocument$ ? (
           <DocumentEditor
-            document={currentDocument}
-            onSave={handleSave}
+            document$={currentDocument$}
+            onSave={(title, content) => {
+              if (currentDocument) {
+                updateDocument(currentDocument.id, { title, content });
+              }
+            }}
             onCancel={handleCancel}
+            onDelete={currentDocument ? deleteDocument : undefined}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center">

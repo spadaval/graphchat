@@ -1,26 +1,28 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { use$ } from "@legendapp/state/react";
+import type { Observable } from "@legendapp/state";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
 import { QuickInlineEdit } from "~/components/ui/quick-inline-edit";
 import type { Document } from "~/lib/state";
+import type { DocumentId } from "~/lib/state/types";
 
 interface DocumentEditorProps {
-  document?: Document;
+  document$: Observable<Document>;
   onSave: (title: string, content: string, tags: string[]) => void;
   onCancel: () => void;
-  onDelete?: (id: string) => void;
-  isSaving?: boolean;
+  onDelete?: (id: DocumentId) => void;
 }
 
 export function DocumentEditor({
-  document,
+  document$,
   onSave,
   onCancel,
   onDelete,
-  isSaving,
 }: DocumentEditorProps) {
-  const [title, setTitle] = useState(document?.title || "");
-  const [content, setContent] = useState(document?.content || "");
+  // Always use use$ hook to avoid conditional hook usage
+  const document = use$(document$);
+  
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea
@@ -29,30 +31,40 @@ export function DocumentEditor({
       textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
-  }, [content]);
+  }, [document.content]);
 
   const handleSave = () => {
-    if (!title.trim()) return;
+    if (!document.title.trim()) return;
     // Pass empty array for tags since we're removing the tagging system
-    onSave(title, content, []);
+    onSave(document.title, document.content, []);
   };
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-zinc-800">
+      <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
         <QuickInlineEdit
-          value={title}
-          onChange={setTitle}
+          value$={document$.title}
           placeholder="Document title"
-          className="w-full"
+          className="flex-1"
         />
+        <div className="flex items-center space-x-2 ml-4">
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(document.id)}
+              className="px-3 py-1 bg-red-700 hover:bg-red-600 text-zinc-200 rounded text-sm"
+            >
+              Delete
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col p-4">
         <Textarea
           ref={textareaRef}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
+          value={use$(document$.content)}
+          onChange={(e) => document$.content.set(e.target.value)}
           className="flex-1 resize-none bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 border-zinc-700 focus:ring-zinc-600"
           placeholder="Start writing your document..."
         />
@@ -62,7 +74,11 @@ export function DocumentEditor({
         <Button type="button" onClick={onCancel} variant="outline">
           Cancel
         </Button>
-        <Button type="button" onClick={handleSave} disabled={!title.trim()}>
+        <Button 
+          type="button" 
+          onClick={handleSave} 
+          disabled={!document.title?.trim()}
+        >
           Save
         </Button>
       </div>

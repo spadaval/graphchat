@@ -313,7 +313,7 @@ export function SidebarContent({
       <div className="p-2">
         <button
           type="button"
-          onClick={createNewThread}
+          onClick={() => createNewThread()}
           className="w-full p-3 mb-2 bg-gradient-to-br from-zinc-700 to-zinc-800 hover:from-zinc-600 hover:to-zinc-700 text-zinc-100 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:ring-offset-2 text-sm"
         >
           + New Chat
