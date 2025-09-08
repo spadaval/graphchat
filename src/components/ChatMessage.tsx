@@ -1,9 +1,8 @@
+import { Bot, RefreshCw, RotateCcw, User } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
-import type { Block } from "../lib/state";
 import { useBlock } from "../lib/state/hooks";
-import { Bot, RefreshCw, RotateCcw, User } from "lucide-react";
 
 type CodeProps = React.DetailedHTMLProps<
   React.HTMLAttributes<HTMLElement>,
@@ -27,8 +26,8 @@ interface MessageAvatarProps {
 const MessageAvatar = ({ role }: MessageAvatarProps) => (
   <span
     className={`w-7 h-7 rounded-full flex items-center justify-center text-zinc-300 text-xs font-medium flex-shrink-0 ${
-      role === "user" 
-        ? "bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600" 
+      role === "user"
+        ? "bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600"
         : "bg-gradient-to-br from-zinc-800 to-zinc-850 border border-zinc-700"
     }`}
   >
@@ -59,7 +58,10 @@ const MessageBubble = ({ text, role, isStreaming }: MessageBubbleProps) => {
                   </code>
                 </pre>
               ) : (
-                <code className="bg-zinc-700 px-1 py-0.5 rounded text-xs" {...props}>
+                <code
+                  className="bg-zinc-700 px-1 py-0.5 rounded text-xs"
+                  {...props}
+                >
                   {children}
                 </code>
               );
@@ -111,11 +113,21 @@ const MessageBubble = ({ text, role, isStreaming }: MessageBubbleProps) => {
               />
             ),
             p: (props) => <p className="mb-3 text-zinc-200" {...props} />,
-            h1: (props) => <h1 className="text-xl font-bold mb-3 text-zinc-100" {...props} />,
-            h2: (props) => <h2 className="text-lg font-bold mb-3 text-zinc-100" {...props} />,
-            h3: (props) => <h3 className="text-md font-bold mb-3 text-zinc-100" {...props} />,
-            ul: (props) => <ul className="list-disc pl-5 mb-3 text-zinc-200" {...props} />,
-            ol: (props) => <ol className="list-decimal pl-5 mb-3 text-zinc-200" {...props} />,
+            h1: (props) => (
+              <h1 className="text-xl font-bold mb-3 text-zinc-100" {...props} />
+            ),
+            h2: (props) => (
+              <h2 className="text-lg font-bold mb-3 text-zinc-100" {...props} />
+            ),
+            h3: (props) => (
+              <h3 className="text-md font-bold mb-3 text-zinc-100" {...props} />
+            ),
+            ul: (props) => (
+              <ul className="list-disc pl-5 mb-3 text-zinc-200" {...props} />
+            ),
+            ol: (props) => (
+              <ol className="list-decimal pl-5 mb-3 text-zinc-200" {...props} />
+            ),
           }}
         >
           {text}
@@ -167,14 +179,16 @@ const MessageActions = ({
 export function ChatMessage({ blockId, isStreaming }: ChatMessageProps) {
   // Fetch the specific block
   const block = useBlock(blockId);
-  
+
   // If block not found, render nothing
   if (!block) return null;
 
   const isUser = block.role === "user";
 
   return (
-    <div className={`flex items-start gap-3 transform transition-all duration-300 ease-out group ${isUser ? 'flex-row-reverse' : ''}`}>
+    <div
+      className={`flex items-start gap-3 transform transition-all duration-300 ease-out group ${isUser ? "flex-row-reverse" : ""}`}
+    >
       <MessageAvatar role={block.role} />
 
       <div className="flex flex-col w-full min-w-0">

@@ -203,6 +203,9 @@ export async function* callLLMStreaming(
     }
 
     const typedEvent = event as any; // Type assertion since the event type is unknown
-    yield ok({ content: typedEvent.choices[0].delta.content ?? "", done: false });
+    yield ok({
+      content: typedEvent.choices[0].delta.content ?? "",
+      done: false,
+    });
   }
 }

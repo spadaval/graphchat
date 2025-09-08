@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
-import { useThreadsArray, useCurrentThreadId } from "~/lib/state/hooks";
+import { useEffect, useRef, useState } from "react";
 import type { ChatThread } from "~/lib/state";
+import { useCurrentThreadId, useThreadsArray } from "~/lib/state/hooks";
 
 // Sidebar Header Component
 export function SidebarHeader() {
@@ -31,11 +31,11 @@ function ThreadItem({
   onDelete,
   onDuplicate,
   isOpenMenu,
-  onToggleMenu
+  onToggleMenu,
 }: ThreadItemProps) {
   return (
-    <div 
-      key={thread.id} 
+    <div
+      key={thread.id}
       className={`relative mb-1 rounded-md p-2 transition-all duration-200 flex items-center group ${
         isActive
           ? "bg-gradient-to-br from-zinc-700 to-zinc-800 text-zinc-100 ring-2 ring-zinc-600"
@@ -59,8 +59,22 @@ function ThreadItem({
           className="p-1 rounded hover:bg-zinc-700 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-zinc-600 opacity-0 group-hover:opacity-100"
           title="More options"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            role="img"
+            aria-label="More options"
+          >
+            <title>More options</title>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+            />
           </svg>
         </button>
         <OverflowMenu
@@ -86,7 +100,14 @@ interface OverflowMenuProps {
   onClose: () => void;
 }
 
-function OverflowMenu({ threadId, onDelete, onDuplicate, onEdit, isOpen, onClose }: OverflowMenuProps) {
+function OverflowMenu({
+  threadId,
+  onDelete,
+  onDuplicate,
+  onEdit,
+  isOpen,
+  onClose,
+}: OverflowMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -99,7 +120,7 @@ function OverflowMenu({ threadId, onDelete, onDuplicate, onEdit, isOpen, onClose
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-    
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -108,7 +129,7 @@ function OverflowMenu({ threadId, onDelete, onDuplicate, onEdit, isOpen, onClose
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       ref={menuRef}
       className="absolute right-0 top-6 mt-1 w-48 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-10"
     >
@@ -154,7 +175,12 @@ interface EditNameModalProps {
   onSave: (threadId: string, newTitle: string) => void;
 }
 
-function EditNameModal({ thread, isOpen, onClose, onSave }: EditNameModalProps) {
+function EditNameModal({
+  thread,
+  isOpen,
+  onClose,
+  onSave,
+}: EditNameModalProps) {
   const [newTitle, setNewTitle] = useState(thread.title);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -178,7 +204,9 @@ function EditNameModal({ thread, isOpen, onClose, onSave }: EditNameModalProps) 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-6 w-96">
-        <h3 className="text-lg font-medium text-zinc-100 mb-4">Edit Chat Name</h3>
+        <h3 className="text-lg font-medium text-zinc-100 mb-4">
+          Edit Chat Name
+        </h3>
         <form onSubmit={handleSubmit}>
           <input
             ref={inputRef}
@@ -216,22 +244,25 @@ interface DeleteAllButtonProps {
   onBlur: () => void;
 }
 
-function DeleteAllButton({ confirmation, onClick, onBlur }: DeleteAllButtonProps) {
+function DeleteAllButton({
+  confirmation,
+  onClick,
+  onBlur,
+}: DeleteAllButtonProps) {
   return (
-    <div 
-      className="flex items-center"
-      onBlur={onBlur}
-      tabIndex={-1}
-    >
+    <div className="flex items-center">
       <button
         type="button"
         onClick={onClick}
+        onBlur={onBlur}
         className={`w-full p-2 text-sm rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 ${
           confirmation
             ? "bg-gradient-to-br from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-zinc-100"
             : "bg-gradient-to-br from-zinc-800 to-zinc-850 hover:from-zinc-700 hover:to-zinc-800 text-zinc-300"
         }`}
-        title={confirmation ? "Confirm deletion of all chats" : "Delete all chats"}
+        title={
+          confirmation ? "Confirm deletion of all chats" : "Delete all chats"
+        }
       >
         {confirmation ? "Confirm Delete All" : "Delete All Chats"}
       </button>
@@ -259,12 +290,12 @@ export function SidebarContent({
 }: SidebarContentProps) {
   const threads = useThreadsArray();
   const currentThreadId = useCurrentThreadId();
-  
+
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingThread, setEditingThread] = useState<ChatThread | null>(null);
   const [deleteAllConfirmation, setDeleteAllConfirmation] = useState(false);
-  
+
   const handleEditThread = (thread: ChatThread) => {
     setEditingThread(thread);
     setEditModalOpen(true);
@@ -302,12 +333,14 @@ export function SidebarContent({
               onDelete={deleteThread}
               onDuplicate={duplicateThread}
               isOpenMenu={openMenuId === thread.id}
-              onToggleMenu={(id) => setOpenMenuId(id === openMenuId ? null : id)}
+              onToggleMenu={(id) =>
+                setOpenMenuId(id === openMenuId ? null : id)
+              }
             />
           ))}
         </div>
       )}
-      
+
       {/* Delete All Button */}
       <div className="p-2 mt-auto">
         <DeleteAllButton
@@ -323,7 +356,7 @@ export function SidebarContent({
           onBlur={() => setDeleteAllConfirmation(false)}
         />
       </div>
-      
+
       {/* Edit Name Modal */}
       {editingThread && (
         <EditNameModal

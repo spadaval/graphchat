@@ -8,13 +8,13 @@ GraphChat is a React-based AI chat application built with TanStack Router, desig
 
 - **Framework**: React 19 with TypeScript
 - **Routing**: TanStack Router
-- **State Management**: @legendapp/state with localStorage persistence
+- **State Management**: `@legendapp/state` with localStorage persistence
 - **UI Framework**: Tailwind CSS with custom dark theme
-- **API Client**: Auto-generated OpenAPI client with @hey-api/openapi-ts
+- **API Client**: Auto-generated OpenAPI client with `@hey-api/openapi-ts`
 - **LLM Integration**: SSE (Server-Sent Events) streaming for real-time responses
-- **Error Handling**: neverthrow for functional error handling
-- **Build Tool**: Vite
-- **Code Quality**: Biome for formatting and linting
+- **Error Handling**: `neverthrow` for functional error handling
+- **Build Tool**: `Vite`
+- **Code Quality**: `Biome` for formatting and linting
 
 ## Project Structure
 
@@ -44,7 +44,7 @@ The dev server should always be running. DO NOT try to start it.
 
 ### State Management
 
-The application uses @legendapp/state for reactive state management with automatic localStorage persistence:
+The application uses `@legendapp/state` for reactive state management with automatic localStorage persistence:
 
 - `chatStore$` - Manages chat threads, messages, and current user input
 - `modelProps$` - Manages LLM model parameters
@@ -94,3 +94,16 @@ TanStack Router is used for application routing with:
 - try/catch for async operations
 - User-friendly error messages
 - Console logging for debugging
+
+## Qwen Added Memories
+- I've successfully implemented the document feature for GraphChat, including:
+1. Created document state management with localStorage persistence
+2. Implemented document CRUD operations (create, read, update, delete)
+3. Built UI components for document listing, editing, and referencing
+4. Integrated document referencing into the chat interface
+5. Added document search and tagging functionality
+6. Created routes for documents list, new document, and document editing
+7. Fixed all TypeScript compilation errors
+8. Addressed most linting issues (remaining ones are in existing code we didn't modify)
+
+The document feature allows users to create, edit, and reference documents during chat conversations, supporting use cases like exploratory worldbuilding where users can chat about fantasy worlds and create documents about nations, people, political structures, events, etc.

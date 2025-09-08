@@ -1,9 +1,9 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
-import { callLLM, callLLMStreaming, modelProps$, type ModelProperties } from "./llm";
-import { blocks$, createBlock, type Block } from "./block";
-import { BlockId, ChatId } from "./types";
+import { type Block, blocks$, createBlock } from "./block";
+import { callLLMStreaming, modelProps$ } from "./llm";
+import type { BlockId, ChatId } from "./types";
 
 // Global configuration
 
@@ -32,7 +32,7 @@ const newThread = (title?: string, initialMessage?: string): ChatThread => {
     createdAt: new Date(),
     lastMessageAt: new Date(),
   };
-  
+
   // If there's an initial message, create it and add to thread
   if (initialMessage) {
     // Create a block for the initial message
@@ -42,7 +42,7 @@ const newThread = (title?: string, initialMessage?: string): ChatThread => {
     thread.messages.push(block.id);
     thread.lastMessageAt = new Date();
   }
-  
+
   return thread;
 };
 
@@ -68,10 +68,11 @@ export const setCurrentUserMessage = (message: string) => {
 
 export const createNewThread = (initialMessage?: string) => {
   // Use first 30 characters of the initial message as the thread title, or default to "New Chat"
-  const title = initialMessage 
-    ? initialMessage.trim().substring(0, 30) + (initialMessage.trim().length > 30 ? "..." : "")
+  const title = initialMessage
+    ? initialMessage.trim().substring(0, 30) +
+      (initialMessage.trim().length > 30 ? "..." : "")
     : "New Chat";
-    
+
   const thread = newThread(title, initialMessage);
   chatStore$.threads[thread.id].set(thread);
   chatStore$.currentThreadId.set(thread.id);
@@ -85,7 +86,7 @@ export const switchThread = (threadId: string) => {
 export const deleteThread = (threadId: string) => {
   // Delete the thread directly
   chatStore$.threads[threadId].delete();
-  
+
   // If we're deleting the current thread, switch to another thread or unset current thread
   const currentThreadId = chatStore$.currentThreadId.get();
   if (currentThreadId === threadId) {
@@ -102,7 +103,7 @@ export const deleteThread = (threadId: string) => {
 export const deleteAllThreads = () => {
   // Get all thread keys and delete each one directly
   const threads = chatStore$.threads.get();
-  Object.keys(threads).forEach(threadId => {
+  Object.keys(threads).forEach((threadId) => {
     chatStore$.threads[threadId].delete();
   });
   chatStore$.currentThreadId.set(undefined);
@@ -111,9 +112,9 @@ export const deleteAllThreads = () => {
 export const duplicateThread = (threadId: string) => {
   const threads = chatStore$.threads.get();
   const originalThread = threads[threadId];
-  
+
   if (!originalThread) return;
-  
+
   // Create a new thread with the same title and messages
   const newThread: ChatThread = {
     id: `thread-${nextThreadId++}`,
@@ -122,20 +123,20 @@ export const duplicateThread = (threadId: string) => {
     createdAt: new Date(),
     lastMessageAt: new Date(),
   };
-  
+
   // Add the new thread to the store
   chatStore$.threads[newThread.id].set(newThread);
   chatStore$.currentThreadId.set(newThread.id);
-  
+
   return newThread.id;
 };
 
 export const editThreadTitle = (threadId: string, newTitle: string) => {
   const threads = chatStore$.threads.get();
   const thread = threads[threadId];
-  
+
   if (!thread) return;
-  
+
   // Update the thread title
   chatStore$.threads[threadId].title.set(newTitle);
 };
@@ -146,7 +147,7 @@ export const getThreadMessages = (threadId: string): Block[] => {
   const threads = chatStore$.threads.get();
   const thread = threads[threadId];
   if (!thread) return [];
-  
+
   // Get blocks directly
   return thread.messages
     .map((blockId) => {
@@ -165,7 +166,7 @@ export const getCurrentThread = (): ChatThread | undefined => {
 
 // Backward compatibility function that returns a thread with actual messages
 // Note: This function returns a modified thread type for backward compatibility
-export interface ChatThreadWithMessages extends Omit<ChatThread, 'messages'> {
+export interface ChatThreadWithMessages extends Omit<ChatThread, "messages"> {
   messages: Block[];
 }
 
@@ -173,17 +174,19 @@ export interface ChatThreadWithMessages extends Omit<ChatThread, 'messages'> {
  * @deprecated This method is deprecated and will be removed in a future version.
  * Please use `getCurrentThread` instead.
  */
-export const getCurrentThreadWithMessages = (): ChatThreadWithMessages | undefined => {
+export const getCurrentThreadWithMessages = ():
+  | ChatThreadWithMessages
+  | undefined => {
   const currentThreadId = chatStore$.currentThreadId.get();
   if (!currentThreadId) return undefined;
   const threads = chatStore$.threads.get();
   const thread = threads[currentThreadId];
   if (!thread) return undefined;
-  
+
   // Create a new thread object with actual messages instead of IDs
   return {
     ...thread,
-    messages: getThreadMessages(currentThreadId)
+    messages: getThreadMessages(currentThreadId),
   };
 };
 
@@ -239,9 +242,9 @@ export const sendMessage = async (text?: string) => {
 
   // Stream the response and update the assistant block
   const responseStream = callLLMStreaming(blocksForLLM, modelProps$.get());
-  
+
   let accumulatedContent = "";
-  
+
   for await (const chunkResult of responseStream) {
     chunkResult.match(
       (chunk) => {
@@ -256,7 +259,9 @@ export const sendMessage = async (text?: string) => {
       (error) => {
         // Handle streaming error
         console.error("Streaming error:", error.message);
-        blocks$[assistantBlock.id].text.set(`${accumulatedContent}\n\n[Error: ${error.message}]`);
+        blocks$[assistantBlock.id].text.set(
+          `${accumulatedContent}\n\n[Error: ${error.message}]`,
+        );
       },
     );
   }

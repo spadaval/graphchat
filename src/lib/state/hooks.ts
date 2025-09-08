@@ -1,7 +1,7 @@
 import { use$ } from "@legendapp/state/react";
+import { getThreadMessages } from "./chat";
 import { blocks$, chatStore$ } from "./index";
 import type { BlockId, ChatId } from "./types";
-import { getThreadMessages } from "./chat";
 
 // Hook to get a thread by ID
 export const useThread = (threadId: ChatId) => {
@@ -15,10 +15,10 @@ export const useThreadMessages = (threadId: ChatId) => {
   // This is a computed value based on the blocks and thread structure
   const threads = use$(chatStore$.threads);
   const thread = threads[threadId];
-  
+
   // If thread doesn't exist, return empty array
   if (!thread) return [];
-  
+
   // Get the messages using the existing helper function
   return getThreadMessages(threadId);
 };

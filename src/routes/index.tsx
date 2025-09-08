@@ -1,6 +1,7 @@
 import { use$ } from "@legendapp/state/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { DocumentReferencePanel } from "~/components/DocumentReference";
 import {
   ChatArea,
   ChatThreadsSidebar,
@@ -8,6 +9,7 @@ import {
   MessageInput,
   ModelServerSidebar,
 } from "~/components/LayoutComponents";
+import type { Document } from "~/lib/state";
 import {
   chatStore$,
   createNewThread,
@@ -26,7 +28,18 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const [activeTab, setActiveTab] = useState<"model" | "server">("model");
+  const [showDocumentPanel, setShowDocumentPanel] = useState(false);
   const { currentUserMessage, currentThreadId } = use$(chatStore$);
+
+  const handleInsertDocument = (document: Document) => {
+    // Insert document reference into the message input
+    const documentReference = `[@${document.title}]`;
+    const newMessage = currentUserMessage
+      ? `${currentUserMessage} ${documentReference}`
+      : documentReference;
+    setCurrentUserMessage(newMessage);
+    setShowDocumentPanel(false);
+  };
 
   return (
     <MainLayout
@@ -41,7 +54,29 @@ function Home() {
         />
       }
       modelServer={
-        <ModelServerSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <>
+          {showDocumentPanel ? (
+            <DocumentReferencePanel onInsertDocument={handleInsertDocument} />
+          ) : (
+            <ModelServerSidebar
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+            />
+          )}
+          <div className="border-t border-zinc-800 p-2 bg-zinc-900">
+            <button
+              type="button"
+              className={`w-full py-2 text-sm rounded-lg ${
+                showDocumentPanel
+                  ? "bg-zinc-700 text-zinc-100"
+                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+              }`}
+              onClick={() => setShowDocumentPanel(!showDocumentPanel)}
+            >
+              {showDocumentPanel ? "Close Documents" : "Documents"}
+            </button>
+          </div>
+        </>
       }
     >
       <ChatArea currentThreadId={currentThreadId} sendMessage={sendMessage} />

@@ -1,7 +1,7 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
-import { BlockId } from "./types";
+import type { BlockId } from "./types";
 
 export interface Block {
   id: BlockId;
@@ -17,7 +17,10 @@ export const blocks$ = observable<Record<BlockId, Block>>({});
 
 // Block creation function
 let nextMessageId = 0;
-export const createBlock = (text: string, role: "user" | "assistant" = "user"): Block => ({
+export const createBlock = (
+  text: string,
+  role: "user" | "assistant" = "user",
+): Block => ({
   id: crypto.randomUUID(),
   messageId: nextMessageId++,
   text,

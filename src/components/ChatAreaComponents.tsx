@@ -1,6 +1,5 @@
 import { ChatMessage } from "~/components/ChatMessage";
 import { useThread } from "~/lib/state/hooks";
-import type { Block } from "~/lib/state";
 
 // Types
 interface SamplePrompt {
@@ -67,7 +66,7 @@ interface MessagesListProps {
 export function MessagesList({ threadId }: MessagesListProps) {
   // Fetch the thread to get block IDs
   const thread = useThread(threadId);
-  
+
   // If no thread, render empty state
   if (!thread) {
     return (
@@ -78,12 +77,12 @@ export function MessagesList({ threadId }: MessagesListProps) {
       </div>
     );
   }
-  
+
   const blockIds = thread.messages;
-  
+
   // Find the last assistant block that is still generating
   // We'll need to check this logic later, for now we'll keep it simple
-  const streamingBlockId = undefined;
+  const _streamingBlockId = undefined;
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">

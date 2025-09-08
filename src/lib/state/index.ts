@@ -1,50 +1,52 @@
 // Primary API exports for the state module
 
-// Types
-export type { BlockId, ChatId, MessageId, VariantId, DocumentId } from './types';
-export type { Block } from './block';
-export type { ChatThread, ChatThreadWithMessages } from './chat';
-export type { ModelProperties } from './llm';
-export type { Document } from './documents';
-
+export type { Block } from "./block";
 // Block exports
-export { blocks$, createBlock } from './block';
-
+export { blocks$, createBlock } from "./block";
+export type { ChatThread, ChatThreadWithMessages } from "./chat";
 // Chat exports
 export {
   chatStore$,
   createNewThread,
-  switchThread,
-  deleteThread,
   deleteAllThreads,
+  deleteThread,
   duplicateThread,
   editThreadTitle,
   getCurrentThread,
   getCurrentThreadWithMessages,
+  getThreadMessages,
   sendMessage,
   setCurrentUserMessage,
-  getThreadMessages,
-} from './chat';
-
+  switchThread,
+} from "./chat";
+export type { Document } from "./documents";
 // Document exports
 export {
-  documentStore$,
   createDocument,
-  updateDocument,
   deleteDocument,
-  setCurrentDocument,
+  documentStore$,
   getAllDocuments,
   getDocumentById,
-} from './documents';
+  setCurrentDocument,
+  updateDocument,
+} from "./documents";
+// Hooks exports
+export {
+  useBlock,
+  useCurrentThreadId,
+  useThread,
+  useThreadMessages,
+  useThreadsArray,
+} from "./hooks";
+export type { ModelProperties } from "./llm";
 
 // LLM exports
-export { modelProps$ } from './llm';
-
-// Hooks exports
-export { 
-  useThread, 
-  useThreadMessages, 
-  useBlock, 
-  useCurrentThreadId, 
-  useThreadsArray 
-} from './hooks';
+export { modelProps$ } from "./llm";
+// Types
+export type {
+  BlockId,
+  ChatId,
+  DocumentId,
+  MessageId,
+  VariantId,
+} from "./types";

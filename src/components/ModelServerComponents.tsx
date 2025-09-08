@@ -7,10 +7,7 @@ interface TabNavigationProps {
   setActiveTab: (tab: "model" | "server") => void;
 }
 
-export function TabNavigation({
-  activeTab,
-  setActiveTab,
-}: TabNavigationProps) {
+export function TabNavigation({ activeTab, setActiveTab }: TabNavigationProps) {
   return (
     <div className="border-b border-zinc-800 flex">
       <button

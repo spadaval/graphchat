@@ -1,10 +1,11 @@
-import { SidebarContent, SidebarHeader } from "~/components/Sidebar";
-import { ChatHeader, EmptyState } from "~/components/ChatAreaComponents";
-import { MessagesList } from "~/components/ChatAreaComponents";
+import {
+  ChatHeader,
+  EmptyState,
+  MessagesList,
+} from "~/components/ChatAreaComponents";
 import { TabContent, TabNavigation } from "~/components/ModelServerComponents";
+import { SidebarContent, SidebarHeader } from "~/components/Sidebar";
 import { useThread } from "~/lib/state/hooks";
-import type { ChatThread } from "~/lib/state";
-import type { ChatThreadWithMessages } from "~/lib/state/chat";
 
 // Chat Threads Sidebar Component
 interface ChatThreadsSidebarProps {
@@ -45,17 +46,18 @@ interface ChatAreaProps {
   sendMessage: (message: string) => void;
 }
 
-export function ChatArea({
-  currentThreadId,
-  sendMessage,
-}: ChatAreaProps) {
+export function ChatArea({ currentThreadId, sendMessage }: ChatAreaProps) {
   // Fetch the current thread using our new hook
   const currentThread = useThread(currentThreadId || "");
-  
+
   return (
     <div className="flex-1 flex flex-col min-w-0 relative min-h-0 overflow-hidden">
       <ChatHeader title={currentThread?.title || "Chat"} />
-      {!currentThread ? <EmptyState sendMessage={sendMessage} /> : <MessagesList threadId={currentThreadId || ""} />}
+      {!currentThread ? (
+        <EmptyState sendMessage={sendMessage} />
+      ) : (
+        <MessagesList threadId={currentThreadId || ""} />
+      )}
     </div>
   );
 }

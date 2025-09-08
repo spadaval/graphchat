@@ -11,6 +11,7 @@ import {
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import type * as React from "react";
 import { DefaultCatchBoundary } from "~/components/DefaultCatchBoundary";
+import { Navigation } from "~/components/Navigation";
 import { NotFound } from "~/components/NotFound";
 import appCss from "~/styles/app.css?url";
 import { seo } from "~/utils/seo";
@@ -69,7 +70,12 @@ export const Route = createRootRouteWithContext<{
 function RootComponent() {
   return (
     <RootDocument>
-      <Outlet />
+      <div className="flex flex-col h-screen">
+        <Navigation />
+        <div className="flex-1 overflow-hidden">
+          <Outlet />
+        </div>
+      </div>
     </RootDocument>
   );
 }

@@ -23,7 +23,7 @@ export interface ServerInfo {
   timestamp: number;
 }
 
-/** 
+/**
  * Fetches server information from the API
  */
 export async function fetchServerInfo(): Promise<ServerInfo | null> {
@@ -39,7 +39,12 @@ export async function fetchServerInfo(): Promise<ServerInfo | null> {
   const response = apiCallResult.value;
 
   // Check if response has an error property with the correct structure
-  if (response && typeof response === 'object' && 'error' in response && response.error) {
+  if (
+    response &&
+    typeof response === "object" &&
+    "error" in response &&
+    response.error
+  ) {
     const errorObj = response.error as { error?: { message?: string } } | null;
     const errorMessage = errorObj?.error?.message || "Unknown error";
     const apiError = createNetworkError(

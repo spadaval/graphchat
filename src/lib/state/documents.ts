@@ -1,7 +1,7 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
-import { DocumentId } from "./types";
+import type { DocumentId } from "./types";
 
 export interface Document {
   id: DocumentId;
@@ -27,10 +27,14 @@ const documentStore: DocumentStore = {
 export const documentStore$ = observable<DocumentStore>(documentStore);
 
 // Actions
-export const createDocument = (title: string, content: string = "", tags: string[] = []): DocumentId => {
+export const createDocument = (
+  title: string,
+  content: string = "",
+  tags: string[] = [],
+): DocumentId => {
   const id: DocumentId = `doc-${nextDocumentId++}`;
   const now = new Date();
-  
+
   const document: Document = {
     id,
     title,
@@ -39,29 +43,32 @@ export const createDocument = (title: string, content: string = "", tags: string
     updatedAt: now,
     tags,
   };
-  
+
   documentStore$.documents[id].set(document);
   return id;
 };
 
-export const updateDocument = (id: DocumentId, updates: Partial<Omit<Document, "id" | "createdAt">>) => {
+export const updateDocument = (
+  id: DocumentId,
+  updates: Partial<Omit<Document, "id" | "createdAt">>,
+) => {
   const documents = documentStore$.documents.get();
   const document = documents[id];
-  
+
   if (!document) return;
-  
+
   const updatedDocument = {
     ...document,
     ...updates,
     updatedAt: new Date(),
   };
-  
+
   documentStore$.documents[id].set(updatedDocument);
 };
 
 export const deleteDocument = (id: DocumentId) => {
   documentStore$.documents[id].delete();
-  
+
   // If we're deleting the current document, unset current document
   const currentDocumentId = documentStore$.currentDocumentId.get();
   if (currentDocumentId === id) {
