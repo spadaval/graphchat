@@ -5,9 +5,9 @@ import {
   ChatArea,
   ChatThreadsSidebar,
   MainLayout,
-  MessageInput,
   ModelServerSidebar,
 } from "~/components/LayoutComponents";
+import { SmartMessageInput } from "~/components/SmartMessageInput";
 import type { Document } from "~/lib/state";
 import {
   chatStore$,
@@ -17,7 +17,6 @@ import {
   duplicateThread,
   editThreadTitle,
   sendMessage,
-  setCurrentUserMessage,
   switchThread,
   uiPreferences$,
   setActiveTab,
@@ -29,16 +28,13 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const { currentUserMessage, currentThreadId } = use$(chatStore$);
+  const { currentThreadId } = use$(chatStore$);
   const { activeTab, showDocumentPanel } = use$(uiPreferences$);
 
   const handleInsertDocument = (document: Document) => {
     // Insert document reference into the message input
     const documentReference = `[@${document.title}]`;
-    const newMessage = currentUserMessage
-      ? `${currentUserMessage} ${documentReference}`
-      : documentReference;
-    setCurrentUserMessage(newMessage);
+    // We'll need to update this to work with the new editor
     setShowDocumentPanel(false);
   };
 
@@ -81,11 +77,7 @@ function Home() {
       }
     >
       <ChatArea currentThreadId={currentThreadId} sendMessage={sendMessage} />
-      <MessageInput
-        currentUserMessage={currentUserMessage}
-        setCurrentUserMessage={setCurrentUserMessage}
-        sendMessage={sendMessage}
-      />
+      <SmartMessageInput onSend={sendMessage} />
     </MainLayout>
   );
 }

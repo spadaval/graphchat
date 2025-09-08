@@ -5,6 +5,7 @@ import {
 } from "~/components/ChatAreaComponents";
 import { TabContent, TabNavigation } from "~/components/ModelServerComponents";
 import { SidebarContent, SidebarHeader } from "~/components/Sidebar";
+import { SmartMessageInput } from "~/components/SmartMessageInput";
 import type { ChatId } from "~/lib/state/types";
 import { useThread } from "~/lib/state/hooks";
 
@@ -62,51 +63,6 @@ export function ChatArea({ currentThreadId, sendMessage }: ChatAreaProps) {
       ) : (
         <MessagesList threadId={currentThreadId} />
       )}
-    </div>
-  );
-}
-
-// Message Input Component
-interface MessageInputProps {
-  currentUserMessage: string;
-  setCurrentUserMessage: (message: string) => void;
-  sendMessage: (message: string) => void;
-}
-
-export function MessageInput({
-  currentUserMessage,
-  setCurrentUserMessage,
-  sendMessage,
-}: MessageInputProps) {
-  return (
-    <div className="p-4 border-t border-zinc-800">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (currentUserMessage.trim()) {
-            sendMessage(currentUserMessage);
-            setCurrentUserMessage("");
-          }
-        }}
-        className="flex space-x-2"
-      >
-        <input
-          type="text"
-          value={currentUserMessage}
-          onChange={(e) => setCurrentUserMessage(e.target.value)}
-          className="flex-1 p-3 border border-zinc-700 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-transparent text-sm"
-          placeholder="Type a message..."
-          aria-label="Type your message"
-        />
-        <button
-          type="submit"
-          disabled={!currentUserMessage?.trim()}
-          className="px-5 py-3 bg-gradient-to-br from-zinc-700 to-zinc-800 hover:from-zinc-600 hover:to-zinc-700 disabled:from-zinc-800 disabled:to-zinc-850 disabled:cursor-not-allowed text-zinc-200 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:ring-offset-2 text-sm"
-          aria-label="Send message"
-        >
-          Send
-        </button>
-      </form>
     </div>
   );
 }
