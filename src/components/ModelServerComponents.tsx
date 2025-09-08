@@ -12,13 +12,13 @@ export function TabNavigation({
   setActiveTab,
 }: TabNavigationProps) {
   return (
-    <div className="border-b border-gray-800 flex">
+    <div className="border-b border-zinc-800 flex">
       <button
         type="button"
         className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
           activeTab === "model"
-            ? "text-blue-400 border-b-2 border-blue-500"
-            : "text-gray-400 hover:text-gray-200"
+            ? "text-zinc-300 border-b-2 border-zinc-500"
+            : "text-zinc-500 hover:text-zinc-300"
         }`}
         onClick={() => setActiveTab("model")}
       >
@@ -28,8 +28,8 @@ export function TabNavigation({
         type="button"
         className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
           activeTab === "server"
-            ? "text-blue-400 border-b-2 border-blue-500"
-            : "text-gray-400 hover:text-gray-200"
+            ? "text-zinc-300 border-b-2 border-zinc-500"
+            : "text-zinc-500 hover:text-zinc-300"
         }`}
         onClick={() => setActiveTab("server")}
       >

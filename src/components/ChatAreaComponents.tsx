@@ -23,8 +23,8 @@ interface ChatHeaderProps {
 
 export function ChatHeader({ title }: ChatHeaderProps) {
   return (
-    <div className="p-4 border-b border-gray-800 bg-gray-900">
-      <h1 className="text-xl font-semibold text-gray-100">{title}</h1>
+    <div className="p-4 border-b border-zinc-800 bg-zinc-900">
+      <h1 className="text-lg font-semibold text-zinc-100">{title}</h1>
     </div>
   );
 }
@@ -37,10 +37,10 @@ interface EmptyStateProps {
 export function EmptyState({ sendMessage }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center h-full px-4 py-12 text-center">
-      <h2 className="text-2xl font-semibold text-gray-100 mb-6">
+      <h2 className="text-xl font-semibold text-zinc-100 mb-6">
         How can I help you today?
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-3xl">
         {SAMPLE_PROMPTS.map((prompt) => (
           <button
             type="button"
@@ -49,7 +49,7 @@ export function EmptyState({ sendMessage }: EmptyStateProps) {
               e.preventDefault();
               sendMessage(prompt.text);
             }}
-            className="p-4 text-left rounded-lg border border-gray-700 hover:border-blue-500 hover:bg-gray-800 transition-colors duration-200 text-gray-200"
+            className="p-3 text-left rounded-lg border border-zinc-700 hover:border-zinc-600 hover:bg-gradient-to-br from-zinc-800 to-zinc-850 transition-all duration-200 text-zinc-200 text-sm"
           >
             {prompt.text}
           </button>
@@ -72,7 +72,7 @@ export function MessagesList({ threadId }: MessagesListProps) {
   if (!thread) {
     return (
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-        <div className="text-center text-gray-400 py-8">
+        <div className="text-center text-zinc-500 py-8 text-sm">
           No messages yet. Start a conversation!
         </div>
       </div>
@@ -91,7 +91,7 @@ export function MessagesList({ threadId }: MessagesListProps) {
         <ChatMessage key={blockId} blockId={blockId} isStreaming={false} />
       ))}
       {blockIds.length === 0 && (
-        <div className="text-center text-gray-400 py-8">
+        <div className="text-center text-zinc-500 py-8 text-sm">
           No messages yet. Start a conversation!
         </div>
       )}

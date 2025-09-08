@@ -11,6 +11,8 @@ interface ChatThreadsSidebarProps {
   createNewThread: () => void;
   switchThread: (threadId: string) => void;
   deleteThread: (threadId: string) => void;
+  duplicateThread: (threadId: string) => void;
+  editThreadTitle: (threadId: string, newTitle: string) => void;
   deleteAllThreads: () => void;
 }
 
@@ -18,15 +20,19 @@ export function ChatThreadsSidebar({
   createNewThread,
   switchThread,
   deleteThread,
+  duplicateThread,
+  editThreadTitle,
   deleteAllThreads,
 }: ChatThreadsSidebarProps) {
   return (
-    <div className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
+    <div className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col">
       <SidebarHeader />
       <SidebarContent
         createNewThread={createNewThread}
         switchThread={switchThread}
         deleteThread={deleteThread}
+        duplicateThread={duplicateThread}
+        editThreadTitle={editThreadTitle}
         deleteAllThreads={deleteAllThreads}
       />
     </div>
@@ -67,7 +73,7 @@ export function MessageInput({
   sendMessage,
 }: MessageInputProps) {
   return (
-    <div className="p-4 border-t border-gray-800 bg-gray-900">
+    <div className="p-4 border-t border-zinc-800 bg-zinc-900">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -82,14 +88,14 @@ export function MessageInput({
           type="text"
           value={currentUserMessage}
           onChange={(e) => setCurrentUserMessage(e.target.value)}
-          className="flex-1 p-3 border border-gray-700 rounded-lg bg-gray-800 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+          className="flex-1 p-3 border border-zinc-700 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-transparent text-sm"
           placeholder="Type a message..."
           aria-label="Type your message"
         />
         <button
           type="submit"
           disabled={!currentUserMessage?.trim()}
-          className="px-6 py-3 bg-blue-700 hover:bg-blue-800 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+          className="px-5 py-3 bg-gradient-to-br from-zinc-700 to-zinc-800 hover:from-zinc-600 hover:to-zinc-700 disabled:from-zinc-800 disabled:to-zinc-850 disabled:cursor-not-allowed text-zinc-200 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:ring-offset-2 text-sm"
           aria-label="Send message"
         >
           Send
@@ -110,7 +116,7 @@ export function ModelServerSidebar({
   setActiveTab,
 }: ModelServerSidebarProps) {
   return (
-    <div className="w-80 bg-gray-900 border-l border-gray-800 flex flex-col">
+    <div className="w-80 bg-zinc-900 border-l border-zinc-800 flex flex-col">
       <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
       <TabContent activeTab={activeTab} />
     </div>
@@ -130,7 +136,7 @@ export function MainLayout({
   modelServer,
 }: MainLayoutProps) {
   return (
-    <div className="flex h-screen bg-gray-950">
+    <div className="flex h-screen bg-zinc-950">
       {sidebar}
       <div className="flex-1 flex flex-col min-h-0">{children}</div>
       {modelServer}

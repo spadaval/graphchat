@@ -1,10 +1,11 @@
 // Primary API exports for the state module
 
 // Types
-export type { BlockId, ChatId, MessageId, VariantId } from './types';
+export type { BlockId, ChatId, MessageId, VariantId, DocumentId } from './types';
 export type { Block } from './block';
 export type { ChatThread, ChatThreadWithMessages } from './chat';
 export type { ModelProperties } from './llm';
+export type { Document } from './documents';
 
 // Block exports
 export { blocks$, createBlock } from './block';
@@ -16,12 +17,25 @@ export {
   switchThread,
   deleteThread,
   deleteAllThreads,
+  duplicateThread,
+  editThreadTitle,
   getCurrentThread,
   getCurrentThreadWithMessages,
   sendMessage,
   setCurrentUserMessage,
   getThreadMessages,
 } from './chat';
+
+// Document exports
+export {
+  documentStore$,
+  createDocument,
+  updateDocument,
+  deleteDocument,
+  setCurrentDocument,
+  getAllDocuments,
+  getDocumentById,
+} from './documents';
 
 // LLM exports
 export { modelProps$ } from './llm';

@@ -67,7 +67,12 @@ export const setCurrentUserMessage = (message: string) => {
 // export const regenerateMessage = async (messageId: number) => { ... }
 
 export const createNewThread = (initialMessage?: string) => {
-  const thread = newThread(initialMessage?.slice(0, 100), initialMessage);
+  // Use first 30 characters of the initial message as the thread title, or default to "New Chat"
+  const title = initialMessage 
+    ? initialMessage.trim().substring(0, 30) + (initialMessage.trim().length > 30 ? "..." : "")
+    : "New Chat";
+    
+  const thread = newThread(title, initialMessage);
   chatStore$.threads[thread.id].set(thread);
   chatStore$.currentThreadId.set(thread.id);
   return thread.id;
@@ -101,6 +106,38 @@ export const deleteAllThreads = () => {
     chatStore$.threads[threadId].delete();
   });
   chatStore$.currentThreadId.set(undefined);
+};
+
+export const duplicateThread = (threadId: string) => {
+  const threads = chatStore$.threads.get();
+  const originalThread = threads[threadId];
+  
+  if (!originalThread) return;
+  
+  // Create a new thread with the same title and messages
+  const newThread: ChatThread = {
+    id: `thread-${nextThreadId++}`,
+    title: `${originalThread.title} (Copy)`,
+    messages: [...originalThread.messages], // Copy message IDs
+    createdAt: new Date(),
+    lastMessageAt: new Date(),
+  };
+  
+  // Add the new thread to the store
+  chatStore$.threads[newThread.id].set(newThread);
+  chatStore$.currentThreadId.set(newThread.id);
+  
+  return newThread.id;
+};
+
+export const editThreadTitle = (threadId: string, newTitle: string) => {
+  const threads = chatStore$.threads.get();
+  const thread = threads[threadId];
+  
+  if (!thread) return;
+  
+  // Update the thread title
+  chatStore$.threads[threadId].title.set(newTitle);
 };
 
 // Helper function to get messages for a thread (converted from blocks)

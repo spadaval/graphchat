@@ -26,11 +26,13 @@ interface MessageAvatarProps {
 
 const MessageAvatar = ({ role }: MessageAvatarProps) => (
   <span
-    className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0 ${
-      role === "user" ? "bg-blue-500" : "bg-green-500"
+    className={`w-7 h-7 rounded-full flex items-center justify-center text-zinc-300 text-xs font-medium flex-shrink-0 ${
+      role === "user" 
+        ? "bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600" 
+        : "bg-gradient-to-br from-zinc-800 to-zinc-850 border border-zinc-700"
     }`}
   >
-    {role === "user" ? <User size={16} /> : <Bot size={16} />}
+    {role === "user" ? <User size={14} /> : <Bot size={14} />}
   </span>
 );
 
@@ -40,48 +42,91 @@ interface MessageBubbleProps {
   isStreaming: boolean;
 }
 
-const MessageBubble = ({ text, role, isStreaming }: MessageBubbleProps) => (
-  <div
-    className={`w-[90%] px-4 py-2 rounded-lg transition-all duration-200 hover:shadow-md prose prose-invert max-w-none rounded-bl-none ${
-      role === "user"
-        ? "bg-blue-600 text-white hover:bg-blue-700"
-        : "bg-gray-800 text-gray-100 border border-gray-600 hover:shadow-md hover:bg-gray-700"
-    }`}
-  >
-    <ReactMarkdown
-      rehypePlugins={[rehypeRaw, rehypeHighlight]}
-      components={{
-        code({ className, children, ...props }: CodeProps) {
-          const isInline = !className?.includes("language-");
-          return !isInline ? (
-            <pre className="bg-gray-900 p-4 rounded overflow-x-auto">
-              <code className={className} {...props}>
-                {children}
-              </code>
-            </pre>
-          ) : (
-            <code className="bg-gray-700 px-1 py-0.5 rounded" {...props}>
-              {children}
-            </code>
-          );
-        },
-        a: (props: AnchorProps) => (
-          <a
-            className="text-blue-400 hover:text-blue-300 underline"
-            target="_blank"
-            rel="noopener noreferrer"
-            {...props}
-          />
-        ),
-      }}
-    >
-      {text}
-    </ReactMarkdown>
-    {isStreaming && (
-      <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
-    )}
-  </div>
-);
+const MessageBubble = ({ text, role, isStreaming }: MessageBubbleProps) => {
+  if (role === "user") {
+    // User messages: smaller, gray bubble on the right
+    return (
+      <div className="px-3 py-2 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-850 border border-zinc-700 max-w-[85%] ml-auto">
+        <ReactMarkdown
+          rehypePlugins={[rehypeRaw, rehypeHighlight]}
+          components={{
+            code({ className, children, ...props }: CodeProps) {
+              const isInline = !className?.includes("language-");
+              return !isInline ? (
+                <pre className="bg-gradient-to-br from-zinc-900 to-zinc-850 p-3 rounded overflow-x-auto text-xs">
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                </pre>
+              ) : (
+                <code className="bg-zinc-700 px-1 py-0.5 rounded text-xs" {...props}>
+                  {children}
+                </code>
+              );
+            },
+            a: (props: AnchorProps) => (
+              <a
+                className="text-blue-400 hover:text-blue-300 underline text-sm"
+                target="_blank"
+                rel="noopener noreferrer"
+                {...props}
+              />
+            ),
+          }}
+        >
+          {text}
+        </ReactMarkdown>
+        {isStreaming && (
+          <span className="inline-block w-2 h-4 bg-zinc-400 ml-1 animate-pulse"></span>
+        )}
+      </div>
+    );
+  } else {
+    // Assistant messages: no bubble, just text
+    return (
+      <div className="w-full max-w-none prose prose-invert">
+        <ReactMarkdown
+          rehypePlugins={[rehypeRaw, rehypeHighlight]}
+          components={{
+            code({ className, children, ...props }: CodeProps) {
+              const isInline = !className?.includes("language-");
+              return !isInline ? (
+                <pre className="bg-gradient-to-br from-zinc-900 to-zinc-850 p-4 rounded overflow-x-auto">
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                </pre>
+              ) : (
+                <code className="bg-zinc-800 px-1 py-0.5 rounded" {...props}>
+                  {children}
+                </code>
+              );
+            },
+            a: (props: AnchorProps) => (
+              <a
+                className="text-blue-400 hover:text-blue-300 underline"
+                target="_blank"
+                rel="noopener noreferrer"
+                {...props}
+              />
+            ),
+            p: (props) => <p className="mb-3 text-zinc-200" {...props} />,
+            h1: (props) => <h1 className="text-xl font-bold mb-3 text-zinc-100" {...props} />,
+            h2: (props) => <h2 className="text-lg font-bold mb-3 text-zinc-100" {...props} />,
+            h3: (props) => <h3 className="text-md font-bold mb-3 text-zinc-100" {...props} />,
+            ul: (props) => <ul className="list-disc pl-5 mb-3 text-zinc-200" {...props} />,
+            ol: (props) => <ol className="list-decimal pl-5 mb-3 text-zinc-200" {...props} />,
+          }}
+        >
+          {text}
+        </ReactMarkdown>
+        {isStreaming && (
+          <span className="inline-block w-2 h-4 bg-zinc-500 ml-1 animate-pulse"></span>
+        )}
+      </div>
+    );
+  }
+};
 
 interface MessageActionsProps {
   hasMultipleVariants: boolean;
@@ -96,25 +141,25 @@ const MessageActions = ({
   onNextVariant,
   onRegenerate,
 }: MessageActionsProps) => (
-  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1">
+  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1 ml-auto">
     <button
       type="button"
       onClick={onNextVariant}
-      className="p-1 text-xs text-gray-400 hover:text-white bg-gray-800 rounded flex items-center gap-1"
+      className="p-1 text-xs text-zinc-500 hover:text-zinc-300 bg-gradient-to-br from-zinc-800 to-zinc-850 hover:from-zinc-700 hover:to-zinc-800 rounded flex items-center gap-1 border border-zinc-700"
       title="Show variants"
       aria-label="Show message variants"
     >
-      <RotateCcw size={14} />
+      <RotateCcw size={12} />
       {hasMultipleVariants && <span>({variantsCount})</span>}
     </button>
     <button
       type="button"
       onClick={onRegenerate}
-      className="p-1 text-xs text-gray-400 hover:text-white bg-gray-800 rounded flex items-center"
+      className="p-1 text-xs text-zinc-500 hover:text-zinc-300 bg-gradient-to-br from-zinc-800 to-zinc-850 hover:from-zinc-700 hover:to-zinc-800 rounded flex items-center border border-zinc-700"
       title="Regenerate response"
       aria-label="Regenerate message"
     >
-      <RefreshCw size={14} />
+      <RefreshCw size={12} />
     </button>
   </div>
 );
@@ -129,10 +174,10 @@ export function ChatMessage({ blockId, isStreaming }: ChatMessageProps) {
   const isUser = block.role === "user";
 
   return (
-    <div className="flex items-start gap-3 justify-start transform transition-all duration-300 ease-out group">
+    <div className={`flex items-start gap-3 transform transition-all duration-300 ease-out group ${isUser ? 'flex-row-reverse' : ''}`}>
       <MessageAvatar role={block.role} />
 
-      <div className="flex flex-col">
+      <div className="flex flex-col w-full min-w-0">
         <MessageBubble
           text={block.text}
           role={block.role}

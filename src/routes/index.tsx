@@ -13,6 +13,8 @@ import {
   createNewThread,
   deleteAllThreads,
   deleteThread,
+  duplicateThread,
+  editThreadTitle,
   sendMessage,
   setCurrentUserMessage,
   switchThread,
@@ -30,9 +32,11 @@ function Home() {
     <MainLayout
       sidebar={
         <ChatThreadsSidebar
-          createNewThread={() => createNewThread()}
+          createNewThread={createNewThread}
           switchThread={switchThread}
           deleteThread={deleteThread}
+          duplicateThread={duplicateThread}
+          editThreadTitle={editThreadTitle}
           deleteAllThreads={deleteAllThreads}
         />
       }

@@ -6,7 +6,7 @@ export function ModelProperties() {
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-gray-400">
+      <div className="text-sm text-zinc-500">
         Configure model sampling parameters
       </div>
 
@@ -14,7 +14,7 @@ export function ModelProperties() {
       <div className="space-y-2">
         <label
           htmlFor="temperature"
-          className="block text-sm font-medium text-gray-200"
+          className="block text-sm font-medium text-zinc-300"
         >
           Temperature
         </label>
@@ -27,11 +27,11 @@ export function ModelProperties() {
           onChange={(e) =>
             modelProps$.assign({ temperature: parseFloat(e.target.value) })
           }
-          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-zinc-300"
         />
-        <div className="flex justify-between text-xs text-gray-400">
+        <div className="flex justify-between text-xs text-zinc-500">
           <span>0.0</span>
-          <span className="text-gray-200">{modelProperties.temperature}</span>
+          <span className="text-zinc-300">{modelProperties.temperature}</span>
           <span>2.0</span>
         </div>
       </div>
@@ -40,7 +40,7 @@ export function ModelProperties() {
       <div className="space-y-2">
         <label
           htmlFor="top-k"
-          className="block text-sm font-medium text-gray-200"
+          className="block text-sm font-medium text-zinc-300"
         >
           Top K
         </label>
@@ -53,11 +53,11 @@ export function ModelProperties() {
           onChange={(e) =>
             modelProps$.assign({ top_k: parseInt(e.target.value, 10) })
           }
-          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-zinc-300"
         />
-        <div className="flex justify-between text-xs text-gray-400">
+        <div className="flex justify-between text-xs text-zinc-500">
           <span>1</span>
-          <span className="text-gray-200">{modelProperties.top_k}</span>
+          <span className="text-zinc-300">{modelProperties.top_k}</span>
           <span>100</span>
         </div>
       </div>
@@ -66,7 +66,7 @@ export function ModelProperties() {
       <div className="space-y-2">
         <label
           htmlFor="top-p"
-          className="block text-sm font-medium text-gray-200"
+          className="block text-sm font-medium text-zinc-300"
         >
           Top P
         </label>
@@ -79,11 +79,11 @@ export function ModelProperties() {
           onChange={(e) =>
             modelProps$.assign({ top_p: parseFloat(e.target.value) })
           }
-          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
         />
-        <div className="flex justify-between text-xs text-gray-400">
+        <div className="flex justify-between text-xs text-zinc-500">
           <span>0.0</span>
-          <span className="text-gray-200">{modelProperties.top_p}</span>
+          <span className="text-zinc-300">{modelProperties.top_p}</span>
           <span>1.0</span>
         </div>
       </div>
@@ -92,7 +92,7 @@ export function ModelProperties() {
       <div className="space-y-2">
         <label
           htmlFor="max-tokens"
-          className="block text-sm font-medium text-gray-200"
+          className="block text-sm font-medium text-zinc-300"
         >
           Max Tokens
         </label>
@@ -106,7 +106,7 @@ export function ModelProperties() {
               n_predict: parseInt(e.target.value, 10) || 128,
             })
           }
-          className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-2 bg-gradient-to-br from-zinc-800 to-zinc-850 border border-zinc-700 rounded-lg text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-600 text-sm"
         />
       </div>
 
@@ -114,7 +114,7 @@ export function ModelProperties() {
       <div className="space-y-2">
         <label
           htmlFor="repeat-penalty"
-          className="block text-sm font-medium text-gray-200"
+          className="block text-sm font-medium text-zinc-300"
         >
           Repeat Penalty
         </label>
@@ -127,11 +127,11 @@ export function ModelProperties() {
           onChange={(e) =>
             modelProps$.assign({ repeat_penalty: parseFloat(e.target.value) })
           }
-          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
         />
-        <div className="flex justify-between text-xs text-gray-400">
+        <div className="flex justify-between text-xs text-zinc-500">
           <span>1.0</span>
-          <span className="text-gray-200">
+          <span className="text-zinc-300">
             {modelProperties.repeat_penalty}
           </span>
           <span>2.0</span>
@@ -142,7 +142,7 @@ export function ModelProperties() {
       <div className="space-y-2">
         <label
           htmlFor="presence-penalty"
-          className="block text-sm font-medium text-gray-200"
+          className="block text-sm font-medium text-zinc-300"
         >
           Presence Penalty
         </label>
@@ -155,11 +155,11 @@ export function ModelProperties() {
           onChange={(e) =>
             modelProps$.assign({ presence_penalty: parseFloat(e.target.value) })
           }
-          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
         />
-        <div className="flex justify-between text-xs text-gray-400">
+        <div className="flex justify-between text-xs text-zinc-500">
           <span>-2.0</span>
-          <span className="text-gray-200">
+          <span className="text-zinc-300">
             {modelProperties.presence_penalty}
           </span>
           <span>2.0</span>
@@ -170,7 +170,7 @@ export function ModelProperties() {
       <div className="space-y-2">
         <label
           htmlFor="frequency-penalty"
-          className="block text-sm font-medium text-gray-200"
+          className="block text-sm font-medium text-zinc-300"
         >
           Frequency Penalty
         </label>
@@ -185,11 +185,11 @@ export function ModelProperties() {
               frequency_penalty: parseFloat(e.target.value),
             })
           }
-          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
         />
-        <div className="flex justify-between text-xs text-gray-400">
+        <div className="flex justify-between text-xs text-zinc-500">
           <span>-2.0</span>
-          <span className="text-gray-200">
+          <span className="text-zinc-300">
             {modelProperties.frequency_penalty}
           </span>
           <span>2.0</span>
@@ -200,7 +200,7 @@ export function ModelProperties() {
       <div className="space-y-2">
         <label
           htmlFor="mirostat-mode"
-          className="block text-sm font-medium text-gray-200"
+          className="block text-sm font-medium text-zinc-300"
         >
           Mirostat Mode
         </label>
@@ -211,7 +211,7 @@ export function ModelProperties() {
               mirostat: parseInt(e.target.value, 10) as 0 | 1 | 2,
             })
           }
-          className="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-2 bg-gradient-to-br from-zinc-800 to-zinc-850 border border-zinc-700 rounded-lg text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-600 text-sm"
         >
           <option value={0}>Disabled</option>
           <option value={1}>Mirostat 1.0</option>
@@ -224,7 +224,7 @@ export function ModelProperties() {
         <div className="space-y-2">
           <label
             htmlFor="mirostat-tau"
-            className="block text-sm font-medium text-gray-200"
+            className="block text-sm font-medium text-zinc-300"
           >
             Mirostat Tau
           </label>
@@ -237,11 +237,11 @@ export function ModelProperties() {
             onChange={(e) =>
               modelProps$.assign({ mirostat_tau: parseFloat(e.target.value) })
             }
-            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+            className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
           />
-          <div className="flex justify-between text-xs text-gray-400">
+          <div className="flex justify-between text-xs text-zinc-500">
             <span>0.0</span>
-            <span className="text-gray-200">
+            <span className="text-zinc-300">
               {modelProperties.mirostat_tau}
             </span>
             <span>10.0</span>
@@ -254,7 +254,7 @@ export function ModelProperties() {
         <div className="space-y-2">
           <label
             htmlFor="mirostat-eta"
-            className="block text-sm font-medium text-gray-200"
+            className="block text-sm font-medium text-zinc-300"
           >
             Mirostat Eta
           </label>
@@ -267,11 +267,11 @@ export function ModelProperties() {
             onChange={(e) =>
               modelProps$.assign({ mirostat_eta: parseFloat(e.target.value) })
             }
-            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+            className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
           />
-          <div className="flex justify-between text-xs text-gray-400">
+          <div className="flex justify-between text-xs text-zinc-500">
             <span>0.00</span>
-            <span className="text-gray-200">
+            <span className="text-zinc-300">
               {modelProperties.mirostat_eta}
             </span>
             <span>1.00</span>
@@ -285,11 +285,11 @@ export function ModelProperties() {
           type="checkbox"
           checked={modelProperties.stream}
           onChange={(e) => modelProps$.assign({ stream: e.target.checked })}
-          className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+          className="w-4 h-4 text-zinc-600 bg-zinc-700 border-zinc-600 rounded focus:ring-zinc-500"
         />
         <label
           htmlFor="streaming"
-          className="text-sm font-medium text-gray-200"
+          className="text-sm font-medium text-zinc-300"
         >
           Enable Streaming
         </label>
@@ -303,11 +303,11 @@ export function ModelProperties() {
           onChange={(e) =>
             modelProps$.assign({ cache_prompt: e.target.checked })
           }
-          className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+          className="w-4 h-4 text-zinc-600 bg-zinc-700 border-zinc-600 rounded focus:ring-zinc-500"
         />
         <label
           htmlFor="cache-prompt"
-          className="text-sm font-medium text-gray-200"
+          className="text-sm font-medium text-zinc-300"
         >
           Cache Prompt
         </label>
@@ -321,11 +321,11 @@ export function ModelProperties() {
           onChange={(e) =>
             modelProps$.assign({ return_tokens: e.target.checked })
           }
-          className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+          className="w-4 h-4 text-zinc-600 bg-zinc-700 border-zinc-600 rounded focus:ring-zinc-500"
         />
         <label
           htmlFor="return-tokens"
-          className="text-sm font-medium text-gray-200"
+          className="text-sm font-medium text-zinc-300"
         >
           Return Tokens
         </label>

@@ -30,7 +30,7 @@ export function ServerInfoComponent() {
 
   if (loading) {
     return (
-      <div className="p-4 text-center text-gray-400">
+      <div className="p-4 text-center text-zinc-500">
         Loading server info...
       </div>
     );
@@ -42,7 +42,7 @@ export function ServerInfoComponent() {
 
   if (!serverInfo) {
     return (
-      <div className="p-4 text-center text-gray-400">
+      <div className="p-4 text-center text-zinc-500">
         No server information available
       </div>
     );
@@ -51,23 +51,23 @@ export function ServerInfoComponent() {
   return (
     <div className="space-y-4 p-4">
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-gray-200">Model</h3>
-        <div className="text-sm text-gray-300">{serverInfo.model_name}</div>
-        <div className="text-xs text-gray-400 truncate">
+        <h3 className="text-sm font-medium text-zinc-300">Model</h3>
+        <div className="text-sm text-zinc-200">{serverInfo.model_name}</div>
+        <div className="text-xs text-zinc-500 truncate">
           {serverInfo.model_path}
         </div>
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-gray-200">Model Info</h3>
+        <h3 className="text-sm font-medium text-zinc-300">Model Info</h3>
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="text-gray-400">Type</div>
-          <div className="text-right text-gray-300">
+          <div className="text-zinc-500">Type</div>
+          <div className="text-right text-zinc-300">
             {serverInfo.model_type}
           </div>
 
-          <div className="text-gray-400">Size</div>
-          <div className="text-right text-gray-300">
+          <div className="text-zinc-500">Size</div>
+          <div className="text-right text-zinc-300">
             {serverInfo.model_size} (
             {serverInfo.model_params
               ? serverInfo.model_params.toLocaleString()
@@ -75,39 +75,39 @@ export function ServerInfoComponent() {
             params)
           </div>
 
-          <div className="text-gray-400">Context</div>
-          <div className="text-right text-gray-300">
+          <div className="text-zinc-500">Context</div>
+          <div className="text-right text-zinc-300">
             {serverInfo.context_size
               ? serverInfo.context_size.toLocaleString()
               : "N/A"}{" "}
             tokens
           </div>
 
-          <div className="text-gray-400">GPU Layers</div>
-          <div className="text-right text-gray-300">
+          <div className="text-zinc-500">GPU Layers</div>
+          <div className="text-right text-zinc-300">
             {serverInfo.gpu_layers}
           </div>
         </div>
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-gray-200">System</h3>
+        <h3 className="text-sm font-medium text-zinc-300">System</h3>
         <div className="space-y-1 text-xs">
           <div className="flex justify-between">
-            <span className="text-gray-400">CPU Usage</span>
-            <span className="text-gray-300">
+            <span className="text-zinc-500">CPU Usage</span>
+            <span className="text-zinc-300">
               {serverInfo.cpu_usage ? serverInfo.cpu_usage.toFixed(1) : "N/A"}%
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-400">RAM Usage</span>
-            <span className="text-gray-300">
+            <span className="text-zinc-500">RAM Usage</span>
+            <span className="text-zinc-300">
               {serverInfo.ram_usage ? serverInfo.ram_usage.toFixed(1) : "N/A"}%
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-400">VRAM Usage</span>
-            <span className="text-gray-300">
+            <span className="text-zinc-500">VRAM Usage</span>
+            <span className="text-zinc-300">
               {serverInfo.vram_usage ? serverInfo.vram_usage.toFixed(1) : "N/A"}
               %
             </span>
@@ -117,7 +117,7 @@ export function ServerInfoComponent() {
 
       <SlotsComponent />
 
-      <div className="pt-2 text-xs text-gray-500 text-center">
+      <div className="pt-2 text-xs text-zinc-600 text-center">
         Last updated:{" "}
         {serverInfo.timestamp
           ? new Date(serverInfo.timestamp).toLocaleTimeString()

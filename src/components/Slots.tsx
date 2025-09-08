@@ -19,7 +19,7 @@ export function SlotsComponent() {
 
   if (isLoading) {
     return (
-      <div className="p-4 text-center text-gray-400">
+      <div className="p-4 text-center text-zinc-500">
         Loading slots information...
       </div>
     );
@@ -51,7 +51,7 @@ export function SlotsComponent() {
 
   if (!slots || slots.length === 0) {
     return (
-      <div className="p-4 text-center text-gray-400">
+      <div className="p-4 text-center text-zinc-500">
         No slots information available
       </div>
     );
@@ -65,50 +65,50 @@ export function SlotsComponent() {
 
   return (
     <div className="space-y-4 p-4">
-      <h3 className="text-sm font-medium text-gray-200">Slots Information</h3>
+      <h3 className="text-sm font-medium text-zinc-300">Slots Information</h3>
       
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-gray-800 rounded-lg p-3">
-          <div className="text-xs text-gray-400">Total Slots</div>
-          <div className="text-xl font-semibold text-gray-100">{totalSlots}</div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-gradient-to-br from-zinc-800 to-zinc-850 rounded-lg p-3 border border-zinc-700">
+          <div className="text-xs text-zinc-500">Total Slots</div>
+          <div className="text-lg font-semibold text-zinc-200">{totalSlots}</div>
         </div>
         
-        <div className="bg-gray-800 rounded-lg p-3">
-          <div className="text-xs text-gray-400">Processing</div>
-          <div className="text-xl font-semibold text-green-400">{processingSlots}</div>
+        <div className="bg-gradient-to-br from-zinc-800 to-zinc-850 rounded-lg p-3 border border-zinc-700">
+          <div className="text-xs text-zinc-500">Processing</div>
+          <div className="text-lg font-semibold text-green-400">{processingSlots}</div>
         </div>
         
-        <div className="bg-gray-800 rounded-lg p-3">
-          <div className="text-xs text-gray-400">Idle</div>
-          <div className="text-xl font-semibold text-blue-400">{idleSlots}</div>
+        <div className="bg-gradient-to-br from-zinc-800 to-zinc-850 rounded-lg p-3 border border-zinc-700">
+          <div className="text-xs text-zinc-500">Idle</div>
+          <div className="text-lg font-semibold text-blue-400">{idleSlots}</div>
         </div>
         
-        <div className="bg-gray-800 rounded-lg p-3">
-          <div className="text-xs text-gray-400">Pending</div>
-          <div className="text-xl font-semibold text-yellow-400">{pendingSlots}</div>
+        <div className="bg-gradient-to-br from-zinc-800 to-zinc-850 rounded-lg p-3 border border-zinc-700">
+          <div className="text-xs text-zinc-500">Pending</div>
+          <div className="text-lg font-semibold text-yellow-400">{pendingSlots}</div>
         </div>
       </div>
 
       <div className="space-y-3">
-        <h4 className="text-sm font-medium text-gray-300">Slot Details</h4>
+        <h4 className="text-sm font-medium text-zinc-300">Slot Details</h4>
         {slots.map((slot) => (
           <div 
             key={slot.id} 
-            className="bg-gray-800 rounded-lg p-3 border border-gray-700"
+            className="bg-gradient-to-br from-zinc-800 to-zinc-850 rounded-lg p-3 border border-zinc-700"
           >
             <div className="flex justify-between items-start">
               <div>
-                <div className="font-medium text-gray-100">Slot {slot.id}</div>
-                <div className="text-xs text-gray-400 mt-1">
+                <div className="font-medium text-zinc-200">Slot {slot.id}</div>
+                <div className="text-xs text-zinc-500 mt-1">
                   Task ID: {slot.id_task || "None"}
                 </div>
               </div>
               <div className={`px-2 py-1 rounded text-xs font-medium flex items-center ${
                 slot.is_processing 
-                  ? "bg-green-900 text-green-300" 
+                  ? "bg-green-900/30 text-green-400" 
                   : slot.id_task 
-                    ? "bg-yellow-900 text-yellow-300" 
-                    : "bg-blue-900 text-blue-300"
+                    ? "bg-yellow-900/30 text-yellow-400" 
+                    : "bg-blue-900/30 text-blue-400"
               }`}>
                 {slot.is_processing && (
                   <span className="flex h-2 w-2 mr-1">
@@ -122,12 +122,12 @@ export function SlotsComponent() {
             
             {slot.is_processing && slot.next_token && (
               <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-gray-700 rounded p-2">
-                  <div className="text-gray-400">Remaining Tokens</div>
+                <div className="bg-zinc-700/50 rounded p-2">
+                  <div className="text-zinc-500">Remaining Tokens</div>
                   <div className="text-green-400 font-medium">{slot.next_token.n_remain}</div>
                 </div>
-                <div className="bg-gray-700 rounded p-2">
-                  <div className="text-gray-400">Decoded Tokens</div>
+                <div className="bg-zinc-700/50 rounded p-2">
+                  <div className="text-zinc-500">Decoded Tokens</div>
                   <div className="text-green-400 font-medium">{slot.next_token.n_decoded}</div>
                 </div>
               </div>
@@ -135,8 +135,8 @@ export function SlotsComponent() {
             
             {slot.prompt && (
               <div className="mt-2">
-                <div className="text-xs text-gray-400">Prompt Preview</div>
-                <div className="text-xs text-gray-300 truncate mt-1">
+                <div className="text-xs text-zinc-500">Prompt Preview</div>
+                <div className="text-xs text-zinc-300 truncate mt-1">
                   {slot.prompt.substring(0, 60)}{slot.prompt.length > 60 ? "..." : ""}
                 </div>
               </div>
