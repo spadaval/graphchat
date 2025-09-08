@@ -1,15 +1,19 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import type { Document } from '~/lib/state';
-import { getAllDocuments } from '~/lib/state';
 
 interface MentionListProps {
   items: Document[];
   command: (document: Document) => void;
-  selectedIndex: number;
 }
 
-export function MentionList({ items, command, selectedIndex }: MentionListProps) {
+export const MentionList = forwardRef((props: MentionListProps, ref) => {
+  const { items, command } = props;
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [items]);
 
   useEffect(() => {
     const selectedElement = listRef.current?.children[selectedIndex] as HTMLElement | undefined;
@@ -17,6 +21,35 @@ export function MentionList({ items, command, selectedIndex }: MentionListProps)
       selectedElement.scrollIntoView({ block: 'nearest' });
     }
   }, [selectedIndex]);
+
+  const selectItem = (index: number) => {
+    const item = items[index];
+    
+    if (item) {
+      command(item);
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    onKeyDown: ({ event }: { event: KeyboardEvent }) => {
+      if (event.key === 'ArrowUp') {
+        setSelectedIndex((selectedIndex + items.length - 1) % items.length);
+        return true;
+      }
+
+      if (event.key === 'ArrowDown') {
+        setSelectedIndex((selectedIndex + 1) % items.length);
+        return true;
+      }
+
+      if (event.key === 'Enter') {
+        selectItem(selectedIndex);
+        return true;
+      }
+
+      return false;
+    },
+  }));
 
   return (
     <div
@@ -27,7 +60,7 @@ export function MentionList({ items, command, selectedIndex }: MentionListProps)
         items.map((document, index) => (
           <div
             key={document.id}
-            onClick={() => command(document)}
+            onClick={() => selectItem(index)}
             className={`p-2 cursor-pointer text-zinc-100 text-sm border-b border-zinc-700 last:border-b-0 ${
               index === selectedIndex ? 'bg-zinc-700' : 'hover:bg-zinc-750'
             }`}
@@ -44,4 +77,6 @@ export function MentionList({ items, command, selectedIndex }: MentionListProps)
       )}
     </div>
   );
-}
+});
+
+MentionList.displayName = 'MentionList';

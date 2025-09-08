@@ -1,10 +1,12 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { MentionList } from './MentionList';
 import type { Document } from '~/lib/state';
 import { getAllDocuments } from '~/lib/state';
+import { ReactRenderer } from '@tiptap/react';
+import tippy from 'tippy.js';
 
 interface SmartMessageInputProps {
   onSend: (content: string) => void;
@@ -12,14 +14,7 @@ interface SmartMessageInputProps {
 }
 
 export function SmartMessageInput({ onSend, disabled }: SmartMessageInputProps) {
-  const [suggestions, setSuggestions] = useState<Document[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
-  const suggestionContainerRef = useRef<HTMLDivElement>(null);
-  const editorRef = useRef<HTMLDivElement>(null);
-
-  // Create suggestion configuration
+  // Create suggestion configuration using Tiptap's recommended approach
   const suggestion = {
     items: ({ query }: { query: string }) => {
       const allDocs = getAllDocuments();
@@ -34,81 +29,60 @@ export function SmartMessageInput({ onSend, disabled }: SmartMessageInputProps) 
     },
 
     render: () => {
-      let component: any;
+      let component: ReactRenderer;
       let popup: any;
       
       return {
         onStart: (props: any) => {
-          setShowSuggestions(true);
-          setSuggestions(props.items);
-          setSelectedIndex(0);
-          
-          // Calculate position - show above the editor
-          if (props.clientRect) {
-            const rect = props.clientRect();
-            if (rect) {
-              // Get the height of the suggestion list to position it correctly above
-              const suggestionHeight = 200; // Approximate height of the suggestion list
-              setSuggestionPosition({ 
-                top: rect.top + window.scrollY - suggestionHeight, 
-                left: rect.left + window.scrollX 
-              });
-            }
+          component = new ReactRenderer(MentionList, {
+            props,
+            editor: props.editor,
+          });
+
+          if (!props.clientRect) {
+            return;
           }
+
+          popup = tippy('body', {
+            getReferenceClientRect: props.clientRect,
+            appendTo: () => document.body,
+            content: component.element,
+            showOnCreate: true,
+            interactive: true,
+            trigger: 'manual',
+            placement: 'top-start',
+            maxWidth: '24rem',
+          });
         },
         
         onUpdate: (props: any) => {
-          setSuggestions(props.items);
-          setSelectedIndex(Math.min(selectedIndex, props.items.length - 1));
+          component.updateProps(props);
+          
+          if (!props.clientRect) {
+            return;
+          }
+          
+          popup[0].setProps({
+            getReferenceClientRect: props.clientRect,
+          });
         },
         
-        onKeyDown: ({ event }: { event: KeyboardEvent }) => {
-          if (event.key === 'Escape') {
-            setShowSuggestions(false);
+        onKeyDown: (props: any) => {
+          if (props.event.key === 'Escape') {
+            popup[0].hide();
             return true;
           }
           
-          if (!showSuggestions) {
-            return false;
-          }
-          
-          if (event.key === 'ArrowUp') {
-            setSelectedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
-            return true;
-          }
-          
-          if (event.key === 'ArrowDown') {
-            setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
-            return true;
-          }
-          
-          if (event.key === 'Enter' || event.key === 'Tab') {
-            if (suggestions.length > 0) {
-              // Select the currently highlighted item
-              const selectedDocument = suggestions[selectedIndex];
-              if (selectedDocument) {
-                // Use the command function from the suggestion config
-                suggestion.command({ 
-                  editor: editor, 
-                  range: editor?.state.selection, 
-                  props: selectedDocument 
-                });
-                return true;
-              }
-            }
-            return true;
-          }
-          
-          return false;
+          return component.ref?.onKeyDown(props);
         },
         
         onExit: () => {
-          setShowSuggestions(false);
-          setSelectedIndex(0);
+          popup[0].destroy();
+          component.destroy();
         },
       };
     },
-
+    
     command: ({ editor, range, props }: { editor: any; range: any; props: Document }) => {
       editor
         .chain()
@@ -118,14 +92,15 @@ export function SmartMessageInput({ onSend, disabled }: SmartMessageInputProps) 
           type: 'mention',
           attrs: {
             id: props.id,
-            label: props.title
-          }
+            label: props.title,
+          },
         })
         .run();
     },
   };
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: false,
@@ -135,7 +110,30 @@ export function SmartMessageInput({ onSend, disabled }: SmartMessageInputProps) 
         blockquote: false,
         horizontalRule: false,
       }),
-      Mention.configure({
+      Mention.extend({
+        addAttributes() {
+          return {
+            id: {
+              default: null,
+              parseHTML: element => element.getAttribute('data-id'),
+              renderHTML: attributes => {
+                return {
+                  'data-id': attributes.id,
+                }
+              },
+            },
+            label: {
+              default: null,
+              parseHTML: element => element.getAttribute('data-label'),
+              renderHTML: attributes => {
+                return {
+                  'data-label': attributes.label,
+                }
+              },
+            },
+          }
+        },
+      }).configure({
         HTMLAttributes: {
           class: 'mention',
         },
@@ -190,54 +188,11 @@ export function SmartMessageInput({ onSend, disabled }: SmartMessageInputProps) 
     };
   }, [editor]);
 
-  // Handle clicks outside suggestions
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (suggestionContainerRef.current && 
-          !suggestionContainerRef.current.contains(event.target as Node) &&
-          editorRef.current && 
-          !editorRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
   return (
     <div className="p-4 border-t border-zinc-800 relative">
       <div className="flex space-x-2">
-        <div className="flex-1 relative" ref={editorRef}>
+        <div className="flex-1 relative">
           <EditorContent editor={editor} />
-          {showSuggestions && suggestions.length > 0 && (
-            <div
-              ref={suggestionContainerRef}
-              className="fixed z-50"
-              style={{
-                top: `${suggestionPosition.top}px`,
-                left: `${suggestionPosition.left}px`,
-              }}
-            >
-              <MentionList
-                items={suggestions}
-                selectedIndex={selectedIndex}
-                command={(document) => {
-                  editor?.commands.insertContent({
-                    type: 'mention',
-                    attrs: {
-                      id: document.id,
-                      label: document.title
-                    }
-                  });
-                  setShowSuggestions(false);
-                  editor?.commands.focus();
-                }}
-              />
-            </div>
-          )}
         </div>
         <button
           type="button"
