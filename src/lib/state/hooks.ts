@@ -1,7 +1,8 @@
 import { use$ } from "@legendapp/state/react";
 import { getThreadMessages } from "./chat";
-import { blocks$, chatStore$ } from "./index";
-import type { BlockId, ChatId } from "./types";
+import { blocks$, chatStore$, documentStore$, serverStore$, uiPreferences$ } from "./index";
+import type { BlockId, ChatId, DocumentId } from "./types";
+import type { Document } from "./documents";
 
 // Hook to get a thread by ID
 export const useThread = (threadId: ChatId) => {
@@ -38,4 +39,33 @@ export const useCurrentThreadId = () => {
 export const useThreadsArray = () => {
   const threads = use$(chatStore$.threads);
   return Object.values(threads);
+};
+
+// Hook to get all documents as an array
+export const useDocuments = () => {
+  const documents = use$(documentStore$.documents);
+  return Object.values(documents);
+};
+
+// Hook to get current document
+export const useCurrentDocument = () => {
+  const currentDocumentId = use$(documentStore$.currentDocumentId);
+  const documents = use$(documentStore$.documents);
+  return currentDocumentId ? documents[currentDocumentId] : undefined;
+};
+
+// Hook to get a document by ID
+export const useDocument = (documentId: DocumentId) => {
+  const documents = use$(documentStore$.documents);
+  return documents[documentId];
+};
+
+// Hook to get server info
+export const useServerInfo = () => {
+  return use$(serverStore$);
+};
+
+// Hook to get UI preferences
+export const useUIPreferences = () => {
+  return use$(uiPreferences$);
 };

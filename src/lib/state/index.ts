@@ -33,20 +33,35 @@ export {
 // Hooks exports
 export {
   useBlock,
+  useCurrentDocument,
   useCurrentThreadId,
+  useDocument,
   useThread,
   useThreadMessages,
   useThreadsArray,
+  useDocuments,
+  useServerInfo,
+  useUIPreferences,
 } from "./hooks";
 export type { ModelProperties } from "./llm";
 
 // LLM exports
 export { modelProps$ } from "./llm";
+// Server exports
+export { serverStore$, setServerInfo, setLoading, setError } from "./server";
+// UI exports
+export {
+  uiPreferences$,
+  setActiveTab,
+  setShowDocumentPanel,
+} from "./ui";
 // Types
 export type {
+  ActiveTab,
   BlockId,
   ChatId,
   DocumentId,
   MessageId,
+  ServerInfo,
   VariantId,
 } from "./types";

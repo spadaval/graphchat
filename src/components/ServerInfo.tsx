@@ -1,15 +1,16 @@
-import { useEffect, useState } from "react";
-import { fetchServerInfo, type ServerInfo } from "../lib/server";
+import { useEffect } from "react";
+import { fetchServerInfo } from "../lib/server";
+import { useServerInfo } from "~/lib/state/hooks";
+import { serverStore$, setServerInfo, setLoading, setError } from "~/lib/state/server";
 import { SlotsComponent } from "./Slots";
 
 export function ServerInfoComponent() {
-  const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { serverInfo, loading, error } = useServerInfo();
 
   useEffect(() => {
     const loadServerInfo = async () => {
       try {
+        setLoading(true);
         const data = await fetchServerInfo();
         setServerInfo(data);
         setError(null);

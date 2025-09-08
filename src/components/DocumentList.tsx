@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import type { Document } from "~/lib/state";
+import type { DocumentId } from "~/lib/state/types";
 
 interface DocumentListProps {
   documents: Document[];
   onCreateNew: () => void;
   onEdit: (document: Document) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: DocumentId) => void;
 }
 
 export function DocumentList({

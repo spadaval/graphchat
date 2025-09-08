@@ -5,15 +5,16 @@ import {
 } from "~/components/ChatAreaComponents";
 import { TabContent, TabNavigation } from "~/components/ModelServerComponents";
 import { SidebarContent, SidebarHeader } from "~/components/Sidebar";
+import type { ChatId } from "~/lib/state/types";
 import { useThread } from "~/lib/state/hooks";
 
 // Chat Threads Sidebar Component
 interface ChatThreadsSidebarProps {
   createNewThread: () => void;
-  switchThread: (threadId: string) => void;
-  deleteThread: (threadId: string) => void;
-  duplicateThread: (threadId: string) => void;
-  editThreadTitle: (threadId: string, newTitle: string) => void;
+  switchThread: (threadId: ChatId) => void;
+  deleteThread: (threadId: ChatId) => void;
+  duplicateThread: (threadId: ChatId) => void;
+  editThreadTitle: (threadId: ChatId, newTitle: string) => void;
   deleteAllThreads: () => void;
 }
 
@@ -42,21 +43,24 @@ export function ChatThreadsSidebar({
 
 // Chat Area Component
 interface ChatAreaProps {
-  currentThreadId: string | undefined;
+  currentThreadId: ChatId | undefined;
   sendMessage: (message: string) => void;
 }
 
 export function ChatArea({ currentThreadId, sendMessage }: ChatAreaProps) {
   // Fetch the current thread using our new hook
-  const currentThread = useThread(currentThreadId || "");
+  const currentThread = useThread(currentThreadId);
 
+  if (!currentThreadId) {
+    return <EmptyState sendMessage={sendMessage} />;
+  }
+  
   return (
     <div className="flex-1 flex flex-col min-w-0 relative min-h-0 overflow-hidden">
-      <ChatHeader title={currentThread?.title || "Chat"} />
       {!currentThread ? (
         <EmptyState sendMessage={sendMessage} />
       ) : (
-        <MessagesList threadId={currentThreadId || ""} />
+        <MessagesList threadId={currentThreadId} />
       )}
     </div>
   );

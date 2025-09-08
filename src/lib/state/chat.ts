@@ -26,7 +26,7 @@ let nextThreadId = 1;
 
 const newThread = (title?: string, initialMessage?: string): ChatThread => {
   const thread: ChatThread = {
-    id: `thread-${nextThreadId++}`,
+    id: `chat-${nextThreadId++}`,
     title: title || "New Chat",
     messages: [],
     createdAt: new Date(),
@@ -79,11 +79,11 @@ export const createNewThread = (initialMessage?: string) => {
   return thread.id;
 };
 
-export const switchThread = (threadId: string) => {
+export const switchThread = (threadId: ChatId) => {
   chatStore$.currentThreadId.set(threadId);
 };
 
-export const deleteThread = (threadId: string) => {
+export const deleteThread = (threadId: ChatId) => {
   // Delete the thread directly
   chatStore$.threads[threadId].delete();
 
@@ -93,7 +93,7 @@ export const deleteThread = (threadId: string) => {
     const threads = chatStore$.threads.get();
     const threadIds = Object.keys(threads);
     if (threadIds.length > 0) {
-      chatStore$.currentThreadId.set(threadIds[0]);
+      chatStore$.currentThreadId.set(threadIds[0] as ChatId);
     } else {
       chatStore$.currentThreadId.set(undefined);
     }
@@ -104,12 +104,12 @@ export const deleteAllThreads = () => {
   // Get all thread keys and delete each one directly
   const threads = chatStore$.threads.get();
   Object.keys(threads).forEach((threadId) => {
-    chatStore$.threads[threadId].delete();
+    chatStore$.threads[threadId as ChatId].delete();
   });
   chatStore$.currentThreadId.set(undefined);
 };
 
-export const duplicateThread = (threadId: string) => {
+export const duplicateThread = (threadId: ChatId) => {
   const threads = chatStore$.threads.get();
   const originalThread = threads[threadId];
 
@@ -117,7 +117,7 @@ export const duplicateThread = (threadId: string) => {
 
   // Create a new thread with the same title and messages
   const newThread: ChatThread = {
-    id: `thread-${nextThreadId++}`,
+    id: `chat-${nextThreadId++}`,
     title: `${originalThread.title} (Copy)`,
     messages: [...originalThread.messages], // Copy message IDs
     createdAt: new Date(),
@@ -131,7 +131,7 @@ export const duplicateThread = (threadId: string) => {
   return newThread.id;
 };
 
-export const editThreadTitle = (threadId: string, newTitle: string) => {
+export const editThreadTitle = (threadId: ChatId, newTitle: string) => {
   const threads = chatStore$.threads.get();
   const thread = threads[threadId];
 
@@ -143,7 +143,7 @@ export const editThreadTitle = (threadId: string, newTitle: string) => {
 
 // Helper function to get messages for a thread (converted from blocks)
 // TODO: This function should be deprecated in favor of working directly with blocks
-export const getThreadMessages = (threadId: string): Block[] => {
+export const getThreadMessages = (threadId: ChatId): Block[] => {
   const threads = chatStore$.threads.get();
   const thread = threads[threadId];
   if (!thread) return [];

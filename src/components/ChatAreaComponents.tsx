@@ -1,5 +1,6 @@
 import { ChatMessage } from "~/components/ChatMessage";
 import { useThread } from "~/lib/state/hooks";
+import type { ChatId } from "~/lib/state/types";
 
 // Types
 interface SamplePrompt {
@@ -60,7 +61,7 @@ export function EmptyState({ sendMessage }: EmptyStateProps) {
 
 // Messages List Component
 interface MessagesListProps {
-  threadId: string;
+  threadId: ChatId;
 }
 
 export function MessagesList({ threadId }: MessagesListProps) {

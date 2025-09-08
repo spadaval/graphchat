@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChatThread } from "~/lib/state";
+import type { ChatId } from "~/lib/state/types";
 import { useCurrentThreadId, useThreadsArray } from "~/lib/state/hooks";
 
 // Sidebar Header Component
@@ -15,12 +16,12 @@ export function SidebarHeader() {
 interface ThreadItemProps {
   thread: ChatThread;
   isActive: boolean;
-  onSwitch: (threadId: string) => void;
+  onSwitch: (threadId: ChatId) => void;
   onEdit: (thread: ChatThread) => void;
-  onDelete: (threadId: string) => void;
-  onDuplicate: (threadId: string) => void;
+  onDelete: (threadId: ChatId) => void;
+  onDuplicate: (threadId: ChatId) => void;
   isOpenMenu: boolean;
-  onToggleMenu: (threadId: string) => void;
+  onToggleMenu: (threadId: ChatId) => void;
 }
 
 function ThreadItem({
@@ -83,7 +84,7 @@ function ThreadItem({
           onDuplicate={onDuplicate}
           onEdit={() => onEdit(thread)}
           isOpen={isOpenMenu}
-          onClose={() => onToggleMenu("")}
+          onClose={() => onToggleMenu("" as ChatId)}
         />
       </div>
     </div>
@@ -92,9 +93,9 @@ function ThreadItem({
 
 // Overflow Menu Component
 interface OverflowMenuProps {
-  threadId: string;
-  onDelete: (threadId: string) => void;
-  onDuplicate: (threadId: string) => void;
+  threadId: ChatId;
+  onDelete: (threadId: ChatId) => void;
+  onDuplicate: (threadId: ChatId) => void;
   onEdit: () => void;
   isOpen: boolean;
   onClose: () => void;
@@ -168,11 +169,14 @@ function OverflowMenu({
 }
 
 // Edit Name Modal Component
-interface EditNameModalProps {
+interface EditableThreadTitleProps {
   thread: ChatThread;
+  threadId: ChatId;
+  initialTitle: string;
+  onSave: (threadId: ChatId, newTitle: string) => void;
+  onCancel: () => void;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (threadId: string, newTitle: string) => void;
 }
 
 function EditNameModal({
@@ -180,53 +184,52 @@ function EditNameModal({
   isOpen,
   onClose,
   onSave,
-}: EditNameModalProps) {
+}: EditableThreadTitleProps) {
   const [newTitle, setNewTitle] = useState(thread.title);
-  const inputRef = useRef<HTMLInputElement>(null);
 
+  // Reset the input when the modal opens
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+    if (isOpen) {
+      setNewTitle(thread.title);
     }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
+  }, [isOpen, thread.title]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newTitle.trim()) {
+    if (newTitle.trim() && newTitle !== thread.title) {
       onSave(thread.id, newTitle.trim());
-      onClose();
     }
+    onClose();
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-6 w-96">
-        <h3 className="text-lg font-medium text-zinc-100 mb-4">
-          Edit Chat Name
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-zinc-800 rounded-lg p-6 w-full max-w-md border border-zinc-700">
+        <h3 className="text-lg font-semibold text-zinc-100 mb-4">
+          Rename Thread
         </h3>
         <form onSubmit={handleSubmit}>
           <input
-            ref={inputRef}
             type="text"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            className="w-full p-2 mb-4 bg-zinc-700 border border-zinc-600 rounded text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-600"
-            placeholder="Chat name"
+            className="w-full p-2 border border-zinc-600 rounded bg-zinc-700 text-zinc-100 mb-4 focus:outline-none focus:ring-2 focus:ring-zinc-600"
+            placeholder="Enter new title"
+            autoFocus
           />
           <div className="flex justify-end space-x-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded"
+              className="px-4 py-2 text-zinc-300 hover:text-zinc-100 bg-zinc-700 hover:bg-zinc-600 rounded transition-colors duration-200"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors duration-200"
             >
               Save
             </button>
@@ -273,10 +276,10 @@ function DeleteAllButton({
 // Sidebar Content Component
 interface SidebarContentProps {
   createNewThread: () => void;
-  switchThread: (threadId: string) => void;
-  deleteThread: (threadId: string) => void;
-  duplicateThread: (threadId: string) => void;
-  editThreadTitle: (threadId: string, newTitle: string) => void;
+  switchThread: (threadId: ChatId) => void;
+  deleteThread: (threadId: ChatId) => void;
+  duplicateThread: (threadId: ChatId) => void;
+  editThreadTitle: (threadId: ChatId, newTitle: string) => void;
   deleteAllThreads: () => void;
 }
 
@@ -301,7 +304,7 @@ export function SidebarContent({
     setEditModalOpen(true);
   };
 
-  const handleSaveTitle = (threadId: string, newTitle: string) => {
+  const handleSaveTitle = (threadId: ChatId, newTitle: string) => {
     editThreadTitle(threadId, newTitle);
   };
 
@@ -361,12 +364,18 @@ export function SidebarContent({
       {editingThread && (
         <EditNameModal
           thread={editingThread}
+          threadId={editingThread.id}
+          initialTitle={editingThread.title}
           isOpen={editModalOpen}
           onClose={() => {
             setEditModalOpen(false);
             setEditingThread(null);
           }}
           onSave={handleSaveTitle}
+          onCancel={() => {
+            setEditModalOpen(false);
+            setEditingThread(null);
+          }}
         />
       )}
     </div>

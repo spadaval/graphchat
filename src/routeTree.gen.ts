@@ -9,68 +9,55 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DocumentsIndexRouteImport } from './routes/documents/index'
-import { Route as DocumentsNewRouteImport } from './routes/documents/new'
-import { Route as DocumentsIdRouteImport } from './routes/documents/$id'
 
+const DocumentsRoute = DocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DocumentsIndexRoute = DocumentsIndexRouteImport.update({
-  id: '/documents/',
-  path: '/documents/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocumentsNewRoute = DocumentsNewRouteImport.update({
-  id: '/documents/new',
-  path: '/documents/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocumentsIdRoute = DocumentsIdRouteImport.update({
-  id: '/documents/$id',
-  path: '/documents/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/documents/$id': typeof DocumentsIdRoute
-  '/documents/new': typeof DocumentsNewRoute
-  '/documents': typeof DocumentsIndexRoute
+  '/documents': typeof DocumentsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/documents/$id': typeof DocumentsIdRoute
-  '/documents/new': typeof DocumentsNewRoute
-  '/documents': typeof DocumentsIndexRoute
+  '/documents': typeof DocumentsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/documents/$id': typeof DocumentsIdRoute
-  '/documents/new': typeof DocumentsNewRoute
-  '/documents/': typeof DocumentsIndexRoute
+  '/documents': typeof DocumentsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/documents/$id' | '/documents/new' | '/documents'
+  fullPaths: '/' | '/documents'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/documents/$id' | '/documents/new' | '/documents'
-  id: '__root__' | '/' | '/documents/$id' | '/documents/new' | '/documents/'
+  to: '/' | '/documents'
+  id: '__root__' | '/' | '/documents'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DocumentsIdRoute: typeof DocumentsIdRoute
-  DocumentsNewRoute: typeof DocumentsNewRoute
-  DocumentsIndexRoute: typeof DocumentsIndexRoute
+  DocumentsRoute: typeof DocumentsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/documents': {
+      id: '/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof DocumentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -78,35 +65,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/documents/': {
-      id: '/documents/'
-      path: '/documents'
-      fullPath: '/documents'
-      preLoaderRoute: typeof DocumentsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/documents/new': {
-      id: '/documents/new'
-      path: '/documents/new'
-      fullPath: '/documents/new'
-      preLoaderRoute: typeof DocumentsNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/documents/$id': {
-      id: '/documents/$id'
-      path: '/documents/$id'
-      fullPath: '/documents/$id'
-      preLoaderRoute: typeof DocumentsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DocumentsIdRoute: DocumentsIdRoute,
-  DocumentsNewRoute: DocumentsNewRoute,
-  DocumentsIndexRoute: DocumentsIndexRoute,
+  DocumentsRoute: DocumentsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

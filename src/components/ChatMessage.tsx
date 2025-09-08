@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
 import { useBlock } from "../lib/state/hooks";
+import type { BlockId } from "../lib/state/types";
 
 type CodeProps = React.DetailedHTMLProps<
   React.HTMLAttributes<HTMLElement>,
@@ -15,7 +16,7 @@ type AnchorProps = React.DetailedHTMLProps<
 >;
 
 interface ChatMessageProps {
-  blockId: string;
+  blockId: BlockId;
   isStreaming: boolean;
 }
 

@@ -17,11 +17,12 @@ export const blocks$ = observable<Record<BlockId, Block>>({});
 
 // Block creation function
 let nextMessageId = 0;
+let nextBlockId = 1;
 export const createBlock = (
   text: string,
   role: "user" | "assistant" = "user",
 ): Block => ({
-  id: crypto.randomUUID(),
+  id: `blk-${nextBlockId++}`,
   messageId: nextMessageId++,
   text,
   role,

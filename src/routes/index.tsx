@@ -1,6 +1,5 @@
 import { use$ } from "@legendapp/state/react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import { DocumentReferencePanel } from "~/components/DocumentReference";
 import {
   ChatArea,
@@ -20,6 +19,9 @@ import {
   sendMessage,
   setCurrentUserMessage,
   switchThread,
+  uiPreferences$,
+  setActiveTab,
+  setShowDocumentPanel,
 } from "~/lib/state";
 
 export const Route = createFileRoute("/")({
@@ -27,9 +29,8 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const [activeTab, setActiveTab] = useState<"model" | "server">("model");
-  const [showDocumentPanel, setShowDocumentPanel] = useState(false);
   const { currentUserMessage, currentThreadId } = use$(chatStore$);
+  const { activeTab, showDocumentPanel } = use$(uiPreferences$);
 
   const handleInsertDocument = (document: Document) => {
     // Insert document reference into the message input
