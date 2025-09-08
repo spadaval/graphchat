@@ -49,7 +49,7 @@ interface ChatAreaProps {
 
 export function ChatArea({ currentThreadId, sendMessage }: ChatAreaProps) {
   // Fetch the current thread using our new hook
-  const currentThread = useThread(currentThreadId);
+  const currentThread = useThread(currentThreadId!);
 
   if (!currentThreadId) {
     return <EmptyState sendMessage={sendMessage} />;
@@ -79,7 +79,7 @@ export function MessageInput({
   sendMessage,
 }: MessageInputProps) {
   return (
-    <div className="p-4 border-t border-zinc-800 bg-zinc-900">
+    <div className="p-4 border-t border-zinc-800">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -142,7 +142,7 @@ export function MainLayout({
   modelServer,
 }: MainLayoutProps) {
   return (
-    <div className="flex h-screen bg-zinc-950">
+    <div className="flex h-full bg-zinc-950">
       {sidebar}
       <div className="flex-1 flex flex-col min-h-0">{children}</div>
       {modelServer}

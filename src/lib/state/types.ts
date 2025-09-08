@@ -3,7 +3,6 @@
 // IDs
 export type ChatId = `chat-${number}`;
 export type MessageId = `msg-${number}`;
-export type VariantId = `var-${number}`;
 export type BlockId = `blk-${number}`;
 export type DocumentId = `doc-${number}`;
 

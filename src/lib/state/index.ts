@@ -18,6 +18,7 @@ export {
   sendMessage,
   setCurrentUserMessage,
   switchThread,
+  regenerateMessage,
 } from "./chat";
 export type { Document } from "./documents";
 // Document exports
@@ -63,5 +64,4 @@ export type {
   DocumentId,
   MessageId,
   ServerInfo,
-  VariantId,
 } from "./types";

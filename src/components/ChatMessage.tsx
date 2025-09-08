@@ -1,8 +1,9 @@
-import { Bot, RefreshCw, RotateCcw, User } from "lucide-react";
+import { Bot, RefreshCw, User } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
 import { useBlock } from "../lib/state/hooks";
+import { regenerateMessage } from "../lib/state/chat";
 import type { BlockId } from "../lib/state/types";
 
 type CodeProps = React.DetailedHTMLProps<
@@ -142,29 +143,13 @@ const MessageBubble = ({ text, role, isStreaming }: MessageBubbleProps) => {
 };
 
 interface MessageActionsProps {
-  hasMultipleVariants: boolean;
-  variantsCount: number;
-  onNextVariant: () => void;
   onRegenerate: () => void;
 }
 
 const MessageActions = ({
-  hasMultipleVariants,
-  variantsCount,
-  onNextVariant,
   onRegenerate,
 }: MessageActionsProps) => (
   <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1 ml-auto">
-    <button
-      type="button"
-      onClick={onNextVariant}
-      className="p-1 text-xs text-zinc-500 hover:text-zinc-300 bg-gradient-to-br from-zinc-800 to-zinc-850 hover:from-zinc-700 hover:to-zinc-800 rounded flex items-center gap-1 border border-zinc-700"
-      title="Show variants"
-      aria-label="Show message variants"
-    >
-      <RotateCcw size={12} />
-      {hasMultipleVariants && <span>({variantsCount})</span>}
-    </button>
     <button
       type="button"
       onClick={onRegenerate}
@@ -202,15 +187,8 @@ export function ChatMessage({ blockId, isStreaming }: ChatMessageProps) {
         {!isUser && (
           <div className="flex justify-end mt-1">
             <MessageActions
-              hasMultipleVariants={false}
-              variantsCount={1}
-              onNextVariant={() => {
-                // TODO: Implement nextVariant functionality
-                console.log("Next variant not implemented yet");
-              }}
               onRegenerate={() => {
-                // TODO: Implement regenerateMessage functionality
-                console.log("Regenerate message not implemented yet");
+                regenerateMessage(blockId);
               }}
             />
           </div>

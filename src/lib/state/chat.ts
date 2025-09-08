@@ -62,9 +62,6 @@ export const setCurrentUserMessage = (message: string) => {
 // TODO: Reimplement these functions for the new block-based system
 // These functions need to be redesigned since we're no longer storing message objects directly
 // We'll need to work with blocks as needed
-// export const nextVariant = (messageId: number) => { ... }
-// export const previousVariant = (messageId: number) => { ... }
-// export const regenerateMessage = async (messageId: number) => { ... }
 
 export const createNewThread = (initialMessage?: string) => {
   // Use first 30 characters of the initial message as the thread title, or default to "New Chat"
@@ -265,6 +262,71 @@ export const sendMessage = async (text?: string) => {
       },
     );
   }
+};
+
+export const regenerateMessage = async (blockId: BlockId) => {
+  // Get the current thread
+  const currentThreadId = chatStore$.currentThreadId.get();
+  if (!currentThreadId) return;
+
+  const threads = chatStore$.threads.get();
+  const currentThread = threads[currentThreadId];
+  if (!currentThread) return;
+
+  // Find the block to regenerate
+  const blocks = blocks$.get();
+  const blockToRegenerate = blocks[blockId];
+  if (!blockToRegenerate || blockToRegenerate.role !== "assistant") return;
+
+  // Find the position of this block in the thread
+  const blockIndex = currentThread.messages.indexOf(blockId);
+  if (blockIndex === -1) return;
+
+  // Get all blocks up to and including the block before the one we're regenerating
+  const previousBlocks = currentThread.messages.slice(0, blockIndex);
+  const blocksForLLM = getBlocksForLLM(previousBlocks);
+
+  // Create a new block for the regenerated response
+  const newBlock = createBlock("", "assistant");
+  blocks$.assign({ [newBlock.id]: newBlock });
+
+  // Replace the old block with the new one in the thread
+  chatStore$.threads[currentThreadId].messages[blockIndex].set(newBlock.id);
+  
+  // Remove the old block from the blocks store
+  blocks$[blockId].delete();
+
+  // Set the new block as generating
+  blocks$[newBlock.id].isGenerating.set(true);
+
+  // Stream the response and update the new block
+  const responseStream = callLLMStreaming(blocksForLLM, modelProps$.get());
+
+  let accumulatedContent = "";
+
+  for await (const chunkResult of responseStream) {
+    chunkResult.match(
+      (chunk) => {
+        if (chunk.done) {
+          // Stream is complete
+          return;
+        }
+        // Accumulate content and update the new block directly
+        accumulatedContent += chunk.content;
+        blocks$[newBlock.id].text.set(accumulatedContent);
+      },
+      (error) => {
+        // Handle streaming error
+        console.error("Streaming error:", error.message);
+        blocks$[newBlock.id].text.set(
+          `${accumulatedContent}\n\n[Error: ${error.message}]`,
+        );
+      },
+    );
+  }
+  
+  // Mark generation as complete
+  blocks$[newBlock.id].isGenerating.set(false);
 };
 
 export default chatStore$;

@@ -34,12 +34,12 @@ export function DocumentEditorPage() {
 
   const handleSave = (title: string, content: string, tags: string[]) => {
     if (!currentDocument) {
-      // Creating a new document
-      createDocument(title, content, tags);
+      // Creating a new document (tags parameter is ignored since we removed tagging)
+      createDocument(title, content);
     } else {
-      // Updating existing document
+      // Updating existing document (tags parameter is ignored since we removed tagging)
       setIsSaving(true);
-      updateDocument(currentDocument.id, { title, content, tags });
+      updateDocument(currentDocument.id, { title, content });
       
       setTimeout(() => setIsSaving(false), 500);
     }
@@ -64,30 +64,11 @@ export function DocumentEditorPage() {
       {/* Main editor area */}
       <div className="flex-1 flex flex-col">
         {currentDocument ? (
-          <>
-            <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
-              <h1 className="text-xl font-bold text-zinc-100">
-                Editing: {currentDocument.title}
-              </h1>
-              <div className="flex space-x-2">
-                {isSaving && (
-                  <span className="text-sm text-zinc-500">Saving...</span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleDelete(currentDocument.id)}
-                  className="px-3 py-1 bg-red-700 hover:bg-red-600 text-zinc-200 rounded text-sm"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-            <DocumentEditor
-              document={currentDocument}
-              onSave={handleSave}
-              onCancel={handleCancel}
-            />
-          </>
+          <DocumentEditor
+            document={currentDocument}
+            onSave={handleSave}
+            onCancel={handleCancel}
+          />
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">

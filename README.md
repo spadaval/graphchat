@@ -249,7 +249,6 @@ TanStack Router is used for application routing:
 
 ### LLM Integration
 
-- Messages support variants (alternative responses)
 - Streaming responses using Server-Sent Events
 - Configurable model parameters
 - Real-time slots monitoring with detailed slot information
