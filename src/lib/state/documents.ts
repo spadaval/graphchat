@@ -2,6 +2,7 @@ import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
 import type { DocumentId } from "./types";
+import { removeDocumentFromAllBlocks } from "./block";
 
 export interface Document {
   id: DocumentId;
@@ -67,6 +68,14 @@ export const updateDocument = (
 };
 
 export const deleteDocument = (id: DocumentId) => {
+  // Remove the document reference from all blocks first
+  try {
+    removeDocumentFromAllBlocks(id);
+  } catch (error) {
+    console.error("Error removing document from blocks:", error);
+  }
+  
+  // Then delete the document from the document store
   documentStore$.documents[id].delete();
 
   // If we're deleting the current document, unset current document

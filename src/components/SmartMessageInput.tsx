@@ -2,9 +2,18 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
 import { useEffect } from 'react';
+import { use$ } from "@legendapp/state/react";
 import { MentionList } from './MentionList';
+import { DocumentChipsList } from './DocumentChips';
 import type { Document } from '~/lib/state';
-import { getAllDocuments } from '~/lib/state';
+import { 
+  getAllDocuments, 
+  documentLinking$,
+  addDocumentToCurrentMessage,
+  removeDocumentFromCurrentMessage,
+  clearCurrentMessageLinks,
+  getCurrentMessageLinks
+} from '~/lib/state';
 import { ReactRenderer } from '@tiptap/react';
 import tippy from 'tippy.js';
 
@@ -14,6 +23,8 @@ interface SmartMessageInputProps {
 }
 
 export function SmartMessageInput({ onSend, disabled }: SmartMessageInputProps) {
+  const { currentMessageLinks } = use$(documentLinking$);
+
   // Create suggestion configuration using Tiptap's recommended approach
   const suggestion = {
     items: ({ query }: { query: string }) => {
@@ -73,7 +84,7 @@ export function SmartMessageInput({ onSend, disabled }: SmartMessageInputProps) 
             return true;
           }
           
-          return component.ref?.onKeyDown(props);
+          return (component.ref as any)?.onKeyDown?.(props);
         },
         
         onExit: () => {
@@ -83,7 +94,10 @@ export function SmartMessageInput({ onSend, disabled }: SmartMessageInputProps) 
       };
     },
     
-    command: ({ editor, range, props }: { editor: any; range: any; props: Document }) => {
+    command: ({ editor, range, props }: { editor: any; range: any; props: any }) => {
+      // Add document to current message links when mentioned
+      addDocumentToCurrentMessage(props.id);
+      
       editor
         .chain()
         .focus()
@@ -190,6 +204,18 @@ export function SmartMessageInput({ onSend, disabled }: SmartMessageInputProps) 
 
   return (
     <div className="p-4 border-t border-zinc-800 relative">
+      {/* Document attachments */}
+      {currentMessageLinks.length > 0 && (
+        <div className="mb-3">
+          <div className="text-xs text-zinc-400 mb-2">Attached documents:</div>
+          <DocumentChipsList
+            documentIds={currentMessageLinks}
+            onRemove={removeDocumentFromCurrentMessage}
+            showRemove={true}
+          />
+        </div>
+      )}
+      
       <div className="flex space-x-2">
         <div className="flex-1 relative">
           <EditorContent editor={editor} />

@@ -2,7 +2,15 @@
 
 export type { Block } from "./block";
 // Block exports
-export { blocks$, createBlock } from "./block";
+export { 
+  blocks$, 
+  createBlock,
+  addDocumentToBlock,
+  removeDocumentFromBlock,
+  getBlockLinkedDocuments,
+  setBlockLinkedDocuments,
+  removeDocumentFromAllBlocks
+} from "./block";
 export type { ChatThread, ChatThreadWithMessages } from "./chat";
 // Chat exports
 export {
@@ -54,7 +62,15 @@ export { serverStore$, setServerInfo, setLoading, setError } from "./server";
 export {
   uiPreferences$,
   setActiveTab,
-  setShowDocumentPanel,
+  documentLinking$,
+  addDocumentToCurrentMessage,
+  removeDocumentFromCurrentMessage,
+  clearCurrentMessageLinks,
+  getCurrentMessageLinks,
+  addDocumentToMessage,
+  removeDocumentFromMessage,
+  getMessageDocumentLinks,
+  setMessageDocumentLinks,
 } from "./ui";
 // Types
 export type {

@@ -69,8 +69,8 @@ export function ChatArea({ currentThreadId, sendMessage }: ChatAreaProps) {
 
 // Model Server Sidebar Component
 interface ModelServerSidebarProps {
-  activeTab: "model" | "server";
-  setActiveTab: (tab: "model" | "server") => void;
+  activeTab: "model" | "server" | "documents";
+  setActiveTab: (tab: "model" | "server" | "documents") => void;
 }
 
 export function ModelServerSidebar({

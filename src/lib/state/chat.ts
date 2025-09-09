@@ -1,7 +1,12 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
-import { type Block, blocks$, createBlock } from "./block";
+import {
+  type Block,
+  blocks$,
+  createBlock,
+  setBlockLinkedDocuments,
+} from "./block";
 import { callLLMStreaming, modelProps$ } from "./llm";
 import type { BlockId, ChatId } from "./types";
 
@@ -207,9 +212,20 @@ export const sendMessage = async (text?: string) => {
     return;
   }
 
-  // Create a block for the user message
+  // Get current message links from UI state
+  const { getCurrentMessageLinks, clearCurrentMessageLinks } = await import(
+    "./ui"
+  );
+  const linkedDocuments = getCurrentMessageLinks();
+
+  // Create a block for the user message with linked documents
   const userBlock = createBlock(text, "user");
+  // Use our helper function to set linked documents
+  setBlockLinkedDocuments(userBlock.id, linkedDocuments);
   blocks$.assign({ [userBlock.id]: userBlock });
+
+  // Clear current message links after sending
+  clearCurrentMessageLinks();
 
   let currentThreadId = chatStore$.currentThreadId.get();
   if (!currentThreadId) {
@@ -258,9 +274,9 @@ export const sendMessage = async (text?: string) => {
         // Handle streaming error
         console.error("Streaming error:", error.message);
         blocks$[assistantBlock.id].text.set(
-          `${accumulatedContent}\n\n[Error: ${error.message}]`,
+          `${accumulatedContent}\n\n[Error: ${error.message}]`
         );
-      },
+      }
     );
   }
 };
@@ -293,7 +309,7 @@ export const regenerateMessage = async (blockId: BlockId) => {
 
   // Replace the old block with the new one in the thread
   chatStore$.threads[currentThreadId].messages[blockIndex].set(newBlock.id);
-  
+
   // Remove the old block from the blocks store
   blocks$[blockId].delete();
 
@@ -320,12 +336,12 @@ export const regenerateMessage = async (blockId: BlockId) => {
         // Handle streaming error
         console.error("Streaming error:", error.message);
         blocks$[newBlock.id].text.set(
-          `${accumulatedContent}\n\n[Error: ${error.message}]`,
+          `${accumulatedContent}\n\n[Error: ${error.message}]`
         );
-      },
+      }
     );
   }
-  
+
   // Mark generation as complete
   blocks$[newBlock.id].isGenerating.set(false);
 };

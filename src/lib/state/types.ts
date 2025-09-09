@@ -32,9 +32,14 @@ export interface ServerInfo {
 }
 
 // UI preferences
-export type ActiveTab = "model" | "server";
+export type ActiveTab = "model" | "server" | "documents";
 
 export interface UIPreferences {
   activeTab: ActiveTab;
-  showDocumentPanel: boolean;
+}
+
+// Document linking state
+export interface DocumentLinkingState {
+  currentMessageLinks: DocumentId[]; // Documents selected for current message
+  messageDocumentLinks: Record<BlockId, DocumentId[]>; // Documents linked to specific messages
 }

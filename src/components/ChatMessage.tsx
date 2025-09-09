@@ -4,6 +4,7 @@ import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
 import { useBlock } from "../lib/state/hooks";
 import { regenerateMessage } from "../lib/state/chat";
+import { DocumentChipsList } from "./DocumentChips";
 import type { BlockId } from "../lib/state/types";
 
 type CodeProps = React.DetailedHTMLProps<
@@ -178,6 +179,17 @@ export function ChatMessage({ blockId, isStreaming }: ChatMessageProps) {
       <MessageAvatar role={block.role} />
 
       <div className="flex flex-col w-full min-w-0">
+        {/* Document attachments for user messages */}
+        {isUser && block.linkedDocuments.length > 0 && (
+          <div className="mb-2">
+            <div className="text-xs text-zinc-400 mb-1">Attached documents:</div>
+            <DocumentChipsList
+              documentIds={block.linkedDocuments}
+              showRemove={false}
+            />
+          </div>
+        )}
+        
         <MessageBubble
           text={block.text}
           role={block.role}

@@ -1,3 +1,5 @@
+import { useSearch } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { DocumentList } from "~/components/DocumentList";
 import { DocumentEditor } from "~/components/DocumentEditor";
 import type { Document } from "~/lib/state";
@@ -10,11 +12,24 @@ import {
   updateDocument,
   useCurrentDocument,
   useDocuments,
+  getDocumentById,
 } from "~/lib/state";
 
 export function DocumentEditorPage() {
   const documents = useDocuments();
   const currentDocument = useCurrentDocument();
+  const search = useSearch({ strict: false }) as { id?: string };
+
+  // Set the current document based on the URL parameter
+  useEffect(() => {
+    if (search.id) {
+      // Check if the document exists
+      const document = getDocumentById(search.id as DocumentId);
+      if (document) {
+        setCurrentDocument(search.id as DocumentId);
+      }
+    }
+  }, [search.id]);
 
   const handleCreateNew = () => {
     // Create a new empty document and set it as the current document
