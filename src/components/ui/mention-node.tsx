@@ -115,7 +115,7 @@ export function MentionInputElement(
           <InlineComboboxInput />
         </span>
 
-        <InlineComboboxContent className="my-1.5">
+        <InlineComboboxContent className="my-1.5 bg-zinc-800 border border-zinc-700">
           <InlineComboboxEmpty>No results</InlineComboboxEmpty>
 
           <InlineComboboxGroup>
@@ -123,7 +123,13 @@ export function MentionInputElement(
               <InlineComboboxItem
                 key={item.key}
                 value={item.text}
-                onClick={() => onSelectItem(editor, item, search)}
+                onClick={() => {
+                  // Add document to current message links when mentioned
+                  addDocumentToCurrentMessage(item.key);
+                  // Use the editor's onSelectItem function
+                  const onSelectItem = getMentionOnSelectItem();
+                  onSelectItem(editor, item, search);
+                }}
               >
                 {item.text}
               </InlineComboboxItem>

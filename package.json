@@ -8,6 +8,7 @@
     "dev": "vite dev",
     "build": "vite build && tsc --noEmit",
     "start": "vite start",
+    "lint": "biome check",
     "format": "biome format --write --unsafe",
     "gen-client": "openapi-ts"
   },
@@ -29,6 +30,7 @@
     "@platejs/code-block": "^49.0.0",
     "@platejs/combobox": "^49.0.0",
     "@platejs/comment": "^49.0.0",
+    "@platejs/core": "^49.2.21",
     "@platejs/date": "^49.0.2",
     "@platejs/dnd": "^49.2.22",
     "@platejs/docx": "^49.0.0",

@@ -32,13 +32,13 @@ src/
 
 ## Development Commands
 
-- **Dev Server**: `pnpm dev` - Starts the development server with hot reloading
-- **Build**: `pnpm build` - Builds the application for production
-- **Start**: `pnpm start` - Starts the production server
 - **Format**: `pnpm format` - Formats code with Biome
-- **Generate Client**: `pnpm gen-client` - Regenerates the OpenAPI client from spec
+- **Lint**: `pnpm lint` - Lints the code with Biome
+- **Generate Client**: `pnpm gen-client` - Regenerates the OpenAPI client (for llama.cpp) from spec
 
-The dev server should always be running. DO NOT try to start it.
+DO NOT RUN THE DEV SERVER!!!
+`pnpm run dev` is a "watch" command, it does not terminate. You will be stuck waiting for it to finish till the end of time.
+The dev server will always be running, so starting it is unnecessary.
 
 ## Architecture
 

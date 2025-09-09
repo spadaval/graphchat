@@ -261,7 +261,7 @@ const InlineComboboxContent: typeof ComboboxPopover = ({
     <Portal>
       <ComboboxPopover
         className={cn(
-          'z-500 max-h-[288px] w-[300px] overflow-y-auto rounded-md bg-popover shadow-md',
+          'z-500 max-h-[288px] w-[300px] overflow-y-auto rounded-md bg-popover shadow-md border border-border bg-zinc-800',
           className
         )}
         {...props}
@@ -279,7 +279,7 @@ const comboboxItemVariants = cva(
     variants: {
       interactive: {
         false: '',
-        true: 'cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground data-[active-item=true]:bg-accent data-[active-item=true]:text-accent-foreground',
+        true: 'cursor-pointer transition-colors hover:bg-zinc-700 hover:text-zinc-100 data-[active-item=true]:bg-zinc-700 data-[active-item=true]:text-zinc-100 focus:bg-zinc-700 focus:text-zinc-100',
       },
     },
   }
@@ -320,6 +320,18 @@ const InlineComboboxItem = ({
   return (
     <ComboboxItem
       className={cn(comboboxItemVariants(), className)}
+      onKeyDown={(event) => {
+        // Handle Tab key to select the item
+        if (event.key === 'Tab') {
+          event.preventDefault();
+          removeInput(focusEditor);
+          // Programmatically click the item to trigger selection
+          const element = event.currentTarget;
+          if (element) {
+            element.click();
+          }
+        }
+      }}
       onClick={(event) => {
         removeInput(focusEditor);
         onClick?.(event);

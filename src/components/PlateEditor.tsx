@@ -2,20 +2,18 @@ import React, { useEffect, useRef } from 'react';
 import {
   Plate,
   PlateContent,
-  PlateProvider,
   usePlateEditor,
-} from '@udecode/plate-common/react';
-import { createParagraphPlugin } from '@udecode/plate-paragraph';
+} from 'platejs/react';
+import { ParagraphPlugin } from 'platejs/react';
 import { MentionKit } from './mention-kit';
 import { getAllDocuments } from '~/lib/state';
 import { addDocumentToCurrentMessage } from '~/lib/state/ui';
 import { getMentionOnSelectItem } from '@platejs/mention';
 import type { TElement } from 'platejs';
-import { usePlateStore } from '@udecode/plate-core/react';
 
 // Create the plugins
 const plugins = [
-  createParagraphPlugin(),
+  ParagraphPlugin,
   ...MentionKit,
 ];
 
@@ -35,9 +33,7 @@ export function PlateEditor({ onSend, disabled }: PlateEditorProps) {
   });
 
   // Custom onSelectItem function to handle document mentions
-  const onSelectItem = getMentionOnSelectItem({
-    insertSpaceAfterMention: true,
-  });
+  const onSelectItem = getMentionOnSelectItem();
 
   // Custom function to handle document selection
   const handleDocumentSelect = (document: any) => {
@@ -46,20 +42,17 @@ export function PlateEditor({ onSend, disabled }: PlateEditorProps) {
     
     // Use the editor's onSelectItem function
     if (editor) {
-      onSelectItem(editor, {
-        key: document.key,
-        text: document.text,
-      });
+      onSelectItem(editor, document);
     }
   };
 
   const handleSend = () => {
     if (editor) {
       // Get the editor content as plain text
-      const content = editor.api.get().children[0]?.children[0]?.text?.trim() || '';
+      const content = editor.api.string();
       if (content) {
         onSend(content);
-        editor.api.get().reset();
+        editor.tf.reset();
       }
     }
   };
@@ -80,11 +73,11 @@ export function PlateEditor({ onSend, disabled }: PlateEditorProps) {
   }, [editor]);
 
   return (
-    <PlateProvider editor={editor}>
+    <Plate editor={editor}>
       <PlateContent
         className="w-full p-3 border border-zinc-700 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600 min-h-[60px] max-h-32 overflow-y-auto"
         placeholder="Type your message... Type @ to reference documents"
       />
-    </PlateProvider>
+    </Plate>
   );
 }
