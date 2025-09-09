@@ -1,10 +1,18 @@
 # Agent Guidelines for GraphChat
 
+## ⚠️ CRITICAL WARNING
+**DO NOT RUN THE DEV SERVER!** `pnpm dev` is a watch command that never terminates. The dev server is always running - starting it will cause you to wait indefinitely.
+
 ## Commands
-- **Dev**: `vite dev` | **Build**: `vite build && tsc --noEmit` | **Start**: `vite start`
-- **Lint**: `biome check --write` | **Format**: `biome format --write --unsafe`
+- **Build**: `vite build && tsc --noEmit` | **Start**: `vite start`
+- **Lint**: `biome check` | **Format**: `biome format --write --unsafe`
 - **Gen client**: `openapi-ts`
 - **Test**: No testing framework configured
+
+## Architecture
+- **State**: `@legendapp/state` for persistent/shared state, `useState` only for ephemeral UI state
+- **LLM Integration**: SSE streaming, configurable model parameters, real-time slots monitoring
+- **Error Handling**: `neverthrow` for functional errors, try/catch for async operations
 
 ## Code Style
 - **Imports**: Path aliases `~/` for `./src/`, group by React/third-party/local, prefer named imports
