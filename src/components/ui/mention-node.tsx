@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 
-import type { TComboboxInputElement, TMentionElement } from 'platejs';
-import type { PlateElementProps } from 'platejs/react';
+import type { TComboboxInputElement, TMentionElement } from "platejs";
+import type { PlateElementProps } from "platejs/react";
 
-import { getMentionOnSelectItem } from '@platejs/mention';
-import { IS_APPLE, KEYS } from 'platejs';
+import { getMentionOnSelectItem } from "@platejs/mention";
+import { IS_APPLE, KEYS } from "platejs";
 import {
   PlateElement,
   useFocused,
   useReadOnly,
   useSelected,
-} from 'platejs/react';
+} from "platejs/react";
 
-import { cn } from '~/lib/utils';
-import { useMounted } from '~/hooks/use-mounted';
-import { getAllDocuments } from '~/lib/state';
+import { cn } from "~/lib/utils";
+import { useMounted } from "~/hooks/use-mounted";
+import { getAllDocuments, addDocumentToCurrentMessage } from "~/lib/state";
 
 import {
   InlineCombobox,
@@ -25,12 +25,12 @@ import {
   InlineComboboxGroup,
   InlineComboboxInput,
   InlineComboboxItem,
-} from './inline-combobox';
+} from "./inline-combobox";
 
 export function MentionElement(
   props: PlateElementProps<TMentionElement> & {
     prefix?: string;
-  }
+  },
 ) {
   const element = props.element;
 
@@ -43,17 +43,17 @@ export function MentionElement(
     <PlateElement
       {...props}
       className={cn(
-        'inline-block rounded-md bg-muted px-1.5 py-0.5 align-baseline text-sm font-medium',
-        !readOnly && 'cursor-pointer',
-        selected && focused && 'ring-2 ring-ring',
-        element.children[0][KEYS.bold] === true && 'font-bold',
-        element.children[0][KEYS.italic] === true && 'italic',
-        element.children[0][KEYS.underline] === true && 'underline'
+        "inline-block rounded-md bg-muted px-1.5 py-0.5 align-baseline text-sm font-medium",
+        !readOnly && "cursor-pointer",
+        selected && focused && "ring-2 ring-ring",
+        element.children[0][KEYS.bold] === true && "font-bold",
+        element.children[0][KEYS.italic] === true && "italic",
+        element.children[0][KEYS.underline] === true && "underline",
       )}
       attributes={{
         ...props.attributes,
         contentEditable: false,
-        'data-slate-value': element.value,
+        "data-slate-value": element.value,
         draggable: true,
       }}
     >
@@ -79,10 +79,13 @@ export function MentionElement(
 const onSelectItem = getMentionOnSelectItem();
 
 export function MentionInputElement(
-  props: PlateElementProps<TComboboxInputElement>
+  props: PlateElementProps<TComboboxInputElement>,
 ) {
   const { editor, element } = props;
-  const [search, setSearch] = React.useState('');
+  const [search, setSearch] = React.useState("");
+
+  // Get the onSelectItem function
+  const onSelectItem = getMentionOnSelectItem();
 
   // Get documents and convert to mentionable format
   const getMentionables = () => {
@@ -97,9 +100,9 @@ export function MentionInputElement(
   const filteredMentionables = React.useMemo(() => {
     const mentionables = getMentionables();
     if (!search) return mentionables;
-    return mentionables.filter(item => 
-      item.text.toLowerCase().includes(search.toLowerCase())
-    ).slice(0, 5); // Limit to 5 results
+    return mentionables
+      .filter((item) => item.text.toLowerCase().includes(search.toLowerCase()))
+      .slice(0, 5); // Limit to 5 results
   }, [search]);
 
   return (
@@ -127,7 +130,6 @@ export function MentionInputElement(
                   // Add document to current message links when mentioned
                   addDocumentToCurrentMessage(item.key);
                   // Use the editor's onSelectItem function
-                  const onSelectItem = getMentionOnSelectItem();
                   onSelectItem(editor, item, search);
                 }}
               >

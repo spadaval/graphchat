@@ -1,22 +1,16 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  Plate,
-  PlateContent,
-  usePlateEditor,
-} from 'platejs/react';
+import React, { useEffect, useRef } from "react";
+import { Plate, PlateContent, usePlateEditor } from "platejs/react";
 
-import { use$ } from '@legendapp/state/react';
-import type { Observable } from '@legendapp/state';
-import { Button } from '~/components/ui/button';
-import { QuickInlineEdit } from '~/components/ui/quick-inline-edit';
-import type { Document } from '~/lib/state';
-import type { DocumentId } from '~/lib/state/types';
-import { AIKit } from './ai-kit';
+import { use$ } from "@legendapp/state/react";
+import type { Observable } from "@legendapp/state";
+import { Button } from "~/components/ui/button";
+import { QuickInlineEdit } from "~/components/ui/quick-inline-edit";
+import type { Document } from "~/lib/state";
+import type { DocumentId } from "~/lib/state/types";
+import { AIKit } from "./ai-kit";
 
 // Create the plugins
-const plugins = [
-  ...AIKit
-];
+const plugins = [...AIKit];
 
 interface PlateDocumentEditorProps {
   document$: Observable<Document>;
@@ -29,14 +23,13 @@ export function PlateDocumentEditor({
 }: PlateDocumentEditorProps) {
   // Always use use$ hook to avoid conditional hook usage
   const document = use$(document$);
-  
+
   // Create the editor
   const editor = usePlateEditor({
-    id: 'document-editor',
+    id: "document-editor",
     plugins,
-    value: [{ type: 'p', children: [{ text: document.content }] }],
+    value: [{ type: "p", children: [{ text: document.content }] }],
   });
-
 
   return (
     <Plate editor={editor}>
@@ -60,16 +53,18 @@ export function PlateDocumentEditor({
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col p-4">
-          <PlateContent
-            className="flex-1 resize-none bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 border border-zinc-700 focus:ring-zinc-600 rounded-md p-3 min-h-[300px]"
-            placeholder="Start writing your document..."
-          />
+        <div className="flex-1 flex flex-col p-4 min-h-0">
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <PlateContent
+              className="resize-none bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 border border-zinc-700 focus:ring-zinc-600 rounded-md p-3 min-h-[300px]"
+              placeholder="Start writing your document..."
+            />
+          </div>
         </div>
 
         <div className="p-4 border-t border-zinc-800 flex justify-end space-x-2">
-          <Button 
-            type="button" 
+          <Button
+            type="button"
             // onClick={handleSave} TODO
             disabled={!document.title?.trim()}
           >
