@@ -9,7 +9,6 @@ import {
   deleteDocument,
   documentStore$,
   setCurrentDocument,
-  updateDocument,
   useCurrentDocument,
   useDocuments,
   getDocumentById,
@@ -42,8 +41,8 @@ export function DocumentEditorPage() {
   };
 
   // Get the observable for the current document if it exists
-  const currentDocument$ = currentDocument 
-    ? documentStore$.documents[currentDocument.id] 
+  const currentDocument$ = currentDocument
+    ? documentStore$.documents[currentDocument.id]
     : null;
 
   return (
@@ -57,25 +56,21 @@ export function DocumentEditorPage() {
           onDelete={deleteDocument}
         />
       </div>
-      
+
       {/* Main editor area */}
       <div className="flex-1 flex flex-col">
         {currentDocument$ ? (
           <DocumentEditor
             document$={currentDocument$}
-            onSave={(title, content) => {
-              if (currentDocument) {
-                updateDocument(currentDocument.id, { title, content });
-              }
-            }}
             onCancel={handleCancel}
-            onDelete={currentDocument ? deleteDocument : undefined}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <h2 className="text-2xl font-bold text-zinc-300 mb-2">
-                {documents.length === 0 ? "No documents yet" : "Select a document"}
+                {documents.length === 0
+                  ? "No documents yet"
+                  : "Select a document"}
               </h2>
               <p className="text-zinc-500 mb-6">
                 {documents.length === 0

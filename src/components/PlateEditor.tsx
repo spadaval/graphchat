@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { use$ } from "@legendapp/state/react";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
 import { ParagraphPlugin } from "platejs/react";
@@ -33,25 +33,43 @@ export function PlateEditor({ onSend, disabled }: PlateEditorProps) {
     value: [{ type: "p", children: [{ text: currentUserMessage || "" }] }],
   });
 
-  // Sync editor content with state
-  useEffect(() => {
-    if (editor) {
-      const handleChange = () => {
-        const content = editor.api.string();
-        setCurrentUserMessage(content);
-      };
+  console.log("[PlateEditor] Editor initialized");
 
-      // Listen for editor changes
-      const unsubscribe = editor.onChange(handleChange);
+  // Handle editor changes
+  const handleEditorChange = (value: any) => {
+    if (!editor) return;
 
-      return unsubscribe;
+    // Extract text content from editor children
+    const children = editor.children;
+    let content = "";
+
+    if (children && children.length > 0) {
+      content = children
+        .map((node: any) => {
+          if (node.type === "p" && node.children) {
+            return node.children.map((child: any) => child.text || "").join("");
+          }
+          return "";
+        })
+        .join("\n");
     }
-  }, [editor]);
 
-  // Update editor when currentUserMessage changes externally
+    console.log("[PlateEditor] Content extracted:", {
+      content,
+      length: content.length,
+    });
+    setCurrentUserMessage(content);
+  };
+
+  // Update editor when currentUserMessage changes externally (only if editor is empty)
   useEffect(() => {
-    if (editor && currentUserMessage !== editor.api.string()) {
-      editor.tf.insertText(currentUserMessage || "", { at: [0, 0] });
+    if (
+      editor &&
+      !editor.children?.[0]?.children?.[0]?.text &&
+      currentUserMessage
+    ) {
+      console.log("[PlateEditor] Syncing observable to empty editor");
+      editor.tf.insertText(currentUserMessage, { at: [0, 0] });
     }
   }, [currentUserMessage, editor]);
 
@@ -69,18 +87,33 @@ export function PlateEditor({ onSend, disabled }: PlateEditorProps) {
     }
   };
 
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     if (editor) {
-      // Get the editor content as plain text
-      const content = editor.api.string();
-      if (content) {
+      // Extract text content from editor children (same method as handleEditorChange)
+      const children = editor.children;
+      let content = "";
+
+      if (children && children.length > 0) {
+        content = children
+          .map((node: any) => {
+            if (node.type === "p" && node.children) {
+              return node.children
+                .map((child: any) => child.text || "")
+                .join("");
+            }
+            return "";
+          })
+          .join("\n");
+      }
+
+      if (content.trim()) {
         onSend(content);
         // Clear the editor and state
         editor.tf.reset();
         setCurrentUserMessage("");
       }
     }
-  };
+  }, [editor, onSend]);
 
   // Handle global key events for sending message
   useEffect(() => {
@@ -95,10 +128,10 @@ export function PlateEditor({ onSend, disabled }: PlateEditorProps) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [editor]);
+  }, [handleSend]);
 
   return (
-    <Plate editor={editor}>
+    <Plate editor={editor} onChange={handleEditorChange}>
       <PlateContent
         className="w-full p-3 border border-zinc-700 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600 min-h-[60px] max-h-32 overflow-y-auto"
         placeholder="Type your message... Type @ to reference documents"

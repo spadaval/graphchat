@@ -6,6 +6,8 @@ import { postV1ChatCompletions } from "../../client";
 import { client } from "../../client/client.gen";
 import { type AppError, type AppResult, createLLMError } from "../errors";
 import type { Block } from "./block";
+import type { DocumentId } from "./types";
+import { getDocumentById } from "./documents";
 
 export interface LLMResponse {
   content: string;
@@ -34,6 +36,29 @@ export interface ModelProperties {
   n_probs: number;
   cache_prompt: boolean;
   return_tokens: boolean;
+}
+
+/**
+ * Formats document content for inclusion in LLM context
+ */
+export function formatDocumentsForContext(documentIds: DocumentId[]): string {
+  if (documentIds.length === 0) {
+    return "";
+  }
+
+  const documents = documentIds
+    .map((id) => getDocumentById(id))
+    .filter((doc) => doc !== undefined);
+
+  if (documents.length === 0) {
+    return "";
+  }
+
+  const formattedDocs = documents
+    .map((doc) => `### ${doc.title}\n${doc.content}`)
+    .join("\n\n");
+
+  return `## Referenced Documents\n\n${formattedDocs}\n\n## Conversation\n`;
 }
 
 export const modelProps$ = observable<ModelProperties>({
@@ -70,11 +95,35 @@ export async function callLLM(
   messages: Block[],
   modelProperties: ModelProperties,
 ): Promise<AppResult<LLMResponse>> {
+  // Collect all document IDs from all messages
+  const allDocumentIds = messages.flatMap((msg) => msg.linkedDocuments || []);
+  const uniqueDocumentIds = [...new Set(allDocumentIds)];
+
+  // Format document content for context
+  const documentContext = formatDocumentsForContext(uniqueDocumentIds);
+
   // Prepare messages for API call
   const messagesForAPI = messages.map((msg) => ({
     role: msg.role,
     content: msg.text,
   }));
+
+  // If we have document context, prepend it to the first user message
+  if (documentContext && messagesForAPI.length > 0) {
+    const firstUserMessageIndex = messagesForAPI.findIndex(
+      (msg) => msg.role === "user",
+    );
+    if (firstUserMessageIndex !== -1) {
+      messagesForAPI[firstUserMessageIndex].content =
+        documentContext + messagesForAPI[firstUserMessageIndex].content;
+    } else {
+      // If no user message, add document context as a system message
+      messagesForAPI.unshift({
+        role: "system",
+        content: documentContext.trim(),
+      });
+    }
+  }
 
   // Call the LLM server using ResultAsync
   const resultAsync = ResultAsync.fromPromise(
@@ -148,11 +197,35 @@ export async function* callLLMStreaming(
   messages: Block[],
   modelProperties: ModelProperties,
 ): AsyncGenerator<Result<StreamingLLMResponse, AppError>, void, unknown> {
+  // Collect all document IDs from all messages
+  const allDocumentIds = messages.flatMap((msg) => msg.linkedDocuments || []);
+  const uniqueDocumentIds = [...new Set(allDocumentIds)];
+
+  // Format document content for context
+  const documentContext = formatDocumentsForContext(uniqueDocumentIds);
+
   // Prepare messages for API call
   const messagesForAPI = messages.map((msg) => ({
     role: msg.role,
     content: msg.text,
   }));
+
+  // If we have document context, prepend it to the first user message
+  if (documentContext && messagesForAPI.length > 0) {
+    const firstUserMessageIndex = messagesForAPI.findIndex(
+      (msg) => msg.role === "user",
+    );
+    if (firstUserMessageIndex !== -1) {
+      messagesForAPI[firstUserMessageIndex].content =
+        documentContext + messagesForAPI[firstUserMessageIndex].content;
+    } else {
+      // If no user message, add document context as a system message
+      messagesForAPI.unshift({
+        role: "system",
+        content: documentContext.trim(),
+      });
+    }
+  }
 
   // Use ResultAsync to handle the SSE client creation
   const sseResultAsync = ResultAsync.fromPromise(

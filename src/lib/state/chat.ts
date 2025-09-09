@@ -208,8 +208,10 @@ const getBlocksForLLM = (blockIds: BlockId[]): Block[] => {
 export const sendMessage = async (text?: string) => {
   if (!text) {
     text = chatStore$.currentUserMessage.get();
-    console.log("No message to save");
-    return;
+    if (!text) {
+      console.log("[sendMessage] No message to save - observable is empty");
+      return;
+    }
   }
 
   // Get current message links from UI state
@@ -274,9 +276,9 @@ export const sendMessage = async (text?: string) => {
         // Handle streaming error
         console.error("Streaming error:", error.message);
         blocks$[assistantBlock.id].text.set(
-          `${accumulatedContent}\n\n[Error: ${error.message}]`
+          `${accumulatedContent}\n\n[Error: ${error.message}]`,
         );
-      }
+      },
     );
   }
 };
@@ -336,9 +338,9 @@ export const regenerateMessage = async (blockId: BlockId) => {
         // Handle streaming error
         console.error("Streaming error:", error.message);
         blocks$[newBlock.id].text.set(
-          `${accumulatedContent}\n\n[Error: ${error.message}]`
+          `${accumulatedContent}\n\n[Error: ${error.message}]`,
         );
-      }
+      },
     );
   }
 

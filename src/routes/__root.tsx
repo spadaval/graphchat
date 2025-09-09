@@ -13,6 +13,7 @@ import type * as React from "react";
 import { DefaultCatchBoundary } from "~/components/DefaultCatchBoundary";
 import { Navigation } from "~/components/Navigation";
 import { NotFound } from "~/components/NotFound";
+import { TooltipProvider } from "~/components/ui/tooltip";
 import appCss from "~/styles/app.css?url";
 import { seo } from "~/utils/seo";
 
@@ -70,14 +71,16 @@ export const Route = createRootRouteWithContext<{
 function RootComponent() {
   return (
     <RootDocument>
-      <div className="flex flex-col h-screen">
-        <div className="fixed top-0 left-0 right-0 z-10">
-          <Navigation />
+      <TooltipProvider>
+        <div className="flex flex-col h-screen">
+          <div className="fixed top-0 left-0 right-0 z-10">
+            <Navigation />
+          </div>
+          <div className="flex-1 overflow-hidden pt-12">
+            <Outlet />
+          </div>
         </div>
-        <div className="flex-1 overflow-hidden pt-12">
-          <Outlet />
-        </div>
-      </div>
+      </TooltipProvider>
     </RootDocument>
   );
 }
