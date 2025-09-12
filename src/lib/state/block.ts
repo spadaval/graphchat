@@ -21,7 +21,7 @@ let nextMessageId = 0;
 let nextBlockId = 1;
 export const createBlock = (
   text: string,
-  role: "user" | "assistant" = "user"
+  role: "user" | "assistant" = "user",
 ): Block => ({
   id: `blk-${nextBlockId++}`,
   messageId: nextMessageId++,
@@ -33,20 +33,26 @@ export const createBlock = (
 });
 
 // Helper functions for document linking
-export const addDocumentToBlock = (blockId: BlockId, documentId: DocumentId) => {
+export const addDocumentToBlock = (
+  blockId: BlockId,
+  documentId: DocumentId,
+) => {
   const block = blocks$[blockId].get();
   if (!block) return;
-  
+
   // Check if document is already linked
   if (!block.linkedDocuments.includes(documentId)) {
     blocks$[blockId].linkedDocuments.push(documentId);
   }
 };
 
-export const removeDocumentFromBlock = (blockId: BlockId, documentId: DocumentId) => {
+export const removeDocumentFromBlock = (
+  blockId: BlockId,
+  documentId: DocumentId,
+) => {
   const block = blocks$[blockId].get();
   if (!block) return;
-  
+
   const index = block.linkedDocuments.indexOf(documentId);
   if (index > -1) {
     blocks$[blockId].linkedDocuments.splice(index, 1);
@@ -58,10 +64,13 @@ export const getBlockLinkedDocuments = (blockId: BlockId): DocumentId[] => {
   return block?.linkedDocuments || [];
 };
 
-export const setBlockLinkedDocuments = (blockId: BlockId, documentIds: DocumentId[]) => {
+export const setBlockLinkedDocuments = (
+  blockId: BlockId,
+  documentIds: DocumentId[],
+) => {
   const block = blocks$[blockId].get();
   if (!block) return;
-  
+
   blocks$[blockId].linkedDocuments.set(documentIds);
 };
 
@@ -71,7 +80,12 @@ export const removeDocumentFromAllBlocks = (documentId: DocumentId) => {
   Object.keys(blocks).forEach((blockId) => {
     const block = blocks[blockId as BlockId];
     // Add proper null checks
-    if (block && block.linkedDocuments && Array.isArray(block.linkedDocuments) && block.linkedDocuments.includes(documentId)) {
+    if (
+      block &&
+      block.linkedDocuments &&
+      Array.isArray(block.linkedDocuments) &&
+      block.linkedDocuments.includes(documentId)
+    ) {
       removeDocumentFromBlock(block.id, documentId);
     }
   });

@@ -2,14 +2,14 @@
 
 export type { Block } from "./block";
 // Block exports
-export { 
-  blocks$, 
+export {
+  blocks$,
   createBlock,
   addDocumentToBlock,
   removeDocumentFromBlock,
   getBlockLinkedDocuments,
   setBlockLinkedDocuments,
-  removeDocumentFromAllBlocks
+  removeDocumentFromAllBlocks,
 } from "./block";
 export type { ChatThread, ChatThreadWithMessages } from "./chat";
 // Chat exports

@@ -9,7 +9,7 @@
     "build": "vite build && tsc --noEmit",
     "start": "vite start",
     "lint": "biome check",
-    "format": "biome format --write --unsafe",
+    "format": "biome format --write",
     "gen-client": "openapi-ts"
   },
   "dependencies": {

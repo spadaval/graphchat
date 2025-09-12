@@ -1,4 +1,4 @@
-import type { TextStreamPart, ToolSet } from 'ai';
+import type { TextStreamPart, ToolSet } from "ai";
 
 /**
  * Transform chunks like [**,bold,**] to [**bold**] make the md deserializer
@@ -17,12 +17,12 @@ export const markdownJoinerTransform =
         if (remaining) {
           controller.enqueue({
             textDelta: remaining,
-            type: 'text-delta',
+            type: "text-delta",
           } as TextStreamPart<TOOLS>);
         }
       },
       async transform(chunk, controller) {
-        if (chunk.type === 'text-delta') {
+        if (chunk.type === "text-delta") {
           const processedText = joiner.processText(chunk.textDelta);
           if (processedText) {
             controller.enqueue({
@@ -42,14 +42,14 @@ const DEFAULT_DELAY_IN_MS = 10;
 const NEST_BLOCK_DELAY_IN_MS = 100;
 
 export class MarkdownJoiner {
-  private buffer = '';
+  private buffer = "";
   private isBuffering = false;
   private streamingCodeBlock = false;
   private streamingTable = false;
   public delayInMs = DEFAULT_DELAY_IN_MS;
 
   private clearBuffer(): void {
-    this.buffer = '';
+    this.buffer = "";
     this.isBuffering = false;
   }
   private isCompleteBold(): boolean {
@@ -59,7 +59,7 @@ export class MarkdownJoiner {
   }
 
   private isCompleteCodeBlockEnd(): boolean {
-    return this.buffer.trimEnd() === '```';
+    return this.buffer.trimEnd() === "```";
   }
 
   private isCompleteCodeBlockStart(): boolean {
@@ -77,7 +77,7 @@ export class MarkdownJoiner {
     const todoListPattern = /^[*-]\s+\[[ xX]\]\s+.+/;
     const orderedListPattern = /^\d+\.\s+.+/;
 
-    if (unorderedListPattern.test(this.buffer) && this.buffer.includes('['))
+    if (unorderedListPattern.test(this.buffer) && this.buffer.includes("["))
       return todoListPattern.test(this.buffer);
 
     return (
@@ -94,24 +94,24 @@ export class MarkdownJoiner {
   }
 
   private isCompleteTableStart(): boolean {
-    return this.buffer.startsWith('|') && this.buffer.endsWith('|');
+    return this.buffer.startsWith("|") && this.buffer.endsWith("|");
   }
 
   private isFalsePositive(char: string): boolean {
     // when link is not complete, even if ths buffer is more than 30 characters, it is not a false positive
-    if (this.buffer.startsWith('[') && this.buffer.includes('http')) {
+    if (this.buffer.startsWith("[") && this.buffer.includes("http")) {
       return false;
     }
 
-    return char === '\n' || this.buffer.length > 30;
+    return char === "\n" || this.buffer.length > 30;
   }
 
   private isListStartChar(char: string): boolean {
-    return char === '-' || char === '*' || /^[0-9]$/.test(char);
+    return char === "-" || char === "*" || /^[0-9]$/.test(char);
   }
 
   private isTableExisted(): boolean {
-    return this.buffer.length > 10 && !this.buffer.includes('|');
+    return this.buffer.length > 10 && !this.buffer.includes("|");
   }
 
   flush(): string {
@@ -121,13 +121,13 @@ export class MarkdownJoiner {
   }
 
   processText(text: string): string {
-    let output = '';
+    let output = "";
 
     for (const char of text) {
       if (this.streamingCodeBlock || this.streamingTable) {
         this.buffer += char;
 
-        if (char === '\n') {
+        if (char === "\n") {
           output += this.buffer;
           this.clearBuffer();
         }
@@ -179,11 +179,11 @@ export class MarkdownJoiner {
         // Check if we should start buffering
 
         if (
-          char === '*' ||
-          char === '<' ||
-          char === '`' ||
-          char === '|' ||
-          char === '[' ||
+          char === "*" ||
+          char === "<" ||
+          char === "`" ||
+          char === "|" ||
+          char === "[" ||
           this.isListStartChar(char)
         ) {
           this.buffer = char;

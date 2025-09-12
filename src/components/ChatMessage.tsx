@@ -1,9 +1,9 @@
-import { Bot, RefreshCw, User } from "lucide-react";
+import { Bot, RefreshCw, Trash, User } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
 import { useBlock } from "../lib/state/hooks";
-import { regenerateMessage } from "../lib/state/chat";
+import { deleteMessage, regenerateMessage } from "../lib/state/chat";
 import { DocumentChipsList } from "./DocumentChips";
 import type { BlockId } from "../lib/state/types";
 
@@ -144,21 +144,31 @@ const MessageBubble = ({ text, role, isStreaming }: MessageBubbleProps) => {
 };
 
 interface MessageActionsProps {
-  onRegenerate: () => void;
+  onRegenerate?: () => void;
+  onDelete: () => void;
 }
 
-const MessageActions = ({
-  onRegenerate,
-}: MessageActionsProps) => (
+const MessageActions = ({ onRegenerate, onDelete }: MessageActionsProps) => (
   <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1 ml-auto">
+    {onRegenerate && (
+      <button
+        type="button"
+        onClick={onRegenerate}
+        className="p-1 text-xs text-zinc-500 hover:text-zinc-300 hover:bg-gradient-to-br hover:from-zinc-700 hover:to-zinc-800 rounded-sm"
+        title="Regenerate response"
+        aria-label="Regenerate message"
+      >
+        <RefreshCw size={12} />
+      </button>
+    )}
     <button
       type="button"
-      onClick={onRegenerate}
-      className="p-1 text-xs text-zinc-500 hover:text-zinc-300 bg-gradient-to-br from-zinc-800 to-zinc-850 hover:from-zinc-700 hover:to-zinc-800 rounded flex items-center border border-zinc-700"
-      title="Regenerate response"
-      aria-label="Regenerate message"
+      onClick={onDelete}
+      className="p-1 text-xs text-zinc-500 hover:text-red-400 hover:bg-gradient-to-br hover:from-zinc-700 hover:to-zinc-800 rounded-sm"
+      title="Delete message"
+      aria-label="Delete message"
     >
-      <RefreshCw size={12} />
+      <Trash size={12} />
     </button>
   </div>
 );
@@ -174,7 +184,7 @@ export function ChatMessage({ blockId, isStreaming }: ChatMessageProps) {
 
   return (
     <div
-      className={`flex items-start gap-3 transform transition-all duration-300 ease-out group ${isUser ? "flex-row-reverse" : ""}`}
+      className={`flex items-start gap-3 transform transition-all duration-300 ease-out group ${isUser ? "flex-row-reverse" : ""} hover:bg-zinc-900/50 rounded-lg p-2 -m-2`}
     >
       <MessageAvatar role={block.role} />
 
@@ -182,29 +192,36 @@ export function ChatMessage({ blockId, isStreaming }: ChatMessageProps) {
         {/* Document attachments for user messages */}
         {isUser && block.linkedDocuments.length > 0 && (
           <div className="mb-2">
-            <div className="text-xs text-zinc-400 mb-1">Attached documents:</div>
+            <div className="text-xs text-zinc-400 mb-1">
+              Attached documents:
+            </div>
             <DocumentChipsList
               documentIds={block.linkedDocuments}
               showRemove={false}
             />
           </div>
         )}
-        
+
         <MessageBubble
           text={block.text}
           role={block.role}
           isStreaming={isStreaming && block.isGenerating}
         />
 
-        {!isUser && (
-          <div className="flex justify-end mt-1">
-            <MessageActions
-              onRegenerate={() => {
-                regenerateMessage(blockId);
-              }}
-            />
-          </div>
-        )}
+        <div className="flex justify-end mt-1">
+          <MessageActions
+            onRegenerate={
+              !isUser
+                ? () => {
+                    regenerateMessage(blockId);
+                  }
+                : undefined
+            }
+            onDelete={() => {
+              deleteMessage(blockId);
+            }}
+          />
+        </div>
       </div>
     </div>
   );

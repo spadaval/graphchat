@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 
-import type { PlateElementProps, RenderNodeWrapper } from 'platejs/react';
+import type { PlateElementProps, RenderNodeWrapper } from "platejs/react";
 
-import { getDraftCommentKey } from '@platejs/comment';
-import { CommentPlugin } from '@platejs/comment/react';
-import { SuggestionPlugin } from '@platejs/suggestion/react';
+import { getDraftCommentKey } from "@platejs/comment";
+import { CommentPlugin } from "@platejs/comment/react";
+import { SuggestionPlugin } from "@platejs/suggestion/react";
 import {
   MessageSquareTextIcon,
   MessagesSquareIcon,
   PencilLineIcon,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   type AnyPluginConfig,
   type NodeEntry,
@@ -21,29 +21,29 @@ import {
   type TSuggestionText,
   PathApi,
   TextApi,
-} from 'platejs';
-import { useEditorPlugin, useEditorRef, usePluginOption } from 'platejs/react';
+} from "platejs";
+import { useEditorPlugin, useEditorRef, usePluginOption } from "platejs/react";
 
-import { Button } from '~/components/ui/button';
+import { Button } from "~/components/ui/button";
 import {
   Popover,
   PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
-} from '~/components/ui/popover';
-import { commentPlugin } from '~/components/editor/plugins/comment-kit';
+} from "~/components/ui/popover";
+import { commentPlugin } from "~/components/editor/plugins/comment-kit";
 import {
   type TDiscussion,
   discussionPlugin,
-} from '~/components/discussion-kit';
-import { suggestionPlugin } from '~/components/suggestion-kit';
+} from "~/components/discussion-kit";
+import { suggestionPlugin } from "~/components/suggestion-kit";
 
 import {
   BlockSuggestionCard,
   isResolvedSuggestion,
   useResolveSuggestion,
-} from './block-suggestion';
-import { Comment, CommentCreateForm } from './comment';
+} from "./block-suggestion";
+import { Comment, CommentCreateForm } from "./comment";
 
 export const BlockDiscussion: RenderNodeWrapper<AnyPluginConfig> = (props) => {
   const { editor, element } = props;
@@ -101,13 +101,13 @@ const BlockCommentContent = ({
   const discussionsCount = resolvedDiscussions.length;
   const totalCount = suggestionsCount + discussionsCount;
 
-  const activeSuggestionId = usePluginOption(suggestionPlugin, 'activeId');
+  const activeSuggestionId = usePluginOption(suggestionPlugin, "activeId");
   const activeSuggestion =
     activeSuggestionId &&
     resolvedSuggestions.find((s) => s.suggestionId === activeSuggestionId);
 
-  const commentingBlock = usePluginOption(commentPlugin, 'commentingBlock');
-  const activeCommentId = usePluginOption(commentPlugin, 'activeId');
+  const commentingBlock = usePluginOption(commentPlugin, "commentingBlock");
+  const activeCommentId = usePluginOption(commentPlugin, "activeId");
   const isCommenting = activeCommentId === getDraftCommentKey();
   const activeDiscussion =
     activeCommentId &&
@@ -143,7 +143,7 @@ const BlockCommentContent = ({
         ([node]) =>
           TextApi.isText(node) &&
           editor.getApi(SuggestionPlugin).suggestion.nodeId(node) ===
-            activeSuggestion.suggestionId
+            activeSuggestion.suggestionId,
       );
     }
 
@@ -154,7 +154,7 @@ const BlockCommentContent = ({
         activeNode = commentNodes.find(
           ([node]) =>
             editor.getApi(commentPlugin).comment.nodeId(node) ===
-            activeCommentId
+            activeCommentId,
         );
       }
     }
@@ -184,7 +184,7 @@ const BlockCommentContent = ({
           if (!_open_ && isCommenting && draftCommentNode) {
             editor.tf.unsetNodes(getDraftCommentKey(), {
               at: [],
-              mode: 'lowest',
+              mode: "lowest",
               match: (n) => n[getDraftCommentKey()],
             });
           }
@@ -226,7 +226,7 @@ const BlockCommentContent = ({
                       discussion={item}
                       isLast={index === sortedMergedData.length - 1}
                     />
-                  )
+                  ),
                 )
               ) : (
                 <React.Fragment>
@@ -313,15 +313,15 @@ function BlockComment({
 
 const useResolvedDiscussion = (
   commentNodes: NodeEntry<TCommentText>[],
-  blockPath: Path
+  blockPath: Path,
 ) => {
   const { api, getOption, setOption } = useEditorPlugin(commentPlugin);
 
-  const discussions = usePluginOption(discussionPlugin, 'discussions');
+  const discussions = usePluginOption(discussionPlugin, "discussions");
 
   commentNodes.forEach(([node]) => {
     const id = api.comment.nodeId(node);
-    const map = getOption('uniquePathMap');
+    const map = getOption("uniquePathMap");
 
     if (!id) return;
 
@@ -332,18 +332,18 @@ const useResolvedDiscussion = (
       const nodes = api.comment.node({ id, at: previousPath });
 
       if (!nodes) {
-        setOption('uniquePathMap', new Map(map).set(id, blockPath));
+        setOption("uniquePathMap", new Map(map).set(id, blockPath));
         return;
       }
 
       return;
     }
     // TODO: fix throw error
-    setOption('uniquePathMap', new Map(map).set(id, blockPath));
+    setOption("uniquePathMap", new Map(map).set(id, blockPath));
   });
 
   const commentsIds = new Set(
-    commentNodes.map(([node]) => api.comment.nodeId(node)).filter(Boolean)
+    commentNodes.map(([node]) => api.comment.nodeId(node)).filter(Boolean),
   );
 
   const resolvedDiscussions = discussions
@@ -353,7 +353,7 @@ const useResolvedDiscussion = (
     }))
     .filter((item: TDiscussion) => {
       /** If comment cross blocks just show it in the first block */
-      const commentsPathMap = getOption('uniquePathMap');
+      const commentsPathMap = getOption("uniquePathMap");
       const firstBlockPath = commentsPathMap.get(item.id);
 
       if (!firstBlockPath) return false;

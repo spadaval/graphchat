@@ -74,7 +74,7 @@ export const deleteDocument = (id: DocumentId) => {
   } catch (error) {
     console.error("Error removing document from blocks:", error);
   }
-  
+
   // Then delete the document from the document store
   documentStore$.documents[id].delete();
 

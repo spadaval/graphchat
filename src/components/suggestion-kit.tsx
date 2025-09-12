@@ -1,25 +1,25 @@
-'use client';
+"use client";
 
 import {
   type BaseSuggestionConfig,
   BaseSuggestionPlugin,
-} from '@platejs/suggestion';
+} from "@platejs/suggestion";
 import {
   type ExtendConfig,
   type Path,
   isSlateEditor,
   isSlateElement,
   isSlateString,
-} from 'platejs';
-import { toTPlatePlugin } from 'platejs/react';
+} from "platejs";
+import { toTPlatePlugin } from "platejs/react";
 
-import { BlockSuggestion } from '~/components/ui/block-suggestion';
+import { BlockSuggestion } from "~/components/ui/block-suggestion";
 import {
   SuggestionLeaf,
   SuggestionLineBreak,
-} from '~/components/ui/suggestion-node';
+} from "~/components/ui/suggestion-node";
 
-import { discussionPlugin } from './discussion-kit';
+import { discussionPlugin } from "./discussion-kit";
 
 export type SuggestionConfig = ExtendConfig<
   BaseSuggestionConfig,
@@ -35,11 +35,11 @@ export const suggestionPlugin = toTPlatePlugin<SuggestionConfig>(
   ({ editor }) => ({
     options: {
       activeId: null,
-      currentUserId: editor.getOption(discussionPlugin, 'currentUserId'),
+      currentUserId: editor.getOption(discussionPlugin, "currentUserId"),
       hoverId: null,
       uniquePathMap: new Map(),
     },
-  })
+  }),
 ).configure({
   handlers: {
     // unset active suggestion when clicking outside of suggestion
@@ -48,7 +48,7 @@ export const suggestionPlugin = toTPlatePlugin<SuggestionConfig>(
       let isSet = false;
 
       const unsetActiveSuggestion = () => {
-        setOption('activeId', null);
+        setOption("activeId", null);
         isSet = true;
       };
 
@@ -70,7 +70,7 @@ export const suggestionPlugin = toTPlatePlugin<SuggestionConfig>(
 
           const id = api.suggestion!.nodeId(suggestionEntry[0]);
 
-          setOption('activeId', id ?? null);
+          setOption("activeId", id ?? null);
           isSet = true;
 
           break;

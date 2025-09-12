@@ -41,10 +41,7 @@ function Home() {
         />
       }
       modelServer={
-        <ModelServerSidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
+        <ModelServerSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       }
     >
       <ChatArea currentThreadId={currentThreadId} sendMessage={sendMessage} />

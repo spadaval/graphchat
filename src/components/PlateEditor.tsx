@@ -130,6 +130,16 @@ export function PlateEditor({ onSend, disabled }: PlateEditorProps) {
     };
   }, [handleSend]);
 
+  // Expose a way to clear the editor from parent components
+  useEffect(() => {
+    if (!editor) return;
+    
+    // When currentUserMessage is cleared externally, also clear the editor
+    if (currentUserMessage === "") {
+      editor.tf.reset();
+    }
+  }, [currentUserMessage, editor]);
+
   return (
     <Plate editor={editor} onChange={handleEditorChange}>
       <PlateContent

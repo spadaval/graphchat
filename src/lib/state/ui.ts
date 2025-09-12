@@ -1,7 +1,12 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
-import type { UIPreferences, DocumentLinkingState, DocumentId, BlockId } from "./types";
+import type {
+  UIPreferences,
+  DocumentLinkingState,
+  DocumentId,
+  BlockId,
+} from "./types";
 
 const uiPreferences: UIPreferences = {
   activeTab: "model",
@@ -48,15 +53,26 @@ export const getCurrentMessageLinks = (): DocumentId[] => {
 };
 
 // Block-specific document linking actions
-export const addDocumentToMessage = (blockId: BlockId, documentId: DocumentId) => {
-  const currentLinks = documentLinking$.messageDocumentLinks[blockId].get() || [];
+export const addDocumentToMessage = (
+  blockId: BlockId,
+  documentId: DocumentId,
+) => {
+  const currentLinks =
+    documentLinking$.messageDocumentLinks[blockId].get() || [];
   if (!currentLinks.includes(documentId)) {
-    documentLinking$.messageDocumentLinks[blockId].set([...currentLinks, documentId]);
+    documentLinking$.messageDocumentLinks[blockId].set([
+      ...currentLinks,
+      documentId,
+    ]);
   }
 };
 
-export const removeDocumentFromMessage = (blockId: BlockId, documentId: DocumentId) => {
-  const currentLinks = documentLinking$.messageDocumentLinks[blockId].get() || [];
+export const removeDocumentFromMessage = (
+  blockId: BlockId,
+  documentId: DocumentId,
+) => {
+  const currentLinks =
+    documentLinking$.messageDocumentLinks[blockId].get() || [];
   const index = currentLinks.indexOf(documentId);
   if (index > -1) {
     const newLinks = [...currentLinks];
@@ -69,7 +85,10 @@ export const getMessageDocumentLinks = (blockId: BlockId): DocumentId[] => {
   return documentLinking$.messageDocumentLinks[blockId].get() || [];
 };
 
-export const setMessageDocumentLinks = (blockId: BlockId, documentIds: DocumentId[]) => {
+export const setMessageDocumentLinks = (
+  blockId: BlockId,
+  documentIds: DocumentId[],
+) => {
   documentLinking$.messageDocumentLinks[blockId].set(documentIds);
 };
 

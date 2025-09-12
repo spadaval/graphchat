@@ -283,6 +283,26 @@ export const sendMessage = async (text?: string) => {
   }
 };
 
+export const deleteMessage = (blockId: BlockId) => {
+  // Get the current thread
+  const currentThreadId = chatStore$.currentThreadId.get();
+  if (!currentThreadId) return;
+
+  const threads = chatStore$.threads.get();
+  const currentThread = threads[currentThreadId];
+  if (!currentThread) return;
+
+  // Find the position of this block in the thread
+  const blockIndex = currentThread.messages.indexOf(blockId);
+  if (blockIndex === -1) return;
+
+  // Remove the block ID from the thread's messages array
+  chatStore$.threads[currentThreadId].messages.splice(blockIndex, 1);
+
+  // Remove the block from the blocks store
+  blocks$[blockId].delete();
+};
+
 export const regenerateMessage = async (blockId: BlockId) => {
   // Get the current thread
   const currentThreadId = chatStore$.currentThreadId.get();

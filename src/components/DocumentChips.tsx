@@ -9,7 +9,11 @@ interface DocumentChipProps {
   showRemove?: boolean;
 }
 
-export function DocumentChip({ documentId, onRemove, showRemove = true }: DocumentChipProps) {
+export function DocumentChip({
+  documentId,
+  onRemove,
+  showRemove = true,
+}: DocumentChipProps) {
   const navigate = useNavigate();
   const document = getDocumentById(documentId);
 
@@ -29,7 +33,7 @@ export function DocumentChip({ documentId, onRemove, showRemove = true }: Docume
   return (
     <div className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600 rounded-md text-xs text-zinc-200 hover:from-zinc-600 hover:to-zinc-700 transition-all duration-200 cursor-pointer group">
       <FileText size={12} className="text-zinc-400" />
-      <span 
+      <span
         onClick={handleClick}
         className="truncate max-w-32 hover:text-zinc-100"
         title={document.title}
@@ -57,11 +61,11 @@ interface DocumentChipsListProps {
   className?: string;
 }
 
-export function DocumentChipsList({ 
-  documentIds, 
-  onRemove, 
-  showRemove = true, 
-  className = "" 
+export function DocumentChipsList({
+  documentIds,
+  onRemove,
+  showRemove = true,
+  className = "",
 }: DocumentChipsListProps) {
   if (documentIds.length === 0) {
     return null;

@@ -55,7 +55,7 @@ export function ChatArea({ currentThreadId, sendMessage }: ChatAreaProps) {
   if (!currentThreadId) {
     return <EmptyState sendMessage={sendMessage} />;
   }
-  
+
   return (
     <div className="flex-1 flex flex-col min-w-0 relative min-h-0 overflow-hidden">
       {!currentThread ? (

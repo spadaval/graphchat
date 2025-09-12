@@ -1,5 +1,11 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
-import type { Document } from '~/lib/state';
+import {
+  useEffect,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+  useState,
+} from "react";
+import type { Document } from "~/lib/state";
 
 interface MentionListProps {
   items: Document[];
@@ -16,15 +22,17 @@ export const MentionList = forwardRef((props: MentionListProps, ref) => {
   }, [items]);
 
   useEffect(() => {
-    const selectedElement = listRef.current?.children[selectedIndex] as HTMLElement | undefined;
+    const selectedElement = listRef.current?.children[selectedIndex] as
+      | HTMLElement
+      | undefined;
     if (selectedElement) {
-      selectedElement.scrollIntoView({ block: 'nearest' });
+      selectedElement.scrollIntoView({ block: "nearest" });
     }
   }, [selectedIndex]);
 
   const selectItem = (index: number) => {
     const item = items[index];
-    
+
     if (item) {
       command(item);
     }
@@ -32,17 +40,17 @@ export const MentionList = forwardRef((props: MentionListProps, ref) => {
 
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }: { event: KeyboardEvent }) => {
-      if (event.key === 'ArrowUp') {
+      if (event.key === "ArrowUp") {
         setSelectedIndex((selectedIndex + items.length - 1) % items.length);
         return true;
       }
 
-      if (event.key === 'ArrowDown') {
+      if (event.key === "ArrowDown") {
         setSelectedIndex((selectedIndex + 1) % items.length);
         return true;
       }
 
-      if (event.key === 'Enter') {
+      if (event.key === "Enter") {
         selectItem(selectedIndex);
         return true;
       }
@@ -62,13 +70,13 @@ export const MentionList = forwardRef((props: MentionListProps, ref) => {
             key={document.id}
             onClick={() => selectItem(index)}
             className={`p-2 cursor-pointer text-zinc-100 text-sm border-b border-zinc-700 last:border-b-0 ${
-              index === selectedIndex ? 'bg-zinc-700' : 'hover:bg-zinc-750'
+              index === selectedIndex ? "bg-zinc-700" : "hover:bg-zinc-750"
             }`}
           >
             <div className="font-medium truncate">@{document.title}</div>
             <div className="text-xs text-zinc-400 truncate">
               {document.content.substring(0, 50)}
-              {document.content.length > 50 ? '...' : ''}
+              {document.content.length > 50 ? "..." : ""}
             </div>
           </div>
         ))
@@ -79,4 +87,4 @@ export const MentionList = forwardRef((props: MentionListProps, ref) => {
   );
 });
 
-MentionList.displayName = 'MentionList';
+MentionList.displayName = "MentionList";
