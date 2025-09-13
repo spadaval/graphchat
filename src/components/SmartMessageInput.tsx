@@ -4,7 +4,7 @@ import {
   documentLinking$,
   removeDocumentFromCurrentMessage,
 } from "~/lib/state";
-import { PlateEditor } from "./PlateEditor";
+import { PlateEditor } from "./editor/PlateEditor";
 import { chatStore$ } from "~/lib/state";
 
 interface SmartMessageInputProps {

@@ -11,7 +11,7 @@ import {
   ToolbarSeparator,
 } from "~/components/ui/toolbar";
 import { MarkToolbarButton } from "~/components/ui/mark-toolbar-button";
-import { AIToolbarButton } from "~/components/ui/ai-toolbar-button";
+import { DocumentAIToolbarButton } from "~/components/ui/document-ai-toolbar-button";
 import { EmojiToolbarButton } from "~/components/ui/emoji-toolbar-button";
 import { FontColorToolbarButton } from "~/components/ui/font-color-toolbar-button";
 import {
@@ -34,11 +34,11 @@ import {
 } from "lucide-react";
 import type { Document } from "~/lib/state";
 import type { DocumentId } from "~/lib/state/types";
-import { EditorKit } from "./editor-kit";
+import { UnifiedEditorKitWithAI, DocumentEditorConfig } from "./unified-editor-kit";
 import { deleteDocument } from "~/lib/state";
 
 // Create the plugins
-const plugins = [...EditorKit];
+const plugins = [...UnifiedEditorKitWithAI];
 
 interface PlateDocumentEditorProps {
   document$: Observable<Document>;
@@ -164,9 +164,9 @@ export function PlateDocumentEditor({
               <FontColorToolbarButton tooltip="Text color">
                 <Palette className="size-4" />
               </FontColorToolbarButton>
-              <AIToolbarButton tooltip="AI Assistant">
+              <DocumentAIToolbarButton tooltip="AI Assistant (Ctrl+J / Cmd+J)">
                 <span className="text-xs font-bold">AI</span>
-              </AIToolbarButton>
+              </DocumentAIToolbarButton>
             </ToolbarGroup>
           </Toolbar>
         </div>
@@ -175,7 +175,7 @@ export function PlateDocumentEditor({
           <div className="flex-1 overflow-y-auto min-h-0">
             <PlateContent
               className="resize-none bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 border border-zinc-700 focus:ring-zinc-600 rounded-md p-3 min-h-[300px]"
-              placeholder="Start writing your document..."
+              placeholder={DocumentEditorConfig.placeholder}
             />
           </div>
         </div>

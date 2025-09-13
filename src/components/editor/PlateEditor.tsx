@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import { use$ } from "@legendapp/state/react";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
-import { ParagraphPlugin } from "platejs/react";
-import { MentionKit } from "./mention-kit";
+import { UnifiedEditorKit, ChatEditorConfig } from "./unified-editor-kit";
 import {
   getAllDocuments,
   chatStore$,
@@ -13,7 +12,7 @@ import { getMentionOnSelectItem } from "@platejs/mention";
 import type { TElement } from "platejs";
 
 // Create the plugins
-const plugins = [ParagraphPlugin, ...MentionKit];
+const plugins = [...UnifiedEditorKit];
 
 interface PlateEditorProps {
   onSend: (content: string) => void;
@@ -144,7 +143,7 @@ export function PlateEditor({ onSend, disabled }: PlateEditorProps) {
     <Plate editor={editor} onChange={handleEditorChange}>
       <PlateContent
         className="w-full p-3 border border-zinc-700 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600 min-h-[60px] max-h-32 overflow-y-auto"
-        placeholder="Type your message... Type @ to reference documents"
+        placeholder={ChatEditorConfig.placeholder}
       />
     </Plate>
   );

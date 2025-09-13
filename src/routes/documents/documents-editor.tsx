@@ -1,7 +1,7 @@
 import { useSearch } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { DocumentList } from "~/components/DocumentList";
-import { DocumentEditor } from "~/components/DocumentEditor";
+import { DocumentEditor } from "~/components/editor/DocumentEditor";
 import type { Document } from "~/lib/state";
 import type { DocumentId } from "~/lib/state/types";
 import {

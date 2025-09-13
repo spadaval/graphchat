@@ -1,15 +1,13 @@
 "use client";
 
-import type { AIChatPluginConfig } from "@platejs/ai/react";
-import type { UseChatOptions } from "ai/react";
-
 import { streamInsertChunk, withAIBatch } from "@platejs/ai";
+import type { AIChatPluginConfig } from "@platejs/ai/react";
 import { AIChatPlugin, AIPlugin, useChatChunk } from "@platejs/ai/react";
+import type { UseChatOptions } from "ai/react";
 import { getPluginType, KEYS, PathApi } from "platejs";
 import { usePluginOption } from "platejs/react";
-
-import { AILoadingBar, AIMenu } from "~/components/ui/ai-menu";
 import { AIAnchorElement, AILeaf } from "~/components/ui/ai-node";
+import { AILoadingBar } from "~/components/ui/document-ai-menu";
 
 import { CursorOverlayKit } from "./cursor-overlay-kit";
 import { MarkdownKit } from "./markdown-kit";
@@ -17,7 +15,7 @@ import { MarkdownKit } from "./markdown-kit";
 export const aiChatPlugin = AIChatPlugin.extend({
   options: {
     chatOptions: {
-      api: "/api/ai/command",
+      api: "/v1/chat/completions",
       body: {},
     } as UseChatOptions,
     promptTemplate: ({ isBlockSelecting, isSelecting }) => {
@@ -37,7 +35,6 @@ export const aiChatPlugin = AIChatPlugin.extend({
   },
   render: {
     afterContainer: AILoadingBar,
-    afterEditable: AIMenu,
     node: AIAnchorElement,
   },
   shortcuts: { show: { keys: "mod+j" } },
@@ -49,7 +46,7 @@ export const aiChatPlugin = AIChatPlugin.extend({
 
     useChatChunk({
       onChunk: ({ chunk, isFirst, nodes }) => {
-        if (isFirst && mode == "insert") {
+        if (isFirst && mode === "insert") {
           editor.tf.withoutSaving(() => {
             editor.tf.insertNodes(
               {
@@ -57,7 +54,7 @@ export const aiChatPlugin = AIChatPlugin.extend({
                 type: getPluginType(editor, KEYS.aiChat),
               },
               {
-                at: PathApi.next(editor.selection!.focus.path.slice(0, 1)),
+                at: editor.selection ? PathApi.next(editor.selection.focus.path.slice(0, 1)) : [0],
               },
             );
           });
