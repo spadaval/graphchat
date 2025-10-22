@@ -3,16 +3,16 @@ import { useEffect } from "react";
 import { DocumentList } from "~/components/DocumentList";
 import { Editor } from "~/editor/Editor";
 import type { Document } from "~/lib/state";
-import type { DocumentId } from "~/lib/state/types";
 import {
   createDocument,
   deleteDocument,
   documentStore$,
+  getDocumentById,
   setCurrentDocument,
   useCurrentDocument,
   useDocuments,
-  getDocumentById,
 } from "~/lib/state";
+import type { DocumentId } from "~/lib/state/types";
 
 export function DocumentEditorPage() {
   const documents = useDocuments();

@@ -15,9 +15,9 @@ import {
   duplicateThread,
   editThreadTitle,
   sendMessage,
+  setActiveTab,
   switchThread,
   uiPreferences$,
-  setActiveTab,
 } from "~/lib/state";
 
 export const Route = createFileRoute("/")({

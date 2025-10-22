@@ -1,9 +1,5 @@
 "use client";
 
-import * as React from "react";
-
-import type { CreatePlateEditorOptions } from "platejs/react";
-
 import { getCommentKey, getDraftCommentKey } from "@platejs/comment";
 import { CommentPlugin, useCommentId } from "@platejs/comment/react";
 import {
@@ -20,7 +16,8 @@ import {
   TrashIcon,
   XIcon,
 } from "lucide-react";
-import { type Value, KEYS, nanoid, NodeApi } from "platejs";
+import { KEYS, NodeApi, nanoid, type Value } from "platejs";
+import type { CreatePlateEditorOptions } from "platejs/react";
 import {
   Plate,
   useEditorPlugin,
@@ -28,7 +25,12 @@ import {
   usePlateEditor,
   usePluginOption,
 } from "platejs/react";
-
+import * as React from "react";
+import { BasicMarksKit } from "~/components/basic-marks-kit";
+import {
+  discussionPlugin,
+  type TDiscussion,
+} from "~/components/discussion-kit";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import {
@@ -39,11 +41,6 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { cn } from "~/lib/utils";
-import { BasicMarksKit } from "~/components/basic-marks-kit";
-import {
-  type TDiscussion,
-  discussionPlugin,
-} from "~/components/discussion-kit";
 
 import { Editor, EditorContainer } from "./editor";
 

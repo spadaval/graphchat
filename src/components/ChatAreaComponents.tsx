@@ -1,5 +1,5 @@
 import React from "react";
-import { ChatMessage } from "~/components/ChatMessage";
+import ChatMessage from "~/components/ChatMessage";
 import { blocks$ } from "~/lib/state/block";
 import { useThread } from "~/lib/state/hooks";
 import type { ChatId } from "~/lib/state/types";

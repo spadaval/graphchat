@@ -1,19 +1,19 @@
-import { useState } from "react";
 import { use$ } from "@legendapp/state/react";
 import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { ModelProperties } from "~/components/ModelProperties";
 import { ServerInfoComponent } from "~/components/ServerInfo";
 import { Button } from "~/components/ui/button";
 import {
+  chatStore$,
+  createDocument,
   documentStore$,
   getAllDocuments,
   getDocumentById,
-  createDocument,
-  chatStore$,
   getThreadMessages,
 } from "~/lib/state";
-import type { DocumentId } from "~/lib/state/types";
 import { callLLMStreaming } from "~/lib/state/llm";
+import type { DocumentId } from "~/lib/state/types";
 
 // Tab Navigation Component
 interface TabNavigationProps {

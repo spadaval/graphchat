@@ -1,7 +1,5 @@
 "use client";
 
-import * as React from "react";
-
 import {
   AIChatPlugin,
   AIPlugin,
@@ -27,14 +25,16 @@ import {
   Wand,
   X,
 } from "lucide-react";
-import { type NodeEntry, type SlateEditor, isHotkey, NodeApi } from "platejs";
+import { isHotkey, NodeApi, type NodeEntry, type SlateEditor } from "platejs";
 import {
+  type PlateEditor,
   useEditorPlugin,
+  useEditorRef,
   useFocusedLast,
   useHotkeys,
   usePluginOption,
 } from "platejs/react";
-import { type PlateEditor, useEditorRef } from "platejs/react";
+import * as React from "react";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -48,8 +48,8 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from "~/components/ui/popover";
-import { cn } from "~/lib/utils";
 import { useChat } from "~/components/use-chat";
+import { cn } from "~/lib/utils";
 
 import { AIChatEditor } from "./ai-chat-editor";
 

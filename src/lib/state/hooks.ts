@@ -1,5 +1,6 @@
 import { use$ } from "@legendapp/state/react";
 import { getThreadMessages } from "./chat";
+import type { Document } from "./documents";
 import {
   blocks$,
   chatStore$,
@@ -8,7 +9,6 @@ import {
   uiPreferences$,
 } from "./index";
 import type { BlockId, ChatId, DocumentId } from "./types";
-import type { Document } from "./documents";
 
 // Hook to get a thread by ID
 export const useThread = (threadId: ChatId) => {

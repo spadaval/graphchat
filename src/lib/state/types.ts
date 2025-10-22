@@ -43,3 +43,16 @@ export interface DocumentLinkingState {
   currentMessageLinks: DocumentId[]; // Documents selected for current message
   messageDocumentLinks: Record<BlockId, DocumentId[]>; // Documents linked to specific messages
 }
+
+// LLM request attribution
+export interface LLMRequest {
+  id: string; // Unique request ID
+  timestamp: Date;
+  model: string;
+  parameters: ModelProperties;
+  tokensUsed?: number;
+  tokensGenerated?: number;
+  duration?: number; // Request duration in ms
+  success: boolean;
+  error?: string;
+}

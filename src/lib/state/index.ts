@@ -3,13 +3,13 @@
 export type { Block } from "./block";
 // Block exports
 export {
+  addDocumentToBlock,
   blocks$,
   createBlock,
-  addDocumentToBlock,
-  removeDocumentFromBlock,
   getBlockLinkedDocuments,
-  setBlockLinkedDocuments,
   removeDocumentFromAllBlocks,
+  removeDocumentFromBlock,
+  setBlockLinkedDocuments,
 } from "./block";
 export type { ChatThread, ChatThreadWithMessages } from "./chat";
 // Chat exports
@@ -23,10 +23,10 @@ export {
   getCurrentThread,
   getCurrentThreadWithMessages,
   getThreadMessages,
+  regenerateMessage,
   sendMessage,
   setCurrentUserMessage,
   switchThread,
-  regenerateMessage,
 } from "./chat";
 export type { Document } from "./documents";
 // Document exports
@@ -45,11 +45,11 @@ export {
   useCurrentDocument,
   useCurrentThreadId,
   useDocument,
+  useDocuments,
+  useServerInfo,
   useThread,
   useThreadMessages,
   useThreadsArray,
-  useDocuments,
-  useServerInfo,
   useUIPreferences,
 } from "./hooks";
 export type { ModelProperties } from "./llm";
@@ -57,21 +57,7 @@ export type { ModelProperties } from "./llm";
 // LLM exports
 export { modelProps$ } from "./llm";
 // Server exports
-export { serverStore$, setServerInfo, setLoading, setError } from "./server";
-// UI exports
-export {
-  uiPreferences$,
-  setActiveTab,
-  documentLinking$,
-  addDocumentToCurrentMessage,
-  removeDocumentFromCurrentMessage,
-  clearCurrentMessageLinks,
-  getCurrentMessageLinks,
-  addDocumentToMessage,
-  removeDocumentFromMessage,
-  getMessageDocumentLinks,
-  setMessageDocumentLinks,
-} from "./ui";
+export { serverStore$, setError, setLoading, setServerInfo } from "./server";
 // Types
 export type {
   ActiveTab,
@@ -81,3 +67,17 @@ export type {
   MessageId,
   ServerInfo,
 } from "./types";
+// UI exports
+export {
+  addDocumentToCurrentMessage,
+  addDocumentToMessage,
+  clearCurrentMessageLinks,
+  documentLinking$,
+  getCurrentMessageLinks,
+  getMessageDocumentLinks,
+  removeDocumentFromCurrentMessage,
+  removeDocumentFromMessage,
+  setActiveTab,
+  setMessageDocumentLinks,
+  uiPreferences$,
+} from "./ui";

@@ -6,11 +6,11 @@ import {
 } from "@platejs/suggestion";
 import {
   type ExtendConfig,
-  type Path,
-  type TElement,
   isSlateEditor,
   isSlateElement,
   isSlateString,
+  type Path,
+  type TElement,
 } from "platejs";
 import { toTPlatePlugin } from "platejs/react";
 

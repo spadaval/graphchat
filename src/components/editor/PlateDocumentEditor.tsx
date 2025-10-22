@@ -1,34 +1,34 @@
+import type { Observable } from "@legendapp/state";
 import { use$ } from "@legendapp/state/react";
+import {
+  Bold,
+  Code,
+  Highlighter,
+  Italic,
+  Palette,
+  Smile,
+  Strikethrough,
+  Underline,
+} from "lucide-react";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
 import { useEffect } from "react";
-import type { Observable } from "@legendapp/state";
 import { Button } from "~/components/ui/button";
+import { DocumentAIToolbarButton } from "~/components/ui/document-ai-toolbar-button";
+import { EmojiToolbarButton } from "~/components/ui/emoji-toolbar-button";
+import { FontColorToolbarButton } from "~/components/ui/font-color-toolbar-button";
+import { MarkToolbarButton } from "~/components/ui/mark-toolbar-button";
 import { QuickInlineEdit } from "~/components/ui/quick-inline-edit";
 import {
   Toolbar,
   ToolbarGroup,
   ToolbarSeparator,
 } from "~/components/ui/toolbar";
-import { MarkToolbarButton } from "~/components/ui/mark-toolbar-button";
-import { DocumentAIToolbarButton } from "~/components/ui/document-ai-toolbar-button";
-import { EmojiToolbarButton } from "~/components/ui/emoji-toolbar-button";
-import { FontColorToolbarButton } from "~/components/ui/font-color-toolbar-button";
-import {
-  Bold,
-  Italic,
-  Underline,
-  Strikethrough,
-  Code,
-  Highlighter,
-  Smile,
-  Palette,
-} from "lucide-react";
 import type { Document } from "~/lib/state";
-import {
-  UnifiedEditorKitWithAI,
-  DocumentEditorConfig,
-} from "./unified-editor-kit";
 import { deleteDocument, updateDocument } from "~/lib/state";
+import {
+  DocumentEditorConfig,
+  UnifiedEditorKitWithAI,
+} from "./unified-editor-kit";
 
 // Create the plugins
 const plugins = [...UnifiedEditorKitWithAI];

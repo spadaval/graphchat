@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import type { ChatThread } from "~/lib/state";
-import type { ChatId } from "~/lib/state/types";
-import { useCurrentThreadId, useThreadsArray } from "~/lib/state/hooks";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import type { ChatThread } from "~/lib/state";
+import { useCurrentThreadId, useThreadsArray } from "~/lib/state/hooks";
+import type { ChatId } from "~/lib/state/types";
 
 // Sidebar Header Component
 export function SidebarHeader() {

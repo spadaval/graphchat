@@ -1,12 +1,12 @@
 "use client";
 
+import type { Observable } from "@legendapp/state";
 import { use$ } from "@legendapp/state/react";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
-import type { Observable } from "@legendapp/state";
-import { updateDocument } from "~/lib/state";
 import { Button } from "~/components/ui/button";
 import { QuickInlineEdit } from "~/components/ui/quick-inline-edit";
-import { UnifiedEditorKitWithAI, UnifiedEditorKit } from "./unified-editor-kit";
+import { updateDocument } from "~/lib/state";
+import { UnifiedEditorKit, UnifiedEditorKitWithAI } from "./unified-editor-kit";
 
 export interface EditorConfig {
   placeholder?: string;

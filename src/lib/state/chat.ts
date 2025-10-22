@@ -37,7 +37,7 @@ ${firstMessage}
 
     if (result.isOk()) {
       // Clean up the response - remove quotes, extra whitespace, and limit length
-      const title = result.value.content
+      const title = result.value.response.content
         .trim()
         .replace(/^["']|["']$/g, "") // Remove surrounding quotes
         .replace(/\n/g, " ") // Replace newlines with spaces
@@ -323,16 +323,18 @@ export const sendMessage = async (text?: string) => {
 
   let accumulatedContent = "";
   let lastUpdate = Date.now();
+  let finalRequest: any = null;
 
   for await (const chunkResult of responseStream) {
     chunkResult.match(
       (chunk) => {
-        if (chunk.done) {
-          // Stream is complete
+        if (chunk.response.done) {
+          // Stream is complete, capture the final request metadata
+          finalRequest = chunk.request;
           return;
         }
         // Accumulate content
-        accumulatedContent += chunk.content;
+        accumulatedContent += chunk.response.content;
         // Batch updates to reduce render frequency
         if (Date.now() - lastUpdate > 50) {
           blocks$[assistantBlock.id].text.set(accumulatedContent);
@@ -351,6 +353,11 @@ export const sendMessage = async (text?: string) => {
 
   // Ensure final content is set
   blocks$[assistantBlock.id].text.set(accumulatedContent);
+
+  // Attach the LLM request metadata to the assistant block
+  if (finalRequest && blocks$[assistantBlock.id].llmRequests) {
+    blocks$[assistantBlock.id].llmRequests.push(finalRequest);
+  }
 
   // Mark generation as complete
   blocks$[assistantBlock.id].isGenerating.set(false);
@@ -416,16 +423,18 @@ export const regenerateMessage = async (blockId: BlockId) => {
 
   let accumulatedContent = "";
   let lastUpdate = Date.now();
+  let finalRequest: any = null;
 
   for await (const chunkResult of responseStream) {
     chunkResult.match(
       (chunk) => {
-        if (chunk.done) {
-          // Stream is complete
+        if (chunk.response.done) {
+          // Stream is complete, capture the final request metadata
+          finalRequest = chunk.request;
           return;
         }
         // Accumulate content
-        accumulatedContent += chunk.content;
+        accumulatedContent += chunk.response.content;
         // Batch updates to reduce render frequency
         if (Date.now() - lastUpdate > 50) {
           blocks$[newBlock.id].text.set(accumulatedContent);
@@ -444,6 +453,11 @@ export const regenerateMessage = async (blockId: BlockId) => {
 
   // Ensure final content is set
   blocks$[newBlock.id].text.set(accumulatedContent);
+
+  // Attach the LLM request metadata to the new block
+  if (finalRequest && blocks$[newBlock.id].llmRequests) {
+    blocks$[newBlock.id].llmRequests.push(finalRequest);
+  }
 
   // Mark generation as complete
   blocks$[newBlock.id].isGenerating.set(false);

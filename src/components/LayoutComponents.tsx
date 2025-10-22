@@ -6,8 +6,8 @@ import {
 import { TabContent, TabNavigation } from "~/components/ModelServerComponents";
 import { SidebarContent, SidebarHeader } from "~/components/Sidebar";
 import { SmartMessageInput } from "~/components/SmartMessageInput";
-import type { ChatId } from "~/lib/state/types";
 import { useThread } from "~/lib/state/hooks";
+import type { ChatId } from "~/lib/state/types";
 
 // Chat Threads Sidebar Component
 interface ChatThreadsSidebarProps {

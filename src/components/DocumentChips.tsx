@@ -1,7 +1,7 @@
-import { X, FileText } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import type { DocumentId } from "~/lib/state/types";
+import { FileText, X } from "lucide-react";
 import { getDocumentById } from "~/lib/state";
+import type { DocumentId } from "~/lib/state/types";
 
 interface DocumentChipProps {
   documentId: DocumentId;

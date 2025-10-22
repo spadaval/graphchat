@@ -6,8 +6,24 @@ import { postV1ChatCompletions } from "../../client";
 import { client } from "../../client/client.gen";
 import { type AppError, type AppResult, createLLMError } from "../errors";
 import type { Block } from "./block";
-import type { DocumentId } from "./types";
 import { getDocumentById } from "./documents";
+import type { DocumentId, LLMRequest } from "./types";
+
+// Helper function to generate unique request IDs
+let nextRequestId = 1;
+const generateRequestId = (): string => `req-${nextRequestId++}`;
+
+// Helper function to create LLMRequest object
+const createLLMRequest = (
+  model: string,
+  parameters: ModelProperties,
+): LLMRequest => ({
+  id: generateRequestId(),
+  timestamp: new Date(),
+  model,
+  parameters: { ...parameters }, // Clone to avoid mutations
+  success: false, // Will be updated when request completes
+});
 
 export interface LLMResponse {
   content: string;
@@ -89,12 +105,12 @@ syncObservable(modelProps$, {
 });
 
 /**
- * Calls the LLM server with the provided messages and returns the response
+ * Calls the LLM server with the provided messages and returns the response with attribution
  */
 export async function callLLM(
   messages: Block[],
   modelProperties: ModelProperties,
-): Promise<AppResult<LLMResponse>> {
+): Promise<AppResult<{ response: LLMResponse; request: LLMRequest }>> {
   // Collect all document IDs from all messages
   const allDocumentIds = messages.flatMap((msg) => msg.linkedDocuments || []);
   const uniqueDocumentIds = [...new Set(allDocumentIds)];
@@ -125,6 +141,10 @@ export async function callLLM(
     }
   }
 
+  // Create request metadata
+  const request = createLLMRequest("llama", modelProperties);
+  const startTime = Date.now();
+
   // Call the LLM server using ResultAsync
   const resultAsync = ResultAsync.fromPromise(
     postV1ChatCompletions({
@@ -148,17 +168,34 @@ export async function callLLM(
         response.data?.choices?.[0]?.message?.content ||
         "Sorry, I couldn't generate a response.";
 
+      // Update request metadata with success info
+      const duration = Date.now() - startTime;
+      request.duration = duration;
+      request.success = true;
+      // Note: tokensUsed and tokensGenerated would need to be extracted from response if available
+
       return ok({
-        content: assistantContent,
+        response: {
+          content: assistantContent,
+        },
+        request,
       });
     })
-    .mapErr((error) =>
-      createLLMError(
-        "Failed to get response from LLM server",
-        "llama",
-        error.cause,
-      ),
-    );
+    .mapErr((error) => {
+      // Update request metadata with error info
+      const duration = Date.now() - startTime;
+      request.duration = duration;
+      request.success = false;
+      request.error = error.message;
+
+      return err(
+        createLLMError(
+          "Failed to get response from LLM server",
+          "llama",
+          error.cause,
+        ),
+      );
+    });
 
   return resultAsync;
 }
@@ -196,7 +233,11 @@ export function parseStreamingResponse(
 export async function* callLLMStreaming(
   messages: Block[],
   modelProperties: ModelProperties,
-): AsyncGenerator<Result<StreamingLLMResponse, AppError>, void, unknown> {
+): AsyncGenerator<
+  Result<{ response: StreamingLLMResponse; request: LLMRequest }, AppError>,
+  void,
+  unknown
+> {
   // Collect all document IDs from all messages
   const allDocumentIds = messages.flatMap((msg) => msg.linkedDocuments || []);
   const uniqueDocumentIds = [...new Set(allDocumentIds)];
@@ -227,6 +268,10 @@ export async function* callLLMStreaming(
     }
   }
 
+  // Create request metadata
+  const request = createLLMRequest("llama", modelProperties);
+  const startTime = Date.now();
+
   // Use ResultAsync to handle the SSE client creation
   const sseResultAsync = ResultAsync.fromPromise(
     client.sse.post({
@@ -256,6 +301,12 @@ export async function* callLLMStreaming(
   const sseResult = await sseResultAsync;
 
   if (sseResult.isErr()) {
+    // Update request metadata with error info
+    const duration = Date.now() - startTime;
+    request.duration = duration;
+    request.success = false;
+    request.error = sseResult.error.message;
+
     yield err(
       createLLMError(
         "Failed to initialize streaming connection",
@@ -271,14 +322,23 @@ export async function* callLLMStreaming(
   // Handle the SSE events
   for await (const event of sseClient.stream) {
     if (event === "[DONE]") {
-      yield ok({ content: "", done: true });
+      // Update request metadata with success info
+      const duration = Date.now() - startTime;
+      request.duration = duration;
+      request.success = true;
+      // Note: tokensUsed and tokensGenerated would need to be extracted from final event if available
+
+      yield ok({ response: { content: "", done: true }, request });
       break;
     }
 
     const typedEvent = event as any; // Type assertion since the event type is unknown
     yield ok({
-      content: typedEvent.choices[0].delta.content ?? "",
-      done: false,
+      response: {
+        content: typedEvent.choices[0].delta.content ?? "",
+        done: false,
+      },
+      request,
     });
   }
 }

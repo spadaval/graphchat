@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
-import { use$ } from "@legendapp/state/react";
 import type { Observable } from "@legendapp/state";
+import { use$ } from "@legendapp/state/react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "~/components/ui/input";
 
 interface QuickInlineEditProps {

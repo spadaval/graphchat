@@ -2,10 +2,10 @@ import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
 import type {
-  UIPreferences,
-  DocumentLinkingState,
-  DocumentId,
   BlockId,
+  DocumentId,
+  DocumentLinkingState,
+  UIPreferences,
 } from "./types";
 
 const uiPreferences: UIPreferences = {
