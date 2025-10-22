@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import type { ChatThread } from "~/lib/state";
 import type { ChatId } from "~/lib/state/types";
 import { useCurrentThreadId, useThreadsArray } from "~/lib/state/hooks";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 
 // Sidebar Header Component
 export function SidebarHeader() {
@@ -48,7 +54,14 @@ function ThreadItem({
         onClick={() => onSwitch(thread.id)}
         className="flex-1 text-left font-medium focus:outline-none min-w-0 text-sm truncate"
       >
-        <div className="truncate pr-6">{thread.title}</div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="truncate pr-6">{thread.title}</div>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="max-w-xs break-words">
+            {thread.title}
+          </TooltipContent>
+        </Tooltip>
       </button>
       <div className="relative">
         <button
@@ -309,75 +322,77 @@ export function SidebarContent({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto flex flex-col">
-      <div className="p-2">
-        <button
-          type="button"
-          onClick={() => createNewThread()}
-          className="w-full p-3 mb-2 bg-gradient-to-br from-zinc-700 to-zinc-800 hover:from-zinc-600 hover:to-zinc-700 text-zinc-100 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:ring-offset-2 text-sm"
-        >
-          + New Chat
-        </button>
-      </div>
-
-      {threads.length === 0 ? (
-        <div className="p-4 text-zinc-500 text-center text-sm">
-          Start a new chat to begin
+    <TooltipProvider>
+      <div className="flex-1 overflow-y-auto flex flex-col">
+        <div className="p-2">
+          <button
+            type="button"
+            onClick={() => createNewThread()}
+            className="w-full p-3 mb-2 bg-gradient-to-br from-zinc-700 to-zinc-800 hover:from-zinc-600 hover:to-zinc-700 text-zinc-100 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:ring-offset-2 text-sm"
+          >
+            + New Chat
+          </button>
         </div>
-      ) : (
-        <div className="px-2 flex-1">
-          {threads.map((thread) => (
-            <ThreadItem
-              key={thread.id}
-              thread={thread}
-              isActive={thread.id === currentThreadId}
-              onSwitch={switchThread}
-              onEdit={handleEditThread}
-              onDelete={deleteThread}
-              onDuplicate={duplicateThread}
-              isOpenMenu={openMenuId === thread.id}
-              onToggleMenu={(id) =>
-                setOpenMenuId(id === openMenuId ? null : id)
+
+        {threads.length === 0 ? (
+          <div className="p-4 text-zinc-500 text-center text-sm">
+            Start a new chat to begin
+          </div>
+        ) : (
+          <div className="px-2 flex-1">
+            {threads.map((thread) => (
+              <ThreadItem
+                key={thread.id}
+                thread={thread}
+                isActive={thread.id === currentThreadId}
+                onSwitch={switchThread}
+                onEdit={handleEditThread}
+                onDelete={deleteThread}
+                onDuplicate={duplicateThread}
+                isOpenMenu={openMenuId === thread.id}
+                onToggleMenu={(id) =>
+                  setOpenMenuId(id === openMenuId ? null : id)
+                }
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Delete All Button */}
+        <div className="p-2 mt-auto">
+          <DeleteAllButton
+            confirmation={deleteAllConfirmation}
+            onClick={() => {
+              if (deleteAllConfirmation) {
+                deleteAllThreads();
+                setDeleteAllConfirmation(false);
+              } else {
+                setDeleteAllConfirmation(true);
               }
-            />
-          ))}
+            }}
+            onBlur={() => setDeleteAllConfirmation(false)}
+          />
         </div>
-      )}
 
-      {/* Delete All Button */}
-      <div className="p-2 mt-auto">
-        <DeleteAllButton
-          confirmation={deleteAllConfirmation}
-          onClick={() => {
-            if (deleteAllConfirmation) {
-              deleteAllThreads();
-              setDeleteAllConfirmation(false);
-            } else {
-              setDeleteAllConfirmation(true);
-            }
-          }}
-          onBlur={() => setDeleteAllConfirmation(false)}
-        />
+        {/* Edit Name Modal */}
+        {editingThread && (
+          <EditNameModal
+            thread={editingThread}
+            threadId={editingThread.id}
+            initialTitle={editingThread.title}
+            isOpen={editModalOpen}
+            onClose={() => {
+              setEditModalOpen(false);
+              setEditingThread(null);
+            }}
+            onSave={handleSaveTitle}
+            onCancel={() => {
+              setEditModalOpen(false);
+              setEditingThread(null);
+            }}
+          />
+        )}
       </div>
-
-      {/* Edit Name Modal */}
-      {editingThread && (
-        <EditNameModal
-          thread={editingThread}
-          threadId={editingThread.id}
-          initialTitle={editingThread.title}
-          isOpen={editModalOpen}
-          onClose={() => {
-            setEditModalOpen(false);
-            setEditingThread(null);
-          }}
-          onSave={handleSaveTitle}
-          onCancel={() => {
-            setEditModalOpen(false);
-            setEditingThread(null);
-          }}
-        />
-      )}
-    </div>
+    </TooltipProvider>
   );
 }

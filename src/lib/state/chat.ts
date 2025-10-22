@@ -7,10 +7,54 @@ import {
   createBlock,
   setBlockLinkedDocuments,
 } from "./block";
-import { callLLMStreaming, modelProps$ } from "./llm";
+import { callLLM, callLLMStreaming, modelProps$ } from "./llm";
 import type { BlockId, ChatId } from "./types";
 
 // Global configuration
+
+/**
+ * Generates a concise title for a conversation based on the first user message
+ */
+async function generateConversationTitle(
+  firstMessage: string,
+): Promise<string> {
+  const prompt = `Generate a very concise title (3-7 words) for this conversation based on the following message. The title should capture the main topic or intent:
+
+${firstMessage}
+
+Title:`;
+
+  try {
+    const result = await callLLM(
+      [{ role: "user", text: prompt, linkedDocuments: [] }],
+      {
+        ...modelProps$.get(),
+        temperature: 0.3, // Lower temperature for more consistent titles
+        n_predict: 50, // Short response
+        stream: false,
+      },
+    );
+
+    if (result.isOk()) {
+      // Clean up the response - remove quotes, extra whitespace, and limit length
+      const title = result.value.content
+        .trim()
+        .replace(/^["']|["']$/g, "") // Remove surrounding quotes
+        .replace(/\n/g, " ") // Replace newlines with spaces
+        .substring(0, 50); // Limit to 50 characters
+
+      return title || "New Chat";
+    }
+  } catch (error) {
+    console.error("Failed to generate conversation title:", error);
+  }
+
+  // Fallback to first 30 characters of the message
+  return (
+    firstMessage.trim().substring(0, 30) +
+    (firstMessage.trim().length > 30 ? "..." : "")
+  );
+}
 
 export interface ChatThread {
   id: ChatId;
@@ -32,7 +76,7 @@ let nextThreadId = 1;
 const newThread = (title?: string, initialMessage?: string): ChatThread => {
   const thread: ChatThread = {
     id: `chat-${nextThreadId++}`,
-    title: title || "New Chat",
+    title: title || (initialMessage ? "Generating title..." : "New Chat"),
     messages: [],
     createdAt: new Date(),
     lastMessageAt: new Date(),
@@ -239,6 +283,24 @@ export const sendMessage = async (text?: string) => {
   // Add the user block ID to the thread
   currentThread$.messages.push(userBlock.id);
   chatStore$.currentUserMessage.set("");
+
+  // Check if this is the first message in a new thread and generate title
+  const threadMessages = currentThread$.messages.get();
+  if (threadMessages.length === 1) {
+    // Only the user message so far
+    const currentTitle = currentThread$.title.get();
+    if (currentTitle === "New Chat") {
+      // Generate title asynchronously without blocking the conversation
+      generateConversationTitle(text)
+        .then((generatedTitle) => {
+          chatStore$.threads[currentThreadId].title.set(generatedTitle);
+        })
+        .catch((error) => {
+          console.error("Title generation failed:", error);
+          // Keep the default title
+        });
+    }
+  }
 
   // Create a block for the assistant response
   const assistantBlock = createBlock("", "assistant");

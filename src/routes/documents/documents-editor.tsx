@@ -72,11 +72,16 @@ export function DocumentEditorPage() {
       <div className="flex-1 flex flex-col">
         {currentDocument$ ? (
           <Editor
-            mode="document"
             value={currentDocument$.content}
             onCancel={handleCancel}
             onSave={handleSave}
             onDelete={handleDelete}
+            config={{
+              showTitle: true,
+              showActions: true,
+              autoUpdateDocument: true,
+              aiEnabled: true,
+            }}
             document$={currentDocument$}
             documentId={currentDocument.id}
           />

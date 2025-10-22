@@ -12,5 +12,5 @@ export const AIChatEditor = React.memo(function AIChatEditor({
 }: {
   content: string;
 }) {
-  return <Editor mode="readonly" value={content} />;
+  return <Editor value={content} config={{ readonly: true }} />;
 });

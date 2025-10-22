@@ -20,7 +20,7 @@ export function SmartMessageInput({
   const currentUserMessage$ = chatStore$.currentUserMessage;
 
   const handleSend = () => {
-    const message = use$(currentUserMessage$);
+    const message = currentUserMessage$.get();
     if (message?.trim()) {
       onSend(message);
     }
@@ -42,7 +42,7 @@ export function SmartMessageInput({
 
       <div className="flex space-x-2">
         <div className="flex-1 relative">
-          <Editor mode="chat" value={currentUserMessage$} disabled={disabled} />
+          <Editor value={currentUserMessage$} disabled={disabled} />
         </div>
         <button
           type="button"
