@@ -1,11 +1,6 @@
 import { useEffect } from "react";
 import { useServerInfo } from "~/lib/state/hooks";
-import {
-  serverStore$,
-  setError,
-  setLoading,
-  setServerInfo,
-} from "~/lib/state/server";
+import { setError, setLoading, setServerInfo } from "~/lib/state/server";
 import { fetchServerInfo } from "../lib/server";
 import { SlotsComponent } from "./Slots";
 

@@ -16,7 +16,7 @@ export function DocumentAIToolbarButton({
   ...props
 }: DocumentAIToolbarButtonProps) {
   const { api } = useEditorPlugin(AIChatPlugin);
-  const editor = useEditor();
+  const _editor = useEditor();
 
   // Handle keyboard shortcut
   React.useEffect(() => {
@@ -35,7 +35,7 @@ export function DocumentAIToolbarButton({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [api, editor]);
+  }, [api]);
 
   return (
     <ToolbarButton

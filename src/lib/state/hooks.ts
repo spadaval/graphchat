@@ -1,6 +1,5 @@
 import { use$ } from "@legendapp/state/react";
 import { getThreadMessages } from "./chat";
-import type { Document } from "./documents";
 import {
   blocks$,
   chatStore$,

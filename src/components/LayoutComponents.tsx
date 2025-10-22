@@ -1,11 +1,6 @@
-import {
-  ChatHeader,
-  EmptyState,
-  MessagesList,
-} from "~/components/ChatAreaComponents";
+import { EmptyState, MessagesList } from "~/components/ChatAreaComponents";
 import { TabContent, TabNavigation } from "~/components/ModelServerComponents";
 import { SidebarContent, SidebarHeader } from "~/components/Sidebar";
-import { SmartMessageInput } from "~/components/SmartMessageInput";
 import { useThread } from "~/lib/state/hooks";
 import type { ChatId } from "~/lib/state/types";
 

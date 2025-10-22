@@ -1,4 +1,3 @@
-import { use$ } from "@legendapp/state/react";
 import {
   Bot,
   ChevronDown,
@@ -9,16 +8,12 @@ import {
   Trash,
   User,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
 import { Editor } from "../editor/Editor";
-import { blocks$ } from "../lib/state/block";
-import { deleteMessage, regenerateMessage } from "../lib/state/chat";
-import { useBlock } from "../lib/state/hooks";
 import type { BlockId } from "../lib/state/types";
-import { DocumentChipsList } from "./DocumentChips";
 
 type CodeProps = React.DetailedHTMLProps<
   React.HTMLAttributes<HTMLElement>,
@@ -39,7 +34,7 @@ interface MessageAvatarProps {
   role: "user" | "assistant";
 }
 
-const MessageAvatar = ({ role }: MessageAvatarProps) => (
+const _MessageAvatar = ({ role }: MessageAvatarProps) => (
   <span
     className={`w-7 h-7 rounded-full flex items-center justify-center text-zinc-300 text-xs font-medium flex-shrink-0 ${
       role === "user"
@@ -61,7 +56,7 @@ interface MessageBubbleProps {
   onEditChange?: (newText: string) => void;
 }
 
-const MessageBubble = ({
+const _MessageBubble = ({
   text,
   role,
   isStreaming,
@@ -213,7 +208,7 @@ const MessageBubble = ({
     onEdit?: () => void;
   }
 
-  const MessageActions = ({
+  const _MessageActions = ({
     onRegenerate,
     onDelete,
     onEdit,
@@ -257,7 +252,7 @@ const MessageBubble = ({
     llmRequests: NonNullable<import("../lib/state/types").Block["llmRequests"]>;
   }
 
-  const MessageAttribution = ({ llmRequests }: MessageAttributionProps) => {
+  const _MessageAttribution = ({ llmRequests }: MessageAttributionProps) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     if (llmRequests.length === 0) return null;

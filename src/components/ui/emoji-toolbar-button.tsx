@@ -372,7 +372,6 @@ function EmojiPickerSearchBar({
           aria-label="Search"
           autoComplete="off"
           type="text"
-          autoFocus
         />
         {children}
       </div>

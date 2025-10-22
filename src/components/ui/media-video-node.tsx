@@ -7,7 +7,6 @@ import { ResizableProvider, useResizableValue } from "@platejs/resizable";
 import type { TResizableProps, TVideoElement } from "platejs";
 import type { PlateElementProps } from "platejs/react";
 import { PlateElement, useEditorMounted, withHOC } from "platejs/react";
-import * as React from "react";
 import LiteYouTubeEmbed from "react-lite-youtube-embed";
 import ReactPlayer from "react-player";
 
@@ -72,7 +71,7 @@ export const VideoElement = withHOC(
               {!isUpload && isYoutube && (
                 <div ref={handleRef}>
                   <LiteYouTubeEmbed
-                    id={embed!.id!}
+                    id={embed?.id!}
                     title="youtube"
                     wrapperClass={cn(
                       "aspect-video rounded-sm",

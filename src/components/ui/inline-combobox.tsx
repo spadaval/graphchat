@@ -167,7 +167,7 @@ const InlineCombobox = ({
     if (!store.getState().activeId) {
       store.setActiveId(store.first());
     }
-  }, [items, store]);
+  }, [store]);
 
   return (
     <span contentEditable={false}>

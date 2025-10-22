@@ -74,7 +74,7 @@ export function MentionElement(
   );
 }
 
-const onSelectItem = getMentionOnSelectItem();
+const _onSelectItem = getMentionOnSelectItem();
 
 export function MentionInputElement(
   props: PlateElementProps<TComboboxInputElement>,

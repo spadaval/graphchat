@@ -5,7 +5,6 @@ import {
   MentionElement,
   MentionInputElement,
 } from "~/components/ui/mention-node";
-import { getAllDocuments } from "~/lib/state";
 
 export const MentionKit = [
   MentionPlugin.configure({

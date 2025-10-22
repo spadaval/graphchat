@@ -230,7 +230,6 @@ function EditNameModal({
             onChange={(e) => setNewTitle(e.target.value)}
             className="w-full p-2 border border-zinc-600 rounded bg-zinc-700 text-zinc-100 mb-4 focus:outline-none focus:ring-2 focus:ring-zinc-600"
             placeholder="Enter new title"
-            autoFocus
           />
           <div className="flex justify-end space-x-2">
             <button

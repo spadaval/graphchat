@@ -2,7 +2,6 @@ import { getEquationHtml } from "@platejs/math";
 import { RadicalIcon } from "lucide-react";
 import type { SlateElementProps, TEquationElement } from "platejs";
 import { SlateElement } from "platejs";
-import * as React from "react";
 
 import { cn } from "~/lib/utils";
 

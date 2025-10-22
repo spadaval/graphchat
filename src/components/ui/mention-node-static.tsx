@@ -1,6 +1,5 @@
 import type { SlateElementProps, TMentionElement } from "platejs";
 import { KEYS, SlateElement } from "platejs";
-import * as React from "react";
 
 import { cn } from "~/lib/utils";
 
@@ -26,11 +25,9 @@ export function MentionElementStatic(
         "data-slate-value": element.value,
       }}
     >
-      <React.Fragment>
-        {props.children}
-        {prefix}
-        {element.value}
-      </React.Fragment>
+      {props.children}
+      {prefix}
+      {element.value}
     </SlateElement>
   );
 }

@@ -197,40 +197,36 @@ const BlockCommentContent = ({
         >
           {isCommenting ? (
             <CommentCreateForm className="p-4" focusOnMount />
+          ) : noneActive ? (
+            sortedMergedData.map((item, index) =>
+              isResolvedSuggestion(item) ? (
+                <BlockSuggestionCard
+                  key={item.suggestionId}
+                  idx={index}
+                  isLast={index === sortedMergedData.length - 1}
+                  suggestion={item}
+                />
+              ) : (
+                <BlockComment
+                  key={item.id}
+                  discussion={item}
+                  isLast={index === sortedMergedData.length - 1}
+                />
+              ),
+            )
           ) : (
             <React.Fragment>
-              {noneActive ? (
-                sortedMergedData.map((item, index) =>
-                  isResolvedSuggestion(item) ? (
-                    <BlockSuggestionCard
-                      key={item.suggestionId}
-                      idx={index}
-                      isLast={index === sortedMergedData.length - 1}
-                      suggestion={item}
-                    />
-                  ) : (
-                    <BlockComment
-                      key={item.id}
-                      discussion={item}
-                      isLast={index === sortedMergedData.length - 1}
-                    />
-                  ),
-                )
-              ) : (
-                <React.Fragment>
-                  {activeSuggestion && (
-                    <BlockSuggestionCard
-                      key={activeSuggestion.suggestionId}
-                      idx={0}
-                      isLast={true}
-                      suggestion={activeSuggestion}
-                    />
-                  )}
+              {activeSuggestion && (
+                <BlockSuggestionCard
+                  key={activeSuggestion.suggestionId}
+                  idx={0}
+                  isLast={true}
+                  suggestion={activeSuggestion}
+                />
+              )}
 
-                  {activeDiscussion && (
-                    <BlockComment discussion={activeDiscussion} isLast={true} />
-                  )}
-                </React.Fragment>
+              {activeDiscussion && (
+                <BlockComment discussion={activeDiscussion} isLast={true} />
               )}
             </React.Fragment>
           )}

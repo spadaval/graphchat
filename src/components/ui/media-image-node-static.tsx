@@ -5,7 +5,6 @@ import type {
   TResizableProps,
 } from "platejs";
 import { NodeApi, SlateElement } from "platejs";
-import * as React from "react";
 
 import { cn } from "~/lib/utils";
 

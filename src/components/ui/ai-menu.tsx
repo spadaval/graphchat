@@ -75,12 +75,12 @@ export function AIMenu() {
     if (streaming) {
       const anchor = api.aiChat.node({ anchor: true });
       setTimeout(() => {
-        const anchorDom = editor.api.toDOMNode(anchor![0])!;
+        const anchorDom = editor.api.toDOMNode(anchor?.[0])!;
         setAnchorElement(anchorDom);
       }, 0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streaming]);
+  }, [streaming, api.aiChat.node, editor.api.toDOMNode]);
 
   const setOpen = (open: boolean) => {
     if (open) {
@@ -98,7 +98,7 @@ export function AIMenu() {
   useEditorChat({
     chat,
     onOpenBlockSelection: (blocks: NodeEntry[]) => {
-      show(editor.api.toDOMNode(blocks.at(-1)![0])!);
+      show(editor.api.toDOMNode(blocks.at(-1)?.[0])!);
     },
     onOpenChange: (open) => {
       if (!open) {
@@ -118,7 +118,7 @@ export function AIMenu() {
       show(editor.api.toDOMNode(ancestor)!);
     },
     onOpenSelection: () => {
-      show(editor.api.toDOMNode(editor.api.blocks().at(-1)![0])!);
+      show(editor.api.toDOMNode(editor.api.blocks().at(-1)?.[0])!);
     },
   });
 

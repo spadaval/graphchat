@@ -2,7 +2,6 @@ import { useSearch } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { DocumentList } from "~/components/DocumentList";
 import { Editor } from "~/editor/Editor";
-import type { Document } from "~/lib/state";
 import {
   createDocument,
   deleteDocument,

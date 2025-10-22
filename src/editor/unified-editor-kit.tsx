@@ -1,7 +1,6 @@
 "use client";
 
 import { BaseParagraphPlugin } from "platejs";
-import { AILoadingBar, DocumentAIMenu } from "~/components/ui/document-ai-menu";
 import { AIKit } from "./ai-kit";
 import { BasicMarksKit } from "./basic-marks-kit";
 import { CursorOverlayKit } from "./cursor-overlay-kit";

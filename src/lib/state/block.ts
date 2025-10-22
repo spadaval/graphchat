@@ -83,8 +83,7 @@ export const removeDocumentFromAllBlocks = (documentId: DocumentId) => {
     const block = blocks[blockId as BlockId];
     // Add proper null checks
     if (
-      block &&
-      block.linkedDocuments &&
+      block?.linkedDocuments &&
       Array.isArray(block.linkedDocuments) &&
       block.linkedDocuments.includes(documentId)
     ) {

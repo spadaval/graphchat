@@ -11,7 +11,6 @@ import {
   Underline,
 } from "lucide-react";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
-import { useEffect } from "react";
 import { Button } from "~/components/ui/button";
 import { DocumentAIToolbarButton } from "~/components/ui/document-ai-toolbar-button";
 import { EmojiToolbarButton } from "~/components/ui/emoji-toolbar-button";

@@ -1,5 +1,4 @@
 import { SlateElement, type SlateElementProps } from "platejs";
-import * as React from "react";
 
 export function BlockquoteElementStatic(props: SlateElementProps) {
   return (

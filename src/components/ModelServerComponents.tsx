@@ -9,7 +9,6 @@ import {
   createDocument,
   documentStore$,
   getAllDocuments,
-  getDocumentById,
   getThreadMessages,
 } from "~/lib/state";
 import { callLLMStreaming } from "~/lib/state/llm";
