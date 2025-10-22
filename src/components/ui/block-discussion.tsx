@@ -31,7 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
-import { commentPlugin } from "~/components/editor/plugins/comment-kit";
+import { commentPlugin } from "~/editor/plugins/comment-kit";
 import {
   type TDiscussion,
   discussionPlugin,

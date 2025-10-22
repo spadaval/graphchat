@@ -4,7 +4,7 @@ import { useChat as useBaseChat } from "@ai-sdk/react";
 import { usePluginOption } from "platejs/react";
 import * as React from "react";
 
-import { aiChatPlugin } from "~/components/editor/ai-kit";
+import { aiChatPlugin } from "~/editor/ai-kit";
 import type { Block } from "~/lib/state/block";
 import { callLLMStreaming, modelProps$ } from "~/lib/state/llm";
 
@@ -32,7 +32,7 @@ export const useLLMChat = () => {
 
   // Convert messages to blocks for LLM call
   const convertMessagesToBlocks = (
-    messages: { role: string; content: string }[]
+    messages: { role: string; content: string }[],
   ): Block[] => {
     return messages.map((msg, index) => ({
       id: `blk-${index + 1}`,
@@ -113,7 +113,7 @@ export const useLLMChat = () => {
               }
               return updated;
             });
-          }
+          },
         );
       }
     } catch (error) {
