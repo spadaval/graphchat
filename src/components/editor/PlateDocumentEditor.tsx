@@ -1,7 +1,6 @@
-import React, { useEffect, useRef } from "react";
-import { Plate, PlateContent, usePlateEditor } from "platejs/react";
-
 import { use$ } from "@legendapp/state/react";
+import { Plate, PlateContent, usePlateEditor } from "platejs/react";
+import { useEffect } from "react";
 import type { Observable } from "@legendapp/state";
 import { Button } from "~/components/ui/button";
 import { QuickInlineEdit } from "~/components/ui/quick-inline-edit";
@@ -21,21 +20,12 @@ import {
   Strikethrough,
   Code,
   Highlighter,
-  List,
-  ListOrdered,
-  Link,
-  Image,
-  Table,
   Smile,
-  Undo,
-  Redo,
-  Type,
   Palette,
 } from "lucide-react";
 import type { Document } from "~/lib/state";
-import type { DocumentId } from "~/lib/state/types";
 import { UnifiedEditorKitWithAI, DocumentEditorConfig } from "./unified-editor-kit";
-import { deleteDocument } from "~/lib/state";
+import { deleteDocument, updateDocument } from "~/lib/state";
 
 // Create the plugins
 const plugins = [...UnifiedEditorKitWithAI];
@@ -52,55 +42,22 @@ export function PlateDocumentEditor({
   // Always use use$ hook to avoid conditional hook usage
   const document = use$(document$);
 
-  // Create the editor
   const editor = usePlateEditor({
     id: "document-editor",
     plugins,
     value: (editor) => editor.api.markdown.deserialize(document.content || ""),
   });
 
-  // Handle save
+  // Update document content when editor changes
+  const handleContentChange = () => {
+    const content = editor.api.markdown.serialize();
+    updateDocument(document.id, { content });
+  };
+
+  // Handle save (title is saved directly via QuickInlineEdit)
   const handleSave = () => {
-    if (document.title?.trim()) {
-      // Get the editor content and serialize to markdown
-      let markdownContent = "";
-
-      try {
-        // Try to use the markdown plugin's serialize method
-        if ((editor as any).api?.markdown?.serialize) {
-          markdownContent = (editor as any).api.markdown.serialize();
-        } else if (editor.children) {
-          // Fallback: extract text content from editor nodes
-          markdownContent = editor.children
-            .map((node: any) => {
-              if (node.type === "p" || !node.type) {
-                return (
-                  node.children
-                    ?.map((child: any) => child.text || "")
-                    .join("") || ""
-                );
-              }
-              return (
-                node.children?.map((child: any) => child.text || "").join("") ||
-                ""
-              );
-            })
-            .filter((text: string) => text.trim())
-            .join("\n\n");
-        }
-      } catch (error) {
-        console.error("Error serializing content:", error);
-        // Last resort: use the current content
-        markdownContent = document.content || "";
-      }
-
-      // Update the observable directly
-      document$.set({
-        ...document,
-        content: markdownContent,
-        updatedAt: new Date(),
-      });
-    }
+    // Content is already saved on change, but we can trigger any additional save logic here
+    handleContentChange();
   };
 
   // Handle delete
@@ -109,7 +66,7 @@ export function PlateDocumentEditor({
   };
 
   return (
-    <Plate editor={editor}>
+    <Plate editor={editor} onChange={handleContentChange}>
       <div className="flex flex-col h-full">
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
           <QuickInlineEdit

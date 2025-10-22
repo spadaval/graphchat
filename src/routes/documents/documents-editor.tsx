@@ -1,7 +1,7 @@
 import { useSearch } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { DocumentList } from "~/components/DocumentList";
-import { DocumentEditor } from "~/components/editor/DocumentEditor";
+import { Editor } from "~/components/editor/Editor";
 import type { Document } from "~/lib/state";
 import type { DocumentId } from "~/lib/state/types";
 import {
@@ -40,6 +40,17 @@ export function DocumentEditorPage() {
     setCurrentDocument(undefined as unknown as DocumentId);
   };
 
+  const handleSave = () => {
+    // Save is handled automatically on change in the editor
+  };
+
+  const handleDelete = () => {
+    if (currentDocument) {
+      deleteDocument(currentDocument.id);
+      setCurrentDocument(undefined as unknown as DocumentId);
+    }
+  };
+
   // Get the observable for the current document if it exists
   const currentDocument$ = currentDocument
     ? documentStore$.documents[currentDocument.id]
@@ -60,9 +71,14 @@ export function DocumentEditorPage() {
       {/* Main editor area */}
       <div className="flex-1 flex flex-col">
         {currentDocument$ ? (
-          <DocumentEditor
-            document$={currentDocument$}
+          <Editor
+            mode="document"
+            value={currentDocument$.content}
             onCancel={handleCancel}
+            onSave={handleSave}
+            onDelete={handleDelete}
+            document$={currentDocument$}
+            documentId={currentDocument.id}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center">

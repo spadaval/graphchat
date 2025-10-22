@@ -4,7 +4,7 @@ import {
   documentLinking$,
   removeDocumentFromCurrentMessage,
 } from "~/lib/state";
-import { PlateEditor } from "./editor/PlateEditor";
+import { Editor } from "./editor/Editor";
 import { chatStore$ } from "~/lib/state";
 
 interface SmartMessageInputProps {
@@ -17,11 +17,12 @@ export function SmartMessageInput({
   disabled,
 }: SmartMessageInputProps) {
   const { currentMessageLinks } = use$(documentLinking$);
-  const { currentUserMessage } = use$(chatStore$);
+  const currentUserMessage$ = chatStore$.currentUserMessage;
 
   const handleSend = () => {
-    if (currentUserMessage?.trim()) {
-      onSend(currentUserMessage);
+    const message = use$(currentUserMessage$);
+    if (message?.trim()) {
+      onSend(message);
     }
   };
 
@@ -41,7 +42,7 @@ export function SmartMessageInput({
 
       <div className="flex space-x-2">
         <div className="flex-1 relative">
-          <PlateEditor onSend={onSend} disabled={disabled} />
+          <Editor mode="chat" value={currentUserMessage$} disabled={disabled} />
         </div>
         <button
           type="button"

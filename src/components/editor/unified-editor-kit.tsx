@@ -13,32 +13,22 @@ import { DocumentAIMenu, AILoadingBar } from "~/components/ui/document-ai-menu";
 const UnifiedPlugins = [
   // Core plugins
   BaseParagraphPlugin,
-  
+
   // Basic text formatting
   ...BasicMarksKit,
-  
+
   // Cursor overlay for collaborative features
   ...CursorOverlayKit,
-  
+
   // Markdown support
   ...MarkdownKit,
-  
+
   // Mention support for document referencing
   ...MentionKit,
 ];
 
 // Extended kit with AI features for document editor
-export const UnifiedEditorKitWithAI = [
-  ...UnifiedPlugins,
-  ...AIKit,
-  {
-    key: 'document-ai-menu',
-    render: {
-      afterContainer: AILoadingBar,
-      afterEditable: DocumentAIMenu,
-    },
-  }
-];
+export const UnifiedEditorKitWithAI = [...UnifiedPlugins, ...AIKit];
 
 // Basic kit without AI for chat editor
 export const UnifiedEditorKit = [...UnifiedPlugins];

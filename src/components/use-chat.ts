@@ -32,7 +32,7 @@ export const useLLMChat = () => {
 
   // Convert messages to blocks for LLM call
   const convertMessagesToBlocks = (
-    messages: { role: string; content: string }[],
+    messages: { role: string; content: string }[]
   ): Block[] => {
     return messages.map((msg, index) => ({
       id: `blk-${index + 1}`,
@@ -113,7 +113,7 @@ export const useLLMChat = () => {
               }
               return updated;
             });
-          },
+          }
         );
       }
     } catch (error) {

@@ -7,7 +7,7 @@ import type { UseChatOptions } from "ai/react";
 import { getPluginType, KEYS, PathApi } from "platejs";
 import { usePluginOption } from "platejs/react";
 import { AIAnchorElement, AILeaf } from "~/components/ui/ai-node";
-import { AILoadingBar } from "~/components/ui/document-ai-menu";
+import { AILoadingBar, DocumentAIMenu } from "~/components/ui/document-ai-menu";
 
 import { CursorOverlayKit } from "./cursor-overlay-kit";
 import { MarkdownKit } from "./markdown-kit";
@@ -35,6 +35,7 @@ export const aiChatPlugin = AIChatPlugin.extend({
   },
   render: {
     afterContainer: AILoadingBar,
+    afterEditable: DocumentAIMenu,
     node: AIAnchorElement,
   },
   shortcuts: { show: { keys: "mod+j" } },
@@ -54,7 +55,9 @@ export const aiChatPlugin = AIChatPlugin.extend({
                 type: getPluginType(editor, KEYS.aiChat),
               },
               {
-                at: editor.selection ? PathApi.next(editor.selection.focus.path.slice(0, 1)) : [0],
+                at: editor.selection
+                  ? PathApi.next(editor.selection.focus.path.slice(0, 1))
+                  : [0],
               },
             );
           });
