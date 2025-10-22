@@ -18,11 +18,11 @@ import type { BlockId, ChatId } from "./types";
 async function generateConversationTitle(
   firstMessage: string,
 ): Promise<string> {
-  const prompt = `Generate a very concise title (3-7 words) for this conversation based on the following message. The title should capture the main topic or intent:
+  const prompt = `What follows is the first message of a conversation. Generate a short title (<10 words) that describes what this conversation is about. Respond only with the title.
 
+  First Message:
 ${firstMessage}
-
-Title:`;
+`;
 
   try {
     const result = await callLLM(
