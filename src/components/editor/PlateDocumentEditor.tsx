@@ -24,7 +24,10 @@ import {
   Palette,
 } from "lucide-react";
 import type { Document } from "~/lib/state";
-import { UnifiedEditorKitWithAI, DocumentEditorConfig } from "./unified-editor-kit";
+import {
+  UnifiedEditorKitWithAI,
+  DocumentEditorConfig,
+} from "./unified-editor-kit";
 import { deleteDocument, updateDocument } from "~/lib/state";
 
 // Create the plugins

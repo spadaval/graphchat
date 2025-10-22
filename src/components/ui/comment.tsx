@@ -424,13 +424,9 @@ export function CommentCreateForm({
 
   const userInfo = usePluginOption(discussionPlugin, "currentUser");
   const [commentValue, setCommentValue] = React.useState<Value | undefined>();
-  const commentContent = React.useMemo(
-    () =>
-      commentValue
-        ? NodeApi.string({ children: commentValue, type: KEYS.p })
-        : "",
-    [commentValue],
-  );
+  const commentContent = commentValue
+    ? NodeApi.string({ children: commentValue, type: KEYS.p })
+    : "";
   const commentEditor = useCommentEditor();
 
   React.useEffect(() => {

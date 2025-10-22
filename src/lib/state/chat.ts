@@ -322,6 +322,7 @@ export const sendMessage = async (text?: string) => {
   const responseStream = callLLMStreaming(blocksForLLM, modelProps$.get());
 
   let accumulatedContent = "";
+  let lastUpdate = Date.now();
 
   for await (const chunkResult of responseStream) {
     chunkResult.match(
@@ -330,9 +331,13 @@ export const sendMessage = async (text?: string) => {
           // Stream is complete
           return;
         }
-        // Accumulate content and update the assistant block directly
+        // Accumulate content
         accumulatedContent += chunk.content;
-        blocks$[assistantBlock.id].text.set(accumulatedContent);
+        // Batch updates to reduce render frequency
+        if (Date.now() - lastUpdate > 50) {
+          blocks$[assistantBlock.id].text.set(accumulatedContent);
+          lastUpdate = Date.now();
+        }
       },
       (error) => {
         // Handle streaming error
@@ -343,6 +348,12 @@ export const sendMessage = async (text?: string) => {
       },
     );
   }
+
+  // Ensure final content is set
+  blocks$[assistantBlock.id].text.set(accumulatedContent);
+
+  // Mark generation as complete
+  blocks$[assistantBlock.id].isGenerating.set(false);
 };
 
 export const deleteMessage = (blockId: BlockId) => {
@@ -404,6 +415,7 @@ export const regenerateMessage = async (blockId: BlockId) => {
   const responseStream = callLLMStreaming(blocksForLLM, modelProps$.get());
 
   let accumulatedContent = "";
+  let lastUpdate = Date.now();
 
   for await (const chunkResult of responseStream) {
     chunkResult.match(
@@ -412,9 +424,13 @@ export const regenerateMessage = async (blockId: BlockId) => {
           // Stream is complete
           return;
         }
-        // Accumulate content and update the new block directly
+        // Accumulate content
         accumulatedContent += chunk.content;
-        blocks$[newBlock.id].text.set(accumulatedContent);
+        // Batch updates to reduce render frequency
+        if (Date.now() - lastUpdate > 50) {
+          blocks$[newBlock.id].text.set(accumulatedContent);
+          lastUpdate = Date.now();
+        }
       },
       (error) => {
         // Handle streaming error
@@ -425,6 +441,9 @@ export const regenerateMessage = async (blockId: BlockId) => {
       },
     );
   }
+
+  // Ensure final content is set
+  blocks$[newBlock.id].text.set(accumulatedContent);
 
   // Mark generation as complete
   blocks$[newBlock.id].isGenerating.set(false);

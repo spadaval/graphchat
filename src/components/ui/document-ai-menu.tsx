@@ -401,19 +401,19 @@ export const DocumentAIMenuItems = ({
   const aiEditor = usePluginOption(AIChatPlugin, "aiEditor");
   const isSelecting = useIsSelecting();
 
-  const menuState = React.useMemo(() => {
+  const menuState = (() => {
     if (messages && messages.length > 0) {
       return isSelecting ? "selectionSuggestion" : "cursorSuggestion";
     }
 
     return isSelecting ? "selectionCommand" : "cursorCommand";
-  }, [isSelecting, messages]);
+  })();
 
-  const menuGroups = React.useMemo(() => {
+  const menuGroups = (() => {
     const items = menuStateItems[menuState];
 
     return items;
-  }, [menuState]);
+  })();
 
   React.useEffect(() => {
     if (menuGroups.length > 0 && menuGroups[0].items.length > 0) {

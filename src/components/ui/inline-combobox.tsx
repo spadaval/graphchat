@@ -144,26 +144,15 @@ const InlineCombobox = ({
 
   const [hasEmpty, setHasEmpty] = React.useState(false);
 
-  const contextValue: InlineComboboxContextValue = React.useMemo(
-    () => ({
-      filter,
-      inputProps,
-      inputRef,
-      removeInput,
-      setHasEmpty,
-      showTrigger,
-      trigger,
-    }),
-    [
-      trigger,
-      showTrigger,
-      filter,
-      inputRef,
-      inputProps,
-      removeInput,
-      setHasEmpty,
-    ],
-  );
+  const contextValue: InlineComboboxContextValue = {
+    filter,
+    inputProps,
+    inputRef,
+    removeInput,
+    setHasEmpty,
+    showTrigger,
+    trigger,
+  };
 
   const store = useComboboxStore({
     // open: ,

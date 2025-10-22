@@ -1,4 +1,6 @@
+import React from "react";
 import { ChatMessage } from "~/components/ChatMessage";
+import { blocks$ } from "~/lib/state/block";
 import { useThread } from "~/lib/state/hooks";
 import type { ChatId } from "~/lib/state/types";
 
@@ -82,13 +84,26 @@ export function MessagesList({ threadId }: MessagesListProps) {
   const blockIds = thread.messages;
 
   // Find the last assistant block that is still generating
-  // We'll need to check this logic later, for now we'll keep it simple
-  const _streamingBlockId = undefined;
+  const streamingBlockId = blockIds
+    .slice()
+    .reverse()
+    .find((blockId) => {
+      const block = blocks$.get()[blockId];
+      return block && block.role === "assistant" && block.isGenerating;
+    });
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-      {blockIds.map((blockId) => (
-        <ChatMessage key={blockId} blockId={blockId} isStreaming={false} />
+      {blockIds.map((blockId, index) => (
+        <React.Fragment key={blockId}>
+          <ChatMessage
+            blockId={blockId}
+            isStreaming={blockId === streamingBlockId}
+          />
+          {index < blockIds.length - 1 && (
+            <div className="border-t border-zinc-700 my-2" />
+          )}
+        </React.Fragment>
       ))}
       {blockIds.length === 0 && (
         <div className="text-center text-zinc-500 py-8 text-sm">

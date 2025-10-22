@@ -46,9 +46,9 @@ interface MessageBubbleProps {
 
 const MessageBubble = ({ text, role, isStreaming }: MessageBubbleProps) => {
   if (role === "user") {
-    // User messages: smaller, gray bubble on the right
+    // User messages: smaller, gray bubble on the left
     return (
-      <div className="px-3 py-2 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-850 border border-zinc-700 max-w-[85%] ml-auto">
+      <div className="px-3 py-2 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-850 border border-zinc-700 max-w-[85%]">
         <ReactMarkdown
           rehypePlugins={[rehypeRaw, rehypeHighlight]}
           components={{
@@ -90,51 +90,70 @@ const MessageBubble = ({ text, role, isStreaming }: MessageBubbleProps) => {
     // Assistant messages: no bubble, just text
     return (
       <div className="w-full max-w-none prose prose-invert">
-        <ReactMarkdown
-          rehypePlugins={[rehypeRaw, rehypeHighlight]}
-          components={{
-            code({ className, children, ...props }: CodeProps) {
-              const isInline = !className?.includes("language-");
-              return !isInline ? (
-                <pre className="bg-gradient-to-br from-zinc-900 to-zinc-850 p-4 rounded overflow-x-auto">
-                  <code className={className} {...props}>
+        {isStreaming ? (
+          // During streaming, render plain text to avoid expensive markdown parsing
+          <pre className="whitespace-pre-wrap text-zinc-200 font-sans">
+            {text}
+          </pre>
+        ) : (
+          <ReactMarkdown
+            rehypePlugins={[rehypeRaw, rehypeHighlight]}
+            components={{
+              code({ className, children, ...props }: CodeProps) {
+                const isInline = !className?.includes("language-");
+                return !isInline ? (
+                  <pre className="bg-gradient-to-br from-zinc-900 to-zinc-850 p-4 rounded overflow-x-auto">
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  </pre>
+                ) : (
+                  <code className="bg-zinc-800 px-1 py-0.5 rounded" {...props}>
                     {children}
                   </code>
-                </pre>
-              ) : (
-                <code className="bg-zinc-800 px-1 py-0.5 rounded" {...props}>
-                  {children}
-                </code>
-              );
-            },
-            a: (props: AnchorProps) => (
-              <a
-                className="text-blue-400 hover:text-blue-300 underline"
-                target="_blank"
-                rel="noopener noreferrer"
-                {...props}
-              />
-            ),
-            p: (props) => <p className="mb-3 text-zinc-200" {...props} />,
-            h1: (props) => (
-              <h1 className="text-xl font-bold mb-3 text-zinc-100" {...props} />
-            ),
-            h2: (props) => (
-              <h2 className="text-lg font-bold mb-3 text-zinc-100" {...props} />
-            ),
-            h3: (props) => (
-              <h3 className="text-md font-bold mb-3 text-zinc-100" {...props} />
-            ),
-            ul: (props) => (
-              <ul className="list-disc pl-5 mb-3 text-zinc-200" {...props} />
-            ),
-            ol: (props) => (
-              <ol className="list-decimal pl-5 mb-3 text-zinc-200" {...props} />
-            ),
-          }}
-        >
-          {text}
-        </ReactMarkdown>
+                );
+              },
+              a: (props: AnchorProps) => (
+                <a
+                  className="text-blue-400 hover:text-blue-300 underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  {...props}
+                />
+              ),
+              p: (props) => <p className="mb-3 text-zinc-200" {...props} />,
+              h1: (props) => (
+                <h1
+                  className="text-xl font-bold mb-3 text-zinc-100"
+                  {...props}
+                />
+              ),
+              h2: (props) => (
+                <h2
+                  className="text-lg font-bold mb-3 text-zinc-100"
+                  {...props}
+                />
+              ),
+              h3: (props) => (
+                <h3
+                  className="text-md font-bold mb-3 text-zinc-100"
+                  {...props}
+                />
+              ),
+              ul: (props) => (
+                <ul className="list-disc pl-5 mb-3 text-zinc-200" {...props} />
+              ),
+              ol: (props) => (
+                <ol
+                  className="list-decimal pl-5 mb-3 text-zinc-200"
+                  {...props}
+                />
+              ),
+            }}
+          >
+            {text}
+          </ReactMarkdown>
+        )}
         {isStreaming && (
           <span className="inline-block w-2 h-4 bg-zinc-500 ml-1 animate-pulse"></span>
         )}
@@ -184,7 +203,7 @@ export function ChatMessage({ blockId, isStreaming }: ChatMessageProps) {
 
   return (
     <div
-      className={`flex items-start gap-3 transform transition-all duration-300 ease-out group ${isUser ? "flex-row-reverse" : ""} hover:bg-zinc-900/50 rounded-lg p-2 -m-2`}
+      className={`flex items-start gap-3 transform transition-all duration-300 ease-out group ${isUser ? "flex-row-reverse" : ""}`}
     >
       <MessageAvatar role={block.role} />
 

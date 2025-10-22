@@ -314,7 +314,7 @@ export const useResolveSuggestion = (
     setOption("uniquePathMap", new Map(map).set(id, blockPath));
   });
 
-  const resolvedSuggestion: ResolvedSuggestion[] = React.useMemo(() => {
+  const resolvedSuggestion: ResolvedSuggestion[] = (() => {
     const map = getOption("uniquePathMap");
 
     if (suggestionNodes.length === 0) return [];
@@ -489,14 +489,7 @@ export const useResolveSuggestion = (
     });
 
     return res;
-  }, [
-    api.suggestion,
-    blockPath,
-    discussions,
-    editor.api,
-    getOption,
-    suggestionNodes,
-  ]);
+  })();
 
   return resolvedSuggestion;
 };

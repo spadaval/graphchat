@@ -215,20 +215,16 @@ function ColorCustom({
     setCustomColor(color);
   }, [color, colors, customColors]);
 
-  const computedColors = React.useMemo(
-    () =>
-      customColor
-        ? [
-            ...customColors,
-            {
-              isBrightColor: false,
-              name: "",
-              value: customColor,
-            },
-          ]
-        : customColors,
-    [customColor, customColors],
-  );
+  const computedColors = customColor
+    ? [
+        ...customColors,
+        {
+          isBrightColor: false,
+          name: "",
+          value: customColor,
+        },
+      ]
+    : customColors;
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const updateCustomColorDebounced = React.useCallback(

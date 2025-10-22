@@ -97,13 +97,13 @@ export function MentionInputElement(
   };
 
   // Filter mentionables based on search
-  const filteredMentionables = React.useMemo(() => {
+  const filteredMentionables = (() => {
     const mentionables = getMentionables();
     if (!search) return mentionables;
     return mentionables
       .filter((item) => item.text.toLowerCase().includes(search.toLowerCase()))
       .slice(0, 5); // Limit to 5 results
-  }, [search]);
+  })();
 
   return (
     <PlateElement {...props} as="span">

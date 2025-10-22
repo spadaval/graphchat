@@ -80,14 +80,10 @@ function CodeBlockCombobox() {
   const value = element.lang || "plaintext";
   const [searchValue, setSearchValue] = React.useState("");
 
-  const items = React.useMemo(
-    () =>
-      languages.filter(
-        (language) =>
-          !searchValue ||
-          language.label.toLowerCase().includes(searchValue.toLowerCase()),
-      ),
-    [searchValue],
+  const items = languages.filter(
+    (language) =>
+      !searchValue ||
+      language.label.toLowerCase().includes(searchValue.toLowerCase()),
   );
 
   if (readOnly) return null;
