@@ -61,6 +61,7 @@ export function DocumentEditorPage() {
       <div className="w-80 bg-zinc-900 border-r border-zinc-800 flex flex-col">
         <DocumentList
           documents={documents}
+          currentDocumentId={currentDocument?.id}
           onCreateNew={handleCreateNew}
           onSelect={setCurrentDocument}
           onDelete={deleteDocument}

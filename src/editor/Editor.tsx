@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import type { Observable } from "@legendapp/state";
 import { use$ } from "@legendapp/state/react";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
@@ -82,6 +83,20 @@ export function Editor({
         }
       : undefined,
   });
+
+  // Update editor content when value changes
+  useEffect(() => {
+    if (editor && currentValue !== undefined) {
+      try {
+        if (editor.api?.markdown) {
+          const deserialized = editor.api.markdown.deserialize(currentValue);
+          editor.tf.setValue(deserialized);
+        }
+      } catch (error) {
+        console.error("Error updating editor content:", error);
+      }
+    }
+  }, [currentValue]);
 
   // Handle content changes
   const handleContentChange = () => {

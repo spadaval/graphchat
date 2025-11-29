@@ -5,6 +5,7 @@ import type { DocumentId } from "~/lib/state/types";
 
 interface DocumentListProps {
   documents: Document[];
+  currentDocumentId?: DocumentId;
   onCreateNew: () => void;
   onSelect: (documentId: DocumentId) => void;
   onDelete: (id: DocumentId) => void;
@@ -12,6 +13,7 @@ interface DocumentListProps {
 
 export function DocumentList({
   documents,
+  currentDocumentId,
   onCreateNew,
   onSelect,
   onDelete,
@@ -70,7 +72,11 @@ export function DocumentList({
             {filteredDocuments.map((doc) => (
               <li
                 key={doc.id}
-                className="hover:bg-zinc-800/50 transition-colors"
+                className={`transition-colors ${
+                  doc.id === currentDocumentId
+                    ? "bg-gradient-to-br from-zinc-700 to-zinc-800 text-zinc-100 ring-2 ring-zinc-600"
+                    : "hover:bg-zinc-800/50"
+                }`}
               >
                 <div className="p-4">
                   <div className="flex justify-between items-start">
