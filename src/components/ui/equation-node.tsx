@@ -1,10 +1,16 @@
-"use client";
+'use client';
 
-import { useEquationElement, useEquationInput } from "@platejs/math/react";
-import { BlockSelectionPlugin } from "@platejs/selection/react";
-import { CornerDownLeftIcon, RadicalIcon } from "lucide-react";
-import type { TEquationElement } from "platejs";
-import type { PlateElementProps } from "platejs/react";
+import * as React from 'react';
+import TextareaAutosize, {
+  type TextareaAutosizeProps,
+} from 'react-textarea-autosize';
+
+import type { TEquationElement } from 'platejs';
+import type { PlateElementProps } from 'platejs/react';
+
+import { useEquationElement, useEquationInput } from '@platejs/math/react';
+import { BlockSelectionPlugin } from '@platejs/selection/react';
+import { CornerDownLeftIcon, RadicalIcon } from 'lucide-react';
 import {
   createPrimitiveComponent,
   PlateElement,
@@ -13,19 +19,15 @@ import {
   useElement,
   useReadOnly,
   useSelected,
-} from "platejs/react";
-import * as React from "react";
-import TextareaAutosize, {
-  type TextareaAutosizeProps,
-} from "react-textarea-autosize";
+} from 'platejs/react';
 
-import { Button } from "~/components/ui/button";
+import { Button } from '~/components/ui/button';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "~/components/ui/popover";
-import { cn } from "~/lib/utils";
+} from '~/components/ui/popover';
+import { cn } from '~/lib/utils';
 
 export function EquationElement(props: PlateElementProps<TEquationElement>) {
   const selected = useSelected();
@@ -34,15 +36,15 @@ export function EquationElement(props: PlateElementProps<TEquationElement>) {
 
   useEquationElement({
     element: props.element,
-    katexRef: katexRef,
+    katexRef,
     options: {
       displayMode: true,
-      errorColor: "#cc0000",
+      errorColor: '#cc0000',
       fleqn: false,
       leqno: false,
-      macros: { "\\f": "#1f(#2)" },
-      output: "htmlAndMathml",
-      strict: "warn",
+      macros: { '\\f': '#1f(#2)' },
+      output: 'htmlAndMathml',
+      strict: 'warn',
       throwOnError: false,
       trust: false,
     },
@@ -54,10 +56,10 @@ export function EquationElement(props: PlateElementProps<TEquationElement>) {
         <PopoverTrigger asChild>
           <div
             className={cn(
-              "group flex cursor-pointer items-center justify-center rounded-sm select-none hover:bg-primary/10 data-[selected=true]:bg-primary/10",
+              'group flex cursor-pointer select-none items-center justify-center rounded-sm hover:bg-primary/10 data-[selected=true]:bg-primary/10',
               props.element.texExpression.length === 0
-                ? "bg-muted p-3 pr-9"
-                : "px-2 py-1",
+                ? 'bg-muted p-3 pr-9'
+                : 'px-2 py-1'
             )}
             data-selected={selected}
             contentEditable={false}
@@ -66,7 +68,7 @@ export function EquationElement(props: PlateElementProps<TEquationElement>) {
             {props.element.texExpression.length > 0 ? (
               <span ref={katexRef} />
             ) : (
-              <div className="flex h-7 w-full items-center gap-2 text-sm whitespace-nowrap text-muted-foreground">
+              <div className="flex h-7 w-full items-center gap-2 whitespace-nowrap text-muted-foreground text-sm">
                 <RadicalIcon className="size-6 text-muted-foreground/80" />
                 <div>Add a Tex equation</div>
               </div>
@@ -76,7 +78,9 @@ export function EquationElement(props: PlateElementProps<TEquationElement>) {
 
         <EquationPopoverContent
           open={open}
-          placeholder={`f(x) = \\begin{cases}\n  x^2, &\\quad x > 0 \\\\\n  0, &\\quad x = 0 \\\\\n  -x^2, &\\quad x < 0\n\\end{cases}`}
+          placeholder={
+            'f(x) = \\begin{cases}\n  x^2, &\\quad x > 0 \\\\\n  0, &\\quad x = 0 \\\\\n  -x^2, &\\quad x < 0\n\\end{cases}'
+          }
           isInline={false}
           setOpen={setOpen}
         />
@@ -88,14 +92,14 @@ export function EquationElement(props: PlateElementProps<TEquationElement>) {
 }
 
 export function InlineEquationElement(
-  props: PlateElementProps<TEquationElement>,
+  props: PlateElementProps<TEquationElement>
 ) {
   const element = props.element;
   const katexRef = React.useRef<HTMLDivElement | null>(null);
   const selected = useSelected();
   const isCollapsed = useEditorSelector(
     (editor) => editor.api.isCollapsed(),
-    [],
+    []
   );
   const [open, setOpen] = React.useState(selected && isCollapsed);
 
@@ -107,15 +111,15 @@ export function InlineEquationElement(
 
   useEquationElement({
     element,
-    katexRef: katexRef,
+    katexRef,
     options: {
       displayMode: true,
-      errorColor: "#cc0000",
+      errorColor: '#cc0000',
       fleqn: false,
       leqno: false,
-      macros: { "\\f": "#1f(#2)" },
-      output: "htmlAndMathml",
-      strict: "warn",
+      macros: { '\\f': '#1f(#2)' },
+      output: 'htmlAndMathml',
+      strict: 'warn',
       throwOnError: false,
       trust: false,
     },
@@ -125,27 +129,27 @@ export function InlineEquationElement(
     <PlateElement
       {...props}
       className={cn(
-        "mx-1 inline-block rounded-sm select-none [&_.katex-display]:my-0!",
+        'mx-1 inline-block select-none rounded-sm [&_.katex-display]:my-0!'
       )}
     >
       <Popover open={open} onOpenChange={setOpen} modal={false}>
         <PopoverTrigger asChild>
           <div
             className={cn(
-              'after:absolute after:inset-0 after:-top-0.5 after:-left-1 after:z-1 after:h-[calc(100%)+4px] after:w-[calc(100%+8px)] after:rounded-sm after:content-[""]',
-              "h-6",
+              'after:-top-0.5 after:-left-1 after:absolute after:inset-0 after:z-1 after:h-[calc(100%)+4px] after:w-[calc(100%+8px)] after:rounded-sm after:content-[""]',
+              'h-6',
               ((element.texExpression.length > 0 && open) || selected) &&
-                "after:bg-brand/15",
+                'after:bg-brand/15',
               element.texExpression.length === 0 &&
-                "text-muted-foreground after:bg-neutral-500/10",
+                'text-muted-foreground after:bg-neutral-500/10'
             )}
             contentEditable={false}
           >
             <span
               ref={katexRef}
               className={cn(
-                element.texExpression.length === 0 && "hidden",
-                "font-mono leading-none",
+                element.texExpression.length === 0 && 'hidden',
+                'font-mono leading-none'
               )}
             />
             {element.texExpression.length === 0 && (
@@ -219,7 +223,7 @@ const EquationPopoverContent = ({
       contentEditable={false}
     >
       <EquationInput
-        className={cn("max-h-[50vh] grow resize-none p-2 text-sm", className)}
+        className={cn('max-h-[50vh] grow resize-none p-2 text-sm', className)}
         state={{ isInline, open, onClose }}
         autoFocus
         {...props}

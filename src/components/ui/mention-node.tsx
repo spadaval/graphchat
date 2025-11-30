@@ -1,20 +1,21 @@
-"use client";
+'use client';
 
-import { getMentionOnSelectItem } from "@platejs/mention";
+import * as React from 'react';
 
-import type { TComboboxInputElement, TMentionElement } from "platejs";
-import { IS_APPLE, KEYS } from "platejs";
-import type { PlateElementProps } from "platejs/react";
+import type { TComboboxInputElement, TMentionElement } from 'platejs';
+import type { PlateElementProps } from 'platejs/react';
+
+import { getMentionOnSelectItem } from '@platejs/mention';
+import { IS_APPLE, KEYS } from 'platejs';
 import {
   PlateElement,
   useFocused,
   useReadOnly,
   useSelected,
-} from "platejs/react";
-import * as React from "react";
-import { useMounted } from "~/hooks/use-mounted";
-import { addDocumentToCurrentMessage, getAllDocuments } from "~/lib/state";
-import { cn } from "~/lib/utils";
+} from 'platejs/react';
+
+import { cn } from '~/lib/utils';
+import { useMounted } from '~/hooks/use-mounted';
 
 import {
   InlineCombobox,
@@ -23,12 +24,12 @@ import {
   InlineComboboxGroup,
   InlineComboboxInput,
   InlineComboboxItem,
-} from "./inline-combobox";
+} from './inline-combobox';
 
 export function MentionElement(
   props: PlateElementProps<TMentionElement> & {
     prefix?: string;
-  },
+  }
 ) {
   const element = props.element;
 
@@ -41,67 +42,46 @@ export function MentionElement(
     <PlateElement
       {...props}
       className={cn(
-        "inline-block rounded-md bg-muted px-1.5 py-0.5 align-baseline text-sm font-medium",
-        !readOnly && "cursor-pointer",
-        selected && focused && "ring-2 ring-ring",
-        element.children[0][KEYS.bold] === true && "font-bold",
-        element.children[0][KEYS.italic] === true && "italic",
-        element.children[0][KEYS.underline] === true && "underline",
+        'inline-block rounded-md bg-muted px-1.5 py-0.5 align-baseline font-medium text-sm',
+        !readOnly && 'cursor-pointer',
+        selected && focused && 'ring-2 ring-ring',
+        element.children[0][KEYS.bold] === true && 'font-bold',
+        element.children[0][KEYS.italic] === true && 'italic',
+        element.children[0][KEYS.underline] === true && 'underline'
       )}
       attributes={{
         ...props.attributes,
         contentEditable: false,
-        "data-slate-value": element.value,
+        'data-slate-value': element.value,
         draggable: true,
       }}
     >
       {mounted && IS_APPLE ? (
         // Mac OS IME https://github.com/ianstormtaylor/slate/issues/3490
-        <React.Fragment>
+        <>
           {props.children}
           {props.prefix}
           {element.value}
-        </React.Fragment>
+        </>
       ) : (
         // Others like Android https://github.com/ianstormtaylor/slate/pull/5360
-        <React.Fragment>
+        <>
           {props.prefix}
           {element.value}
           {props.children}
-        </React.Fragment>
+        </>
       )}
     </PlateElement>
   );
 }
 
-const _onSelectItem = getMentionOnSelectItem();
+const onSelectItem = getMentionOnSelectItem();
 
 export function MentionInputElement(
-  props: PlateElementProps<TComboboxInputElement>,
+  props: PlateElementProps<TComboboxInputElement>
 ) {
   const { editor, element } = props;
-  const [search, setSearch] = React.useState("");
-
-  // Get the onSelectItem function
-  const onSelectItem = getMentionOnSelectItem();
-
-  // Get documents and convert to mentionable format
-  const getMentionables = () => {
-    const documents = getAllDocuments();
-    return documents.map((doc) => ({
-      key: doc.id,
-      text: doc.title,
-    }));
-  };
-
-  // Filter mentionables based on search
-  const filteredMentionables = (() => {
-    const mentionables = getMentionables();
-    if (!search) return mentionables;
-    return mentionables
-      .filter((item) => item.text.toLowerCase().includes(search.toLowerCase()))
-      .slice(0, 5); // Limit to 5 results
-  })();
+  const [search, setSearch] = React.useState('');
 
   return (
     <PlateElement {...props} as="span">
@@ -116,20 +96,15 @@ export function MentionInputElement(
           <InlineComboboxInput />
         </span>
 
-        <InlineComboboxContent className="my-1.5 bg-zinc-800 border border-zinc-700">
+        <InlineComboboxContent className="my-1.5">
           <InlineComboboxEmpty>No results</InlineComboboxEmpty>
 
           <InlineComboboxGroup>
-            {filteredMentionables.map((item) => (
+            {MENTIONABLES.map((item) => (
               <InlineComboboxItem
                 key={item.key}
                 value={item.text}
-                onClick={() => {
-                  // Add document to current message links when mentioned
-                  addDocumentToCurrentMessage(item.key);
-                  // Use the editor's onSelectItem function
-                  onSelectItem(editor, item, search);
-                }}
+                onClick={() => onSelectItem(editor, item, search)}
               >
                 {item.text}
               </InlineComboboxItem>
@@ -142,3 +117,80 @@ export function MentionInputElement(
     </PlateElement>
   );
 }
+
+const MENTIONABLES = [
+  { key: '0', text: 'Aayla Secura' },
+  { key: '1', text: 'Adi Gallia' },
+  {
+    key: '2',
+    text: 'Admiral Dodd Rancit',
+  },
+  {
+    key: '3',
+    text: 'Admiral Firmus Piett',
+  },
+  {
+    key: '4',
+    text: 'Admiral Gial Ackbar',
+  },
+  { key: '5', text: 'Admiral Ozzel' },
+  { key: '6', text: 'Admiral Raddus' },
+  {
+    key: '7',
+    text: 'Admiral Terrinald Screed',
+  },
+  { key: '8', text: 'Admiral Trench' },
+  {
+    key: '9',
+    text: 'Admiral U.O. Statura',
+  },
+  { key: '10', text: 'Agen Kolar' },
+  { key: '11', text: 'Agent Kallus' },
+  {
+    key: '12',
+    text: 'Aiolin and Morit Astarte',
+  },
+  { key: '13', text: 'Aks Moe' },
+  { key: '14', text: 'Almec' },
+  { key: '15', text: 'Alton Kastle' },
+  { key: '16', text: 'Amee' },
+  { key: '17', text: 'AP-5' },
+  { key: '18', text: 'Armitage Hux' },
+  { key: '19', text: 'Artoo' },
+  { key: '20', text: 'Arvel Crynyd' },
+  { key: '21', text: 'Asajj Ventress' },
+  { key: '22', text: 'Aurra Sing' },
+  { key: '23', text: 'AZI-3' },
+  { key: '24', text: 'Bala-Tik' },
+  { key: '25', text: 'Barada' },
+  { key: '26', text: 'Bargwill Tomder' },
+  { key: '27', text: 'Baron Papanoida' },
+  { key: '28', text: 'Barriss Offee' },
+  { key: '29', text: 'Baze Malbus' },
+  { key: '30', text: 'Bazine Netal' },
+  { key: '31', text: 'BB-8' },
+  { key: '32', text: 'BB-9E' },
+  { key: '33', text: 'Ben Quadinaros' },
+  { key: '34', text: 'Berch Teller' },
+  { key: '35', text: 'Beru Lars' },
+  { key: '36', text: 'Bib Fortuna' },
+  {
+    key: '37',
+    text: 'Biggs Darklighter',
+  },
+  { key: '38', text: 'Black Krrsantan' },
+  { key: '39', text: 'Bo-Katan Kryze' },
+  { key: '40', text: 'Boba Fett' },
+  { key: '41', text: 'Bobbajo' },
+  { key: '42', text: 'Bodhi Rook' },
+  { key: '43', text: 'Borvo the Hutt' },
+  { key: '44', text: 'Boss Nass' },
+  { key: '45', text: 'Bossk' },
+  {
+    key: '46',
+    text: 'Breha Antilles-Organa',
+  },
+  { key: '47', text: 'Bren Derlin' },
+  { key: '48', text: 'Brendol Hux' },
+  { key: '49', text: 'BT-1' },
+];

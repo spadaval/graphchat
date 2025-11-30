@@ -83,8 +83,8 @@ export function ModelServerSidebar({
 // Main Layout Component
 interface MainLayoutProps {
   children: React.ReactNode;
-  sidebar: React.ReactNode;
-  modelServer: React.ReactNode;
+  sidebar?: React.ReactNode;
+  modelServer?: React.ReactNode;
 }
 
 export function MainLayout({

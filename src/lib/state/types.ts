@@ -7,7 +7,7 @@ export type BlockId = `blk-${number}`;
 export type DocumentId = `doc-${number}`;
 
 // Message types
-export type MessageType = "user" | "assistant";
+export type MessageType = "user" | "assistant" | "system";
 
 // Server info types
 export interface ServerInfo {
@@ -56,3 +56,32 @@ export interface LLMRequest {
   success: boolean;
   error?: string;
 }
+
+export interface ModelProperties {
+  temperature: number;
+  top_k: number;
+  top_p: number;
+  n_predict: number;
+  stream: boolean;
+  stop: string[];
+  repeat_penalty: number;
+  presence_penalty: number;
+  frequency_penalty: number;
+  mirostat: 0 | 1 | 2;
+  mirostat_tau: number;
+  mirostat_eta: number;
+  seed: number;
+  n_probs: number;
+  cache_prompt: boolean;
+  return_tokens: boolean;
+}
+
+// Graph types
+export interface GraphEdge {
+  source: DocumentId;
+  target: DocumentId;
+  type: string; // e.g., "mentions", "located_in", "part_of"
+}
+
+// Block types
+export type BlockType = "paragraph" | "heading" | "list-item" | "code" | "quote";

@@ -3,7 +3,7 @@
 import type { Value } from "platejs";
 import { type TPlateEditor, useEditorRef } from "platejs/react";
 
-import { UnifiedEditorKitWithAI } from "./unified-editor-kit";
+import { UnifiedEditorKitWithAI } from "~/components/editor/unified-editor-kit";
 
 export const EditorKit = [...UnifiedEditorKitWithAI];
 

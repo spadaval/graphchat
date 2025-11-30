@@ -10,8 +10,10 @@ import {
   documentStore$,
   getAllDocuments,
   getThreadMessages,
+  deleteDocument,
 } from "~/lib/state";
-import { callLLMStreaming } from "~/lib/state/llm";
+import { callLLMStreaming, modelProps$ } from "~/lib/state/llm";
+import { DocumentList } from "~/components/DocumentList";
 import type { DocumentId } from "~/lib/state/types";
 
 // Tab Navigation Component
@@ -60,10 +62,9 @@ export function TabNavigation({ activeTab, setActiveTab }: TabNavigationProps) {
   );
 }
 
-// Document Panel Component (simplified version of the previous DocumentPanel)
+// Document Panel Component
 function DocumentPanelContent() {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
   const [aiRequest, setAiRequest] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const { documents } = use$(documentStore$);
@@ -72,19 +73,17 @@ function DocumentPanelContent() {
   // Get all documents
   const allDocuments = getAllDocuments();
 
-  // Filter documents based on search term
-  const filteredDocuments = allDocuments.filter(
-    (doc) =>
-      doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.tags.some((tag) =>
-        tag.toLowerCase().includes(searchTerm.toLowerCase()),
-      ),
-  );
-
-  const handleDocumentClick = (documentId: DocumentId) => {
-    // Navigate to the documents page with the specific document selected
+  const handleDocumentSelect = (documentId: DocumentId) => {
     navigate({ to: "/documents", search: { id: documentId } });
+  };
+
+  const handleCreateNew = () => {
+    const id = createDocument("Untitled Document");
+    navigate({ to: "/documents", search: { id } });
+  };
+
+  const handleDelete = (id: DocumentId) => {
+    deleteDocument(id);
   };
 
   const handleGenerateDocument = async () => {
@@ -121,21 +120,22 @@ function DocumentPanelContent() {
             messageId: 0,
             text: prompt,
             role: "user",
+            type: "paragraph",
             isGenerating: false,
             createdAt: new Date(),
             linkedDocuments: [],
           },
         ],
-        {},
+        modelProps$.get(),
       );
 
       for await (const chunkResult of responseStream) {
         chunkResult.match(
           (chunk) => {
-            if (chunk.done) {
+            if (chunk.response.done) {
               return;
             }
-            generatedContent += chunk.content;
+            generatedContent += chunk.response.content;
           },
           (error) => {
             console.error("AI generation error:", error.message);
@@ -147,6 +147,7 @@ function DocumentPanelContent() {
       const newDocumentId = createDocument(
         `Generated: ${aiRequest.substring(0, 30)}${aiRequest.length > 30 ? "..." : ""}`,
         generatedContent,
+        "general",
         ["ai-generated"],
       );
 
@@ -161,65 +162,35 @@ function DocumentPanelContent() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search */}
-      <div className="p-2">
-        <input
-          type="text"
-          placeholder="Search documents..."
-          className="w-full p-2 text-sm border border-zinc-700 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+      <div className="flex-1 min-h-0">
+        <DocumentList
+          documents={allDocuments}
+          onCreateNew={handleCreateNew}
+          onSelect={handleDocumentSelect}
+          onDelete={handleDelete}
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {/* Document List */}
-        <div className="p-2 border-b border-zinc-800">
-          <h3 className="text-sm font-medium text-zinc-300 mb-2">
-            All Documents
-          </h3>
-          {filteredDocuments.length > 0 ? (
-            <div className="space-y-1">
-              {filteredDocuments.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between p-2 hover:bg-zinc-800 rounded cursor-pointer"
-                  onClick={() => handleDocumentClick(doc.id)}
-                >
-                  <span className="text-sm text-zinc-200 truncate">
-                    {doc.title}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-zinc-500 italic">
-              {searchTerm ? "No matching documents" : "No documents found"}
-            </p>
-          )}
-        </div>
-
-        {/* AI Document Generation */}
-        <div className="p-2">
-          <h3 className="text-sm font-medium text-zinc-300 mb-2">
-            Generate Document
-          </h3>
-          <div className="space-y-2">
-            <textarea
-              value={aiRequest}
-              onChange={(e) => setAiRequest(e.target.value)}
-              placeholder="Describe what you want in a document..."
-              className="w-full p-2 text-sm border border-zinc-700 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600 min-h-[80px]"
-              disabled={isGenerating}
-            />
-            <Button
-              onClick={handleGenerateDocument}
-              disabled={!aiRequest.trim() || isGenerating}
-              className="w-full text-sm"
-            >
-              {isGenerating ? "Generating..." : "Generate Document"}
-            </Button>
-          </div>
+      {/* AI Document Generation */}
+      <div className="p-2 border-t border-zinc-800 bg-zinc-900">
+        <h3 className="text-sm font-medium text-zinc-300 mb-2">
+          Generate Document
+        </h3>
+        <div className="space-y-2">
+          <textarea
+            value={aiRequest}
+            onChange={(e) => setAiRequest(e.target.value)}
+            placeholder="Describe what you want in a document..."
+            className="w-full p-2 text-sm border border-zinc-700 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600 min-h-[80px]"
+            disabled={isGenerating}
+          />
+          <Button
+            onClick={handleGenerateDocument}
+            disabled={!aiRequest.trim() || isGenerating}
+            className="w-full text-sm"
+          >
+            {isGenerating ? "Generating..." : "Generate Document"}
+          </Button>
         </div>
       </div>
     </div>

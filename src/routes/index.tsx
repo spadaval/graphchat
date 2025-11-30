@@ -1,51 +1,52 @@
-import { use$ } from "@legendapp/state/react";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  ChatArea,
-  ChatThreadsSidebar,
-  MainLayout,
-  ModelServerSidebar,
-} from "~/components/LayoutComponents";
-import { SmartMessageInput } from "~/components/SmartMessageInput";
-import {
-  chatStore$,
-  createNewThread,
-  deleteAllThreads,
-  deleteThread,
-  duplicateThread,
-  editThreadTitle,
-  sendMessage,
-  setActiveTab,
-  switchThread,
-  uiPreferences$,
-} from "~/lib/state";
+import { useState } from "react";
+import { MainLayout } from "~/components/LayoutComponents";
+import { StorybookEditor } from "~/components/StorybookEditor";
+import { StorybookSidebar } from "~/components/StorybookSidebar";
+import type { DocumentId } from "~/lib/state/types";
 
 export const Route = createFileRoute("/")({
-  component: Home,
+  component: StorybookPage,
 });
 
-function Home() {
-  const { currentThreadId } = use$(chatStore$);
-  const { activeTab } = use$(uiPreferences$);
+function StorybookPage() {
+  const [openDocumentIds, setOpenDocumentIds] = useState<DocumentId[]>([]);
+  const [activeDocumentId, setActiveDocumentId] = useState<DocumentId | undefined>(
+    undefined,
+  );
+
+  const handleSelectDocument = (id: DocumentId) => {
+    if (!openDocumentIds.includes(id)) {
+      setOpenDocumentIds([...openDocumentIds, id]);
+    }
+    setActiveDocumentId(id);
+  };
+
+  const handleCloseDocument = (id: DocumentId) => {
+    const newOpenIds = openDocumentIds.filter((docId) => docId !== id);
+    setOpenDocumentIds(newOpenIds);
+
+    if (activeDocumentId === id) {
+      // If we closed the active tab, switch to the last one, or undefined if none left
+      setActiveDocumentId(newOpenIds.length > 0 ? newOpenIds[newOpenIds.length - 1] : undefined);
+    }
+  };
 
   return (
     <MainLayout
       sidebar={
-        <ChatThreadsSidebar
-          createNewThread={createNewThread}
-          switchThread={switchThread}
-          deleteThread={deleteThread}
-          duplicateThread={duplicateThread}
-          editThreadTitle={editThreadTitle}
-          deleteAllThreads={deleteAllThreads}
+        <StorybookSidebar
+          activeDocumentId={activeDocumentId}
+          onSelectDocument={handleSelectDocument}
         />
       }
-      modelServer={
-        <ModelServerSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      }
     >
-      <ChatArea currentThreadId={currentThreadId} sendMessage={sendMessage} />
-      <SmartMessageInput onSend={sendMessage} />
+      <StorybookEditor
+        openDocumentIds={openDocumentIds}
+        activeDocumentId={activeDocumentId}
+        onSelectDocument={setActiveDocumentId}
+        onCloseDocument={handleCloseDocument}
+      />
     </MainLayout>
   );
 }

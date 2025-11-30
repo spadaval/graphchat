@@ -7,7 +7,7 @@ import { client } from "../../client/client.gen";
 import { type AppError, type AppResult, createLLMError } from "../errors";
 import type { Block } from "./block";
 import { getDocumentById } from "./documents";
-import type { DocumentId, LLMRequest } from "./types";
+import type { DocumentId, LLMRequest, ModelProperties } from "./types";
 
 // Helper function to generate unique request IDs
 let nextRequestId = 1;
@@ -35,24 +35,7 @@ export interface StreamingLLMResponse {
   error?: string;
 }
 
-export interface ModelProperties {
-  temperature: number;
-  top_k: number;
-  top_p: number;
-  n_predict: number;
-  stream: boolean;
-  stop: string[];
-  repeat_penalty: number;
-  presence_penalty: number;
-  frequency_penalty: number;
-  mirostat: 0 | 1 | 2;
-  mirostat_tau: number;
-  mirostat_eta: number;
-  seed: number;
-  n_probs: number;
-  cache_prompt: boolean;
-  return_tokens: boolean;
-}
+import { blocks$ } from "./block";
 
 /**
  * Formats document content for inclusion in LLM context
@@ -71,7 +54,13 @@ export function formatDocumentsForContext(documentIds: DocumentId[]): string {
   }
 
   const formattedDocs = documents
-    .map((doc) => `### ${doc.title}\n${doc.content}`)
+    .map((doc) => {
+      const blocks = blocks$.get();
+      const content = doc.blocks
+        .map((blockId) => blocks[blockId]?.text || "")
+        .join("\n\n");
+      return `### ${doc.title}\n${content}`;
+    })
     .join("\n\n");
 
   return `## Referenced Documents\n\n${formattedDocs}\n\n## Conversation\n`;
@@ -104,6 +93,8 @@ syncObservable(modelProps$, {
   },
 });
 
+import { getRelatedDocuments } from "./graph";
+
 /**
  * Calls the LLM server with the provided messages and returns the response with attribution
  */
@@ -112,7 +103,12 @@ export async function callLLM(
   modelProperties: ModelProperties,
 ): Promise<AppResult<{ response: LLMResponse; request: LLMRequest }>> {
   // Collect all document IDs from all messages
-  const allDocumentIds = messages.flatMap((msg) => msg.linkedDocuments || []);
+  const directDocumentIds = messages.flatMap((msg) => msg.linkedDocuments || []);
+  
+  // Get related documents from the graph
+  const relatedDocumentIds = directDocumentIds.flatMap(id => getRelatedDocuments(id));
+  
+  const allDocumentIds = [...directDocumentIds, ...relatedDocumentIds];
   const uniqueDocumentIds = [...new Set(allDocumentIds)];
 
   // Format document content for context
@@ -239,7 +235,12 @@ export async function* callLLMStreaming(
   unknown
 > {
   // Collect all document IDs from all messages
-  const allDocumentIds = messages.flatMap((msg) => msg.linkedDocuments || []);
+  const directDocumentIds = messages.flatMap((msg) => msg.linkedDocuments || []);
+  
+  // Get related documents from the graph
+  const relatedDocumentIds = directDocumentIds.flatMap(id => getRelatedDocuments(id));
+  
+  const allDocumentIds = [...directDocumentIds, ...relatedDocumentIds];
   const uniqueDocumentIds = [...new Set(allDocumentIds)];
 
   // Format document content for context

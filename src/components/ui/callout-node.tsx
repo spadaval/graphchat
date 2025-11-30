@@ -1,14 +1,15 @@
-"use client";
+'use client';
 
-import { useCalloutEmojiPicker } from "@platejs/callout/react";
-import { useEmojiDropdownMenuState } from "@platejs/emoji/react";
-import { PlateElement } from "platejs/react";
-import type * as React from "react";
+import * as React from 'react';
 
-import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
+import { useCalloutEmojiPicker } from '@platejs/callout/react';
+import { useEmojiDropdownMenuState } from '@platejs/emoji/react';
+import { PlateElement } from 'platejs/react';
 
-import { EmojiPicker, EmojiPopover } from "./emoji-toolbar-button";
+import { Button } from '~/components/ui/button';
+import { cn } from '~/lib/utils';
+
+import { EmojiPicker, EmojiPopover } from './emoji-toolbar-button';
 
 export function CalloutElement({
   attributes,
@@ -28,13 +29,13 @@ export function CalloutElement({
 
   return (
     <PlateElement
-      className={cn("my-1 flex rounded-sm bg-muted p-4 pl-3", className)}
+      className={cn('my-1 flex rounded-sm bg-muted p-4 pl-3', className)}
       style={{
         backgroundColor: props.element.backgroundColor as any,
       }}
       attributes={{
         ...attributes,
-        "data-plate-open-context-menu": true,
+        'data-plate-open-context-menu': true,
       }}
       {...props}
     >
@@ -44,14 +45,14 @@ export function CalloutElement({
           control={
             <Button
               variant="ghost"
-              className="size-6 p-1 text-[18px] select-none hover:bg-muted-foreground/15"
+              className="size-6 select-none p-1 text-[18px] hover:bg-muted-foreground/15"
               style={{
                 fontFamily:
                   '"Apple Color Emoji", "Segoe UI Emoji", NotoColorEmoji, "Noto Color Emoji", "Segoe UI Symbol", "Android Emoji", EmojiSymbols',
               }}
               contentEditable={false}
             >
-              {(props.element.icon as any) || "💡"}
+              {(props.element.icon as any) || '💡'}
             </Button>
           }
         >

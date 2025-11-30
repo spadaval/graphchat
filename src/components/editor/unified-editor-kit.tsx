@@ -1,11 +1,11 @@
 "use client";
 
 import { BaseParagraphPlugin } from "platejs";
-import { AIKit } from "./ai-kit";
-import { BasicMarksKit } from "./basic-marks-kit";
-import { CursorOverlayKit } from "./cursor-overlay-kit";
-import { MarkdownKit } from "./markdown-kit";
-import { MentionKit } from "./mention-kit";
+import { AIKit } from "../ai-kit";
+import { BasicMarksKit } from "../basic-marks-kit";
+import { CursorOverlayKit } from "../cursor-overlay-kit";
+import { MarkdownKit } from "../markdown-kit";
+import { MentionKit } from "../mention-kit";
 
 // Unified editor kit that includes all plugins needed for both chat and document editors
 const UnifiedPlugins = [

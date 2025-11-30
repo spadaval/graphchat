@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { Button } from "~/components/ui/button";
 import { QuickInlineEdit } from "~/components/ui/quick-inline-edit";
 import { type DocumentId, updateDocument } from "~/lib/state";
-import { UnifiedEditorKit, UnifiedEditorKitWithAI } from "./unified-editor-kit";
+import { UnifiedEditorKit, UnifiedEditorKitWithAI } from "~/components/editor/unified-editor-kit";
 
 export interface EditorConfig {
   placeholder?: string;
@@ -49,24 +49,19 @@ export function Editor({
   // Get current value - handle both string and observable
   const currentValue = typeof value === "string" ? value : use$(value);
 
-  const editorPlugins =
-    plugins ||
-    (config.aiEnabled ? [...UnifiedEditorKitWithAI] : [...UnifiedEditorKit]);
+  const editorPlugins = plugins || [...UnifiedEditorKitWithAI];
 
   const editor = usePlateEditor({
     id: "editor",
     plugins: editorPlugins,
     value: currentValue
       ? (editor) => {
-          if (editor.api?.markdown) {
-            try {
-              return editor.api.markdown.deserialize(currentValue);
-            } catch (error) {
-              console.error("Error deserializing initial value:", error);
-              return [];
-            }
+          try {
+            return editor.api.markdown.deserialize(currentValue);
+          } catch (error) {
+            console.error("Error deserializing initial value:", error);
+            return [];
           }
-          return [];
         }
       : undefined,
   });

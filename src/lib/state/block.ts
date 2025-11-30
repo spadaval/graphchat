@@ -1,13 +1,15 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
-import type { BlockId, DocumentId, LLMRequest } from "./types";
+import type { BlockId, BlockType, DocumentId, LLMRequest } from "./types";
 
 export interface Block {
   id: BlockId;
   messageId: number; // Message ID for backward compatibility
   text: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system";
+  type: BlockType;
+  metadata?: Record<string, any>;
   isGenerating: boolean;
   createdAt: Date;
   linkedDocuments: DocumentId[]; // Track linked documents
@@ -22,12 +24,16 @@ let nextMessageId = 0;
 let nextBlockId = 1;
 export const createBlock = (
   text: string,
-  role: "user" | "assistant" = "user",
+  role: "user" | "assistant" | "system" = "user",
+  type: BlockType = "paragraph",
+  metadata?: Record<string, any>,
 ): Block => ({
   id: `blk-${nextBlockId++}`,
   messageId: nextMessageId++,
   text,
   role,
+  type,
+  metadata,
   isGenerating: false,
   createdAt: new Date(),
   linkedDocuments: [],
