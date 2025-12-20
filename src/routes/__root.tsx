@@ -11,7 +11,7 @@ import {
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import * as React from "react";
 import { DefaultCatchBoundary } from "~/components/DefaultCatchBoundary";
-import { Navigation } from "~/components/Navigation";
+
 import { NotFound } from "~/components/NotFound";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import appCss from "~/styles/app.css?url";
@@ -30,9 +30,8 @@ export const Route = createRootRouteWithContext<{
         content: "width=device-width, initial-scale=1",
       },
       ...seo({
-        title: "GraphChat",
-        description: `GraphChat is an AI chat app`,
-      }),
+              title: "WorldCrafter",
+              description: `WorldCrafter is a tool for creating imaginary worlds`,      }),
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -73,10 +72,7 @@ function RootComponent() {
     <RootDocument>
       <TooltipProvider>
         <div className="flex flex-col h-screen">
-          <div className="fixed top-0 left-0 right-0 z-10">
-            <Navigation />
-          </div>
-          <div className="flex-1 overflow-hidden pt-12">
+          <div className="flex-1 overflow-hidden">
             <Outlet />
           </div>
         </div>

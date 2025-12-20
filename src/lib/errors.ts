@@ -1,9 +1,9 @@
 import type { Result } from "neverthrow";
 
 /**
- * Base error class for GraphChat application
+ * Base error class for WorldCrafter application
  */
-export abstract class GraphChatError extends Error {
+export abstract class WorldCrafterError extends Error {
   abstract readonly type: string;
 
   constructor(
@@ -18,7 +18,7 @@ export abstract class GraphChatError extends Error {
 /**
  * Error types for different scenarios
  */
-export class APIError extends GraphChatError {
+export class APIError extends WorldCrafterError {
   readonly type = "API_ERROR";
 
   constructor(
@@ -31,7 +31,7 @@ export class APIError extends GraphChatError {
   }
 }
 
-export class NetworkError extends GraphChatError {
+export class NetworkError extends WorldCrafterError {
   readonly type = "NETWORK_ERROR";
 
   constructor(
@@ -43,7 +43,7 @@ export class NetworkError extends GraphChatError {
   }
 }
 
-export class ParsingError extends GraphChatError {
+export class ParsingError extends WorldCrafterError {
   readonly type = "PARSING_ERROR";
 
   constructor(
@@ -55,7 +55,7 @@ export class ParsingError extends GraphChatError {
   }
 }
 
-export class ValidationError extends GraphChatError {
+export class ValidationError extends WorldCrafterError {
   readonly type = "VALIDATION_ERROR";
 
   constructor(
@@ -67,7 +67,7 @@ export class ValidationError extends GraphChatError {
   }
 }
 
-export class LLMError extends GraphChatError {
+export class LLMError extends WorldCrafterError {
   readonly type = "LLM_ERROR";
 
   constructor(
@@ -144,7 +144,7 @@ export const createLLMError = (
  * Helper function to convert unknown errors to AppError
  */
 export const toAppError = (error: unknown, context?: string): AppError => {
-  if (error instanceof GraphChatError) {
+  if (error instanceof WorldCrafterError) {
     return error as AppError;
   }
 

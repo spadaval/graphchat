@@ -70,88 +70,13 @@ export function PlateDocumentEditor({
   return (
     <Plate editor={editor} onChange={handleContentChange}>
       <div className="flex flex-col h-full">
-        <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
-          <QuickInlineEdit
-            value$={document$.title}
-            placeholder="Document title"
-            className="flex-1"
-          />
-          <div className="flex items-center space-x-2 ml-4">
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="px-3 py-1 bg-red-700 hover:bg-red-600 text-zinc-200 rounded text-sm"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-
-        {/* Toolbar */}
-        <div className="border-b border-zinc-800 px-4 py-2">
-          <Toolbar>
-            <ToolbarGroup>
-              <MarkToolbarButton tooltip="Bold" nodeType="bold">
-                <Bold className="size-4" />
-              </MarkToolbarButton>
-              <MarkToolbarButton tooltip="Italic" nodeType="italic">
-                <Italic className="size-4" />
-              </MarkToolbarButton>
-              <MarkToolbarButton tooltip="Underline" nodeType="underline">
-                <Underline className="size-4" />
-              </MarkToolbarButton>
-              <MarkToolbarButton
-                tooltip="Strikethrough"
-                nodeType="strikethrough"
-              >
-                <Strikethrough className="size-4" />
-              </MarkToolbarButton>
-              <MarkToolbarButton tooltip="Code" nodeType="code">
-                <Code className="size-4" />
-              </MarkToolbarButton>
-              <MarkToolbarButton tooltip="Highlight" nodeType="highlight">
-                <Highlighter className="size-4" />
-              </MarkToolbarButton>
-            </ToolbarGroup>
-
-            <ToolbarSeparator />
-
-            <ToolbarGroup>
-              <EmojiToolbarButton tooltip="Emoji">
-                <Smile className="size-4" />
-              </EmojiToolbarButton>
-              <FontColorToolbarButton tooltip="Text color">
-                <Palette className="size-4" />
-              </FontColorToolbarButton>
-              <DocumentAIToolbarButton tooltip="AI Assistant (Ctrl+J / Cmd+J)">
-                <span className="text-xs font-bold">AI</span>
-              </DocumentAIToolbarButton>
-            </ToolbarGroup>
-          </Toolbar>
-        </div>
-
-        <div className="flex-1 flex flex-col p-4 min-h-0">
+        <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto min-h-0">
             <PlateContent
-              className="resize-none bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 border border-zinc-700 focus:ring-zinc-600 rounded-md p-3 min-h-[300px]"
+              className="resize-none bg-transparent text-zinc-100 outline-none p-8 min-h-full"
               placeholder={DocumentEditorConfig.placeholder}
             />
           </div>
-        </div>
-
-        <div className="p-4 border-t border-zinc-800 flex justify-end space-x-2">
-          {onCancel && (
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-          )}
-          <Button
-            type="button"
-            onClick={handleSave}
-            disabled={!document.title?.trim()}
-          >
-            Save
-          </Button>
         </div>
       </div>
     </Plate>
