@@ -5,6 +5,7 @@ export type ChatId = `chat-${number}`;
 export type MessageId = `msg-${number}`;
 export type BlockId = `blk-${number}`;
 export type DocumentId = `doc-${number}`;
+export type FolderId = `folder-${number}`;
 
 // Message types
 export type MessageType = "user" | "assistant" | "system";
@@ -85,3 +86,16 @@ export interface GraphEdge {
 
 // Block types
 export type BlockType = "paragraph" | "heading" | "list-item" | "code" | "quote";
+
+export interface Block {
+  id: BlockId;
+  messageId: number; // Message ID for backward compatibility
+  text: string;
+  role: "user" | "assistant" | "system";
+  type: BlockType;
+  metadata?: Record<string, any>;
+  isGenerating: boolean;
+  createdAt: Date;
+  linkedDocuments: DocumentId[]; // Track linked documents
+  llmRequests?: LLMRequest[]; // LLM request attribution for assistant messages
+}

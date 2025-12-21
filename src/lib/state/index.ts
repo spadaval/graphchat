@@ -1,6 +1,6 @@
 // Primary API exports for the state module
 
-export type { Block } from "./block";
+export type { Block } from "./types";
 // Block exports
 export {
   addDocumentToBlock,
@@ -52,7 +52,7 @@ export {
   useThreadsArray,
   useUIPreferences,
 } from "./hooks";
-export type { ModelProperties } from "./llm";
+export type { ModelProperties } from "./types";
 
 // LLM exports
 export { modelProps$ } from "./llm";

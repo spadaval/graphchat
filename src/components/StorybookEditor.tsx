@@ -1,7 +1,7 @@
 import { 
   X,
   FileText, 
-  Map, 
+  Map as MapIcon, 
   User, 
   Sparkles, 
   Ghost, 
@@ -24,7 +24,7 @@ interface StorybookEditorProps {
 const iconMap: Record<DocumentIcon, React.ComponentType<{ className?: string }>> = {
   [DocumentIcon.FileText]: FileText,
   [DocumentIcon.User]: User,
-  [DocumentIcon.Map]: Map,
+  [DocumentIcon.Map]: MapIcon,
   [DocumentIcon.Sparkles]: Sparkles,
   [DocumentIcon.Ghost]: Ghost,
   [DocumentIcon.Building]: Building,

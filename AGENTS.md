@@ -4,10 +4,9 @@
 **DO NOT RUN THE DEV SERVER!** `bun dev` is a watch command that never terminates. The dev server is always running - starting it will cause you to wait indefinitely.
 
 ## Commands
-- **Build**: `vite build && tsc --noEmit` | **Start**: `vite start`
-- **Lint**: `biome check` | **Format**: `biome format --write --unsafe`
-- **Gen client**: `openapi-ts`
-- **Test**: No testing framework configured
+Use bun for all commands.
+- **Build**: `bun run build` | **Start**: `bun run start`
+- **Lint**: `bun run lint` | **Format**: `bun run format`
 
 ## Architecture
 - **State**: `@legendapp/state` for persistent/shared state, `useState` only for ephemeral UI state

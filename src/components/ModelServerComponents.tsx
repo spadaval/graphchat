@@ -27,33 +27,30 @@ export function TabNavigation({ activeTab, setActiveTab }: TabNavigationProps) {
     <div className="border-b border-zinc-800 flex">
       <button
         type="button"
-        className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
-          activeTab === "model"
+        className={`flex-1 py-3 px-4 text-sm font-medium text-center ${activeTab === "model"
             ? "text-zinc-300 border-b-2 border-zinc-500"
             : "text-zinc-500 hover:text-zinc-300"
-        }`}
+          }`}
         onClick={() => setActiveTab("model")}
       >
         Model
       </button>
       <button
         type="button"
-        className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
-          activeTab === "server"
+        className={`flex-1 py-3 px-4 text-sm font-medium text-center ${activeTab === "server"
             ? "text-zinc-300 border-b-2 border-zinc-500"
             : "text-zinc-500 hover:text-zinc-300"
-        }`}
+          }`}
         onClick={() => setActiveTab("server")}
       >
         Server
       </button>
       <button
         type="button"
-        className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
-          activeTab === "documents"
+        className={`flex-1 py-3 px-4 text-sm font-medium text-center ${activeTab === "documents"
             ? "text-zinc-300 border-b-2 border-zinc-500"
             : "text-zinc-500 hover:text-zinc-300"
-        }`}
+          }`}
         onClick={() => setActiveTab("documents")}
       >
         Documents
@@ -74,16 +71,8 @@ function DocumentPanelContent() {
   const allDocuments = getAllDocuments();
 
   const handleDocumentSelect = (documentId: DocumentId) => {
-    navigate({ to: "/documents", search: { id: documentId } });
-  };
-
-  const handleCreateNew = () => {
-    const id = createDocument("Untitled Document");
-    navigate({ to: "/documents", search: { id } });
-  };
-
-  const handleDelete = (id: DocumentId) => {
-    deleteDocument(id);
+    // Navigate back to home with the document ID in the search params
+    navigate({ to: "/", search: (old: any) => ({ ...old, id: documentId }) });
   };
 
   const handleGenerateDocument = async () => {
@@ -151,8 +140,8 @@ function DocumentPanelContent() {
         ["ai-generated"],
       );
 
-      // Navigate to the new document in the documents page for editing
-      navigate({ to: "/documents", search: { id: newDocumentId } });
+      // Navigate to the new document for editing
+      handleDocumentSelect(newDocumentId);
     } catch (error) {
       console.error("Error generating document:", error);
     } finally {
@@ -164,10 +153,7 @@ function DocumentPanelContent() {
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0">
         <DocumentList
-          documents={allDocuments}
-          onCreateNew={handleCreateNew}
           onSelect={handleDocumentSelect}
-          onDelete={handleDelete}
         />
       </div>
 

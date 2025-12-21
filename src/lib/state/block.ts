@@ -1,20 +1,7 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
-import type { BlockId, BlockType, DocumentId, LLMRequest } from "./types";
-
-export interface Block {
-  id: BlockId;
-  messageId: number; // Message ID for backward compatibility
-  text: string;
-  role: "user" | "assistant" | "system";
-  type: BlockType;
-  metadata?: Record<string, any>;
-  isGenerating: boolean;
-  createdAt: Date;
-  linkedDocuments: DocumentId[]; // Track linked documents
-  llmRequests?: LLMRequest[]; // LLM request attribution for assistant messages
-}
+import type { Block, BlockId, BlockType, DocumentId, LLMRequest } from "./types";
 
 // Block storage
 export const blocks$ = observable<Record<BlockId, Block>>({});

@@ -2,7 +2,7 @@ import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
 import { removeDocumentFromAllBlocks } from "./block";
-import type { DocumentId } from "./types";
+import type { DocumentId, FolderId } from "./types";
 
 export enum DocumentIcon {
   FileText = "FileText",
@@ -22,25 +22,36 @@ export interface DocumentTypeDefinition {
   template: string;
 }
 
+export interface Folder {
+  id: FolderId;
+  name: string;
+  parentId: FolderId | "root";
+  isOpen: boolean;
+}
+
 export interface Document {
   id: DocumentId;
   title: string;
   blocks: BlockId[];
+  content?: string; // Keep for backward compatibility and easy searching
   createdAt: Date;
   updatedAt: Date;
   tags: string[];
-  type: string; // Changed from union type to string
+  type: string;
+  parentId: FolderId | "root";
 }
 
 // export type DocumentType = "character" | "location" | "magic" | "general";
 
 interface DocumentStore {
   documents: Record<DocumentId, Document>;
+  folders: Record<FolderId, Folder>;
   documentTypes: Record<string, DocumentTypeDefinition>;
   currentDocumentId: DocumentId | undefined;
 }
 
 let nextDocumentId = 1;
+let nextFolderId = 1;
 
 const defaultDocumentTypes: Record<string, DocumentTypeDefinition> = {
   general: {
@@ -65,18 +76,24 @@ const defaultDocumentTypes: Record<string, DocumentTypeDefinition> = {
 
 const documentStore: DocumentStore = {
   documents: {} as Record<DocumentId, Document>,
+  folders: {} as Record<FolderId, Folder>,
   documentTypes: defaultDocumentTypes,
   currentDocumentId: undefined,
 };
 
 export const documentStore$ = observable<DocumentStore>(documentStore);
 
-// Initialize default types if missing (will happen after persistence load if empty)
-// We can't easily hook into "after load" with legend-state sync immediately, 
-// but we can ensure they exist when accessing or via an effect if needed.
-// For now, let's just ensure the store starts with them. 
-// If persistence overwrites them with empty, we might need a re-init check.
-// However, since we want to *add* them if missing, let's do a check.
+// Helper to get next IDs based on existing ones to avoid collisions after refresh
+const getNextIds = () => {
+  const docs = documentStore$.documents.get();
+  const folders = documentStore$.folders.get();
+  
+  const docIds = Object.keys(docs).map(id => parseInt(id.replace("doc-", "")));
+  const folderIds = Object.keys(folders).map(id => parseInt(id.replace("folder-", "")));
+  
+  nextDocumentId = Math.max(0, ...docIds.filter(id => !isNaN(id))) + 1;
+  nextFolderId = Math.max(0, ...folderIds.filter(id => !isNaN(id))) + 1;
+};
 
 import { createBlock, blocks$ } from "./block";
 import type { BlockId } from "./types";
@@ -87,7 +104,9 @@ export const createDocument = (
   initialContent: string = "",
   type: string = "general",
   tags: string[] = [],
+  parentId: FolderId | "root" = "root",
 ): DocumentId => {
+  if (nextDocumentId === 1) getNextIds();
   const id: DocumentId = `doc-${nextDocumentId++}`;
   const now = new Date();
 
@@ -116,10 +135,98 @@ export const createDocument = (
     updatedAt: now,
     tags,
     type,
+    parentId,
   };
 
   documentStore$.documents[id].set(document);
   return id;
+};
+
+export const createFolder = (
+  name: string,
+  parentId: FolderId | "root" = "root",
+): FolderId => {
+  if (nextFolderId === 1) getNextIds();
+  const id: FolderId = `folder-${nextFolderId++}`;
+  
+  const folder: Folder = {
+    id,
+    name,
+    parentId,
+    isOpen: true,
+  };
+
+  documentStore$.folders[id].set(folder);
+  return id;
+};
+
+export const updateFolder = (
+  id: FolderId,
+  updates: Partial<Omit<Folder, "id">>,
+) => {
+  const folder = documentStore$.folders[id].get();
+  if (!folder) return;
+
+  documentStore$.folders[id].assign(updates);
+};
+
+export const deleteFolder = (id: FolderId) => {
+  // Move all documents and folders inside this folder to its parent
+  const folder = documentStore$.folders[id].get();
+  if (!folder) return;
+
+  const parentId = folder.parentId;
+
+  const docs = documentStore$.documents.get();
+  Object.values(docs).forEach(doc => {
+    if (doc.parentId === id) {
+      documentStore$.documents[doc.id].parentId.set(parentId);
+    }
+  });
+
+  const folders = documentStore$.folders.get();
+  Object.values(folders).forEach(f => {
+    if (f.parentId === id) {
+      documentStore$.folders[f.id].parentId.set(parentId);
+    }
+  });
+
+  documentStore$.folders[id].delete();
+};
+
+export const moveDocument = (docId: DocumentId, newParentId: FolderId | "root") => {
+  const doc = documentStore$.documents[docId].get();
+  if (!doc) return;
+  documentStore$.documents[docId].parentId.set(newParentId);
+};
+
+export const moveFolder = (folderId: FolderId, newParentId: FolderId | "root") => {
+  // Prevent moving a folder into itself or its descendants
+  if (newParentId !== "root") {
+    let current: FolderId | "root" = newParentId;
+    while (current !== "root") {
+      if (current === folderId) return; // Recursive move
+      current = documentStore$.folders[current].parentId.get();
+    }
+  }
+
+  const folder = documentStore$.folders[folderId].get();
+  if (!folder) return;
+  documentStore$.folders[folderId].parentId.set(newParentId);
+};
+
+export const syncDocumentContent = (id: DocumentId) => {
+  const doc = documentStore$.documents[id].get();
+  if (!doc) return;
+  
+  const blockIds = doc.blocks || [];
+  const allBlocks = blocks$.get();
+  
+  const content = blockIds
+    .map(bid => allBlocks[bid]?.text || "")
+    .join("\n\n");
+    
+  documentStore$.documents[id].content.set(content);
 };
 
 export const updateDocument = (
@@ -138,6 +245,12 @@ export const updateDocument = (
   };
 
   documentStore$.documents[id].set(updatedDocument);
+
+  // If blocks were updated, sync content
+  if (updates.blocks) {
+    syncDocumentContent(id);
+  }
+
   return updatedDocument;
 };
 
@@ -196,5 +309,6 @@ syncObservable(documentStore$, {
 
 // Run initialization check
 ensureDefaultDocumentTypes();
+getNextIds();
 
 export default documentStore$;

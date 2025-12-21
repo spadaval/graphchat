@@ -356,13 +356,13 @@ const _MessageAttribution = ({ llmRequests }: MessageAttributionProps) => {
 const ChatMessage = ({ blockId, isStreaming }: ChatMessageProps) => {
   const block = blocks$.get()[blockId];
   const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(block?.content || "");
+  const [editText, setEditText] = useState(block?.text || "");
 
   if (!block) return null;
 
   const handleEdit = () => {
     setIsEditing(true);
-    setEditText(block.content);
+    setEditText(block.text);
   };
 
   const handleSave = () => {
@@ -372,7 +372,7 @@ const ChatMessage = ({ blockId, isStreaming }: ChatMessageProps) => {
 
   const handleCancel = () => {
     setIsEditing(false);
-    setEditText(block.content);
+    setEditText(block.text);
   };
 
   const handleDelete = () => {
@@ -385,11 +385,11 @@ const ChatMessage = ({ blockId, isStreaming }: ChatMessageProps) => {
 
   return (
     <div className="group flex gap-3">
-      <_MessageAvatar role={block.role} />
+      <_MessageAvatar role={block.role as any} />
       <div className="flex-1 min-w-0">
         <_MessageBubble
-          text={isEditing ? editText : block.content}
-          role={block.role}
+          text={isEditing ? editText : block.text}
+          role={block.role as any}
           isStreaming={isStreaming}
           isEditing={isEditing}
           onSave={handleSave}

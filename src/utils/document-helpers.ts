@@ -14,14 +14,14 @@ export const extractRelevantSections = (
   // 1. Split document into sections/chunks
   // 2. Score each section based on relevance to the query
   // 3. Return the most relevant sections
-  return document.content;
+  return document.content || "";
 };
 
 /**
  * Format a document for inclusion in LLM context
  */
 export const formatDocumentForLLM = (document: Document): string => {
-  return `[Document: ${document.title}]\n${document.content}\n[End of Document]`;
+  return `[Document: ${document.title}]\n${document.content || ""}\n[End of Document]`;
 };
 
 /**
@@ -37,7 +37,7 @@ export const searchDocuments = (
   return documents.filter(
     (doc) =>
       doc.title.toLowerCase().includes(lowerQuery) ||
-      doc.content.toLowerCase().includes(lowerQuery) ||
+      (doc.content || "").toLowerCase().includes(lowerQuery) ||
       doc.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)),
   );
 };
@@ -50,13 +50,15 @@ export const getDocumentExcerpts = (
   query: string,
   excerptLength = 200,
 ): string[] => {
+  const content = document.content || "";
+  
   if (!query)
     return [
-      document.content.substring(0, excerptLength) +
-        (document.content.length > excerptLength ? "..." : ""),
+      content.substring(0, excerptLength) +
+        (content.length > excerptLength ? "..." : ""),
     ];
 
-  const lowerContent = document.content.toLowerCase();
+  const lowerContent = content.toLowerCase();
   const lowerQuery = query.toLowerCase();
   const excerpts: string[] = [];
 
@@ -65,12 +67,12 @@ export const getDocumentExcerpts = (
     // Limit to 3 excerpts
     const start = Math.max(0, index - excerptLength / 2);
     const end = Math.min(
-      document.content.length,
+      content.length,
       index + query.length + excerptLength / 2,
     );
     excerpts.push(
-      document.content.substring(start, end) +
-        (end < document.content.length ? "..." : ""),
+      content.substring(start, end) +
+        (end < content.length ? "..." : ""),
     );
     index = lowerContent.indexOf(lowerQuery, index + 1);
   }
@@ -78,7 +80,7 @@ export const getDocumentExcerpts = (
   return excerpts.length > 0
     ? excerpts
     : [
-        document.content.substring(0, excerptLength) +
-          (document.content.length > excerptLength ? "..." : ""),
+        content.substring(0, excerptLength) +
+          (content.length > excerptLength ? "..." : ""),
       ];
 };

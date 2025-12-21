@@ -1,12 +1,23 @@
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { use$ } from "@legendapp/state/react";
-import { documentStore$, DocumentIcon, updateDocument } from "~/lib/state/documents";
-import type { Document } from "~/lib/state";
-import type { DocumentId } from "~/lib/state/types";
+import {
+  documentStore$,
+  DocumentIcon,
+  updateDocument,
+  createDocument,
+  deleteDocument,
+  createFolder,
+  updateFolder,
+  deleteFolder,
+  moveDocument,
+  moveFolder
+} from "~/lib/state/documents";
+import type { Document, Folder } from "~/lib/state/documents";
+import type { DocumentId, FolderId } from "~/lib/state/types";
 import {
   FileText,
-  Map,
+  Map as MapIcon,
   User,
   Sparkles,
   Ghost,
@@ -14,42 +25,31 @@ import {
   Book,
   Scroll,
   MoreVertical,
+  Plus,
+  Folder as FolderIcon,
+  FolderOpen,
+  ChevronRight,
+  ChevronDown,
+  FolderPlus,
 } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "~/components/ui/context-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 
 interface DocumentListProps {
-  documents: Document[];
   currentDocumentId?: DocumentId;
-  onCreateNew: () => void;
   onSelect: (documentId: DocumentId) => void;
-  onDelete: (id: DocumentId) => void;
 }
 
 const iconMap: Record<DocumentIcon, React.ComponentType<{ className?: string }>> = {
   [DocumentIcon.FileText]: FileText,
   [DocumentIcon.User]: User,
-  [DocumentIcon.Map]: Map,
+  [DocumentIcon.Map]: MapIcon,
   [DocumentIcon.Sparkles]: Sparkles,
   [DocumentIcon.Ghost]: Ghost,
   [DocumentIcon.Building]: Building,
@@ -58,31 +58,13 @@ const iconMap: Record<DocumentIcon, React.ComponentType<{ className?: string }>>
 };
 
 export function DocumentList({
-  documents,
   currentDocumentId,
-  onCreateNew,
   onSelect,
-  onDelete,
 }: DocumentListProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const documents = use$(documentStore$.documents);
+  const folders = use$(documentStore$.folders);
   const documentTypes = use$(documentStore$.documentTypes);
-  
-  // Rename state
-  const [renamingId, setRenamingId] = useState<DocumentId | null>(null);
-  const [renameTitle, setRenameTitle] = useState("");
-
-  // Change Type state
-  const [changingTypeId, setChangingTypeId] = useState<DocumentId | null>(null);
-  const [newType, setNewType] = useState("");
-
-  const filteredDocuments = documents.filter(
-    (doc) =>
-      doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (doc.content || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.tags.some((tag) =>
-        tag.toLowerCase().includes(searchTerm.toLowerCase()),
-      ),
-  );
 
   // Format date without external libraries
   const formatDate = (date: Date) => {
@@ -93,193 +75,326 @@ export function DocumentList({
     });
   };
 
-  // Handle keyboard events for accessibility
-  const handleEditKeyDown = (event: React.KeyboardEvent, doc: Document) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      onSelect(doc.id);
-    }
+  const handleCreateDocument = (typeId: string = "general", parentId: FolderId | "root" = "root") => {
+    const typeDef = documentTypes[typeId];
+    const title = typeDef ? "Untitled " + typeDef.name : "Untitled";
+    const id = createDocument(title, "", typeId, [], parentId);
+    onSelect(id);
   };
 
-  const startRenaming = (doc: Document) => {
-    setRenamingId(doc.id);
-    setRenameTitle(doc.title);
+  const handleCreateFolder = (parentId: FolderId | "root" = "root") => {
+    createFolder("New Folder", parentId);
   };
 
-  const saveRename = () => {
-    if (renamingId && renameTitle.trim()) {
-      updateDocument(renamingId, { title: renameTitle.trim() });
-      setRenamingId(null);
-      setRenameTitle("");
-    } else {
-      setRenamingId(null);
-    }
-  };
+  const filteredDocuments = Object.values(documents).filter(
+    (doc) =>
+      doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (doc.content || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.tags.some((tag) =>
+        tag.toLowerCase().includes(searchTerm.toLowerCase()),
+      ),
+  );
 
-  const openChangeTypeDialog = (doc: Document) => {
-    setChangingTypeId(doc.id);
-    setNewType(doc.type);
-  };
-
-  const saveChangeType = () => {
-    if (changingTypeId && newType) {
-      updateDocument(changingTypeId, { type: newType });
-      setChangingTypeId(null);
-      setNewType("");
-    }
-  };
+  const rootDocuments = Object.values(documents).filter(doc => !doc.parentId || doc.parentId === "root");
+  const rootFolders = Object.values(folders).filter(f => !f.parentId || f.parentId === "root");
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-zinc-800">
-        <h1 className="text-xl font-bold text-zinc-100 mb-4">Documents</h1>
-        <Button onClick={onCreateNew} className="w-full mb-4">
-          + New Document
-        </Button>
+    <div className="flex flex-col h-full bg-zinc-900">
+      <div className="p-4 border-b border-zinc-800 space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-bold text-zinc-100">Documents</h1>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 text-zinc-400 hover:text-zinc-100"
+              onClick={() => handleCreateFolder("root")}
+            >
+              <FolderPlus className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 text-zinc-400 hover:text-zinc-100"
+              onClick={() => handleCreateDocument()}
+            >
+              <Plus className="size-4" />
+            </Button>
+          </div>
+        </div>
         <input
           type="text"
           placeholder="Search documents..."
-          className="w-full p-2 text-sm border border-zinc-700 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-850 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600"
+          className="w-full p-2 text-sm border border-zinc-700 rounded-lg bg-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-600"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {filteredDocuments.length === 0 ? (
-          <div className="p-4 text-center text-zinc-500">
-            {searchTerm ? "No matching documents found" : "No documents yet"}
+      <div className="flex-1 overflow-y-auto p-2">
+        {searchTerm ? (
+          <div className="space-y-1">
+            {filteredDocuments.length === 0 ? (
+              <div className="p-4 text-center text-zinc-500 text-sm">
+                No matching documents found
+              </div>
+            ) : (
+              filteredDocuments.map((doc) => (
+                <DocumentListItem
+                  key={doc.id}
+                  document={doc}
+                  isActive={doc.id === currentDocumentId}
+                  onSelect={() => onSelect(doc.id)}
+                  formatDate={formatDate}
+                />
+              ))
+            )}
           </div>
         ) : (
-          <ul className="divide-y divide-zinc-800">
-            {filteredDocuments.map((doc) => {
-              const typeDef = documentTypes[doc.type] || documentTypes["general"];
-              const IconComponent = typeDef ? (iconMap[typeDef.icon] || FileText) : FileText;
-              const isRenaming = renamingId === doc.id;
-
-              return (
-                <ContextMenu key={doc.id}>
-                  <ContextMenuTrigger>
-                    <li
-                      className={`transition-colors ${
-                        doc.id === currentDocumentId
-                          ? "bg-gradient-to-br from-zinc-700 to-zinc-800 text-zinc-100 ring-2 ring-zinc-600"
-                          : "hover:bg-zinc-800/50"
-                      }`}
-                    >
-                      <div className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <IconComponent className="size-4 text-zinc-400 shrink-0" />
-                            {isRenaming ? (
-                              <Input
-                                value={renameTitle}
-                                onChange={(e) => setRenameTitle(e.target.value)}
-                                onBlur={saveRename}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") saveRename();
-                                  if (e.key === "Escape") setRenamingId(null);
-                                }}
-                                autoFocus
-                                className="h-7 py-1 px-2 text-sm"
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            ) : (
-                              <h3
-                                className="font-medium text-zinc-100 cursor-pointer hover:text-zinc-300 truncate"
-                                onClick={() => onSelect(doc.id)}
-                                onKeyDown={(e) => handleEditKeyDown(e, doc)}
-                              >
-                                {doc.title}
-                              </h3>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-zinc-400 mt-1 line-clamp-2">
-                          {doc.content}
-                        </p>
-                        <div className="flex justify-between items-center mt-2">
-                          <div className="flex flex-wrap gap-1">
-                            {doc.tags.slice(0, 3).map((tag) => (
-                              <span
-                                key={tag}
-                                className="px-2 py-1 text-xs bg-zinc-800 text-zinc-400 rounded"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                            {doc.tags.length > 3 && (
-                              <span className="px-2 py-1 text-xs bg-zinc-800 text-zinc-400 rounded">
-                                +{doc.tags.length - 3}
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-xs text-zinc-500">
-                            {formatDate(new Date(doc.updatedAt))}
-                          </span>
-                        </div>
-                      </div>
-                    </li>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-                    <ContextMenuItem onClick={() => startRenaming(doc)}>
-                      Rename
-                    </ContextMenuItem>
-                    <ContextMenuItem onClick={() => openChangeTypeDialog(doc)}>
-                      Change Type
-                    </ContextMenuItem>
-                    <ContextMenuItem
-                      onClick={() => onDelete(doc.id)}
-                      className="text-red-500 focus:text-red-500"
-                    >
-                      Delete
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              );
-            })}
-          </ul>
+          <div className="space-y-1">
+            {rootFolders.map((folder) => (
+              <FolderListItem
+                key={folder.id}
+                folder={folder}
+                currentDocumentId={currentDocumentId}
+                onSelect={onSelect}
+                onCreateDocument={handleCreateDocument}
+                onCreateFolder={handleCreateFolder}
+                formatDate={formatDate}
+              />
+            ))}
+            {rootDocuments.map((doc) => (
+              <DocumentListItem
+                key={doc.id}
+                document={doc}
+                isActive={doc.id === currentDocumentId}
+                onSelect={() => onSelect(doc.id)}
+                formatDate={formatDate}
+              />
+            ))}
+            {rootFolders.length === 0 && rootDocuments.length === 0 && (
+              <div className="p-4 text-center text-zinc-500 text-sm">
+                No documents yet
+              </div>
+            )}
+          </div>
         )}
       </div>
+    </div>
+  );
+}
 
-      <Dialog open={!!changingTypeId} onOpenChange={(open) => !open && setChangingTypeId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change Document Type</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="type" className="text-right">
-                Type
-              </Label>
-              <Select value={newType} onValueChange={setNewType}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select a type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(documentTypes).map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      <div className="flex items-center gap-2">
-                        {(() => {
-                          const Icon = iconMap[type.icon] || FileText;
-                          return <Icon className="size-4" />;
-                        })()}
-                        {type.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+interface FolderListItemProps {
+  folder: Folder;
+  currentDocumentId?: DocumentId;
+  onSelect: (id: DocumentId) => void;
+  onCreateDocument: (typeId: string, parentId: FolderId | "root") => void;
+  onCreateFolder: (parentId: FolderId | "root") => void;
+  formatDate: (date: Date) => string;
+  depth?: number;
+}
+
+function FolderListItem({
+  folder,
+  currentDocumentId,
+  onSelect,
+  onCreateDocument,
+  onCreateFolder,
+  formatDate,
+  depth = 0
+}: FolderListItemProps) {
+  const documents = use$(documentStore$.documents);
+  const folders = use$(documentStore$.folders);
+  const documentTypes = use$(documentStore$.documentTypes);
+
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const childDocuments = Object.values(documents).filter(doc => doc.parentId === folder.id);
+  const childFolders = Object.values(folders).filter(f => f.parentId === folder.id);
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    updateFolder(folder.id, { isOpen: !folder.isOpen });
+  };
+
+  const handleRename = (newName: string) => {
+    if (newName.trim()) {
+      updateFolder(folder.id, { name: newName.trim() });
+    }
+    setIsRenaming(false);
+  };
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData("application/worldcrafter-item", JSON.stringify({ type: "folder", id: folder.id }));
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const data = e.dataTransfer.getData("application/worldcrafter-item");
+    if (!data) return;
+    const { type, id } = JSON.parse(data);
+    if (type === "document") moveDocument(id as DocumentId, folder.id);
+    else if (type === "folder" && id !== folder.id) moveFolder(id as FolderId, folder.id);
+  };
+
+  return (
+    <div className="flex flex-col">
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <div
+            draggable
+            onDragStart={handleDragStart}
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true); }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={handleDrop}
+            onClick={handleToggle}
+            className={`flex items-center gap-2 p-2 rounded-md transition-colors cursor-pointer group ${isDragOver ? "bg-zinc-800" : "hover:bg-zinc-800/50"
+              }`}
+          >
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              {folder.isOpen ? <ChevronDown className="size-3.5 text-zinc-500" /> : <ChevronRight className="size-3.5 text-zinc-500" />}
+              {folder.isOpen ? <FolderOpen className="size-4 text-blue-400/80" /> : <FolderIcon className="size-4 text-blue-400/80" />}
+              {isRenaming ? (
+                <Input
+                  autoFocus
+                  defaultValue={folder.name}
+                  onBlur={(e) => handleRename(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleRename(e.currentTarget.value);
+                    if (e.key === "Escape") setIsRenaming(false);
+                  }}
+                  className="h-6 text-xs bg-zinc-800 border-zinc-700 text-zinc-100 px-1"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <span className="truncate text-sm text-zinc-300 group-hover:text-zinc-100">
+                  {folder.name || "Untitled Folder"}
+                </span>
+              )}
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setChangingTypeId(null)}>
-              Cancel
-            </Button>
-            <Button onClick={saveChangeType}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </ContextMenuTrigger>
+        <ContextMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+          <ContextMenuItem onClick={() => onCreateFolder(folder.id)}>New Subfolder</ContextMenuItem>
+          <ContextMenuItem onClick={() => onCreateDocument("general", folder.id)}>New Document</ContextMenuItem>
+          <ContextMenuSeparator className="bg-zinc-800" />
+          <ContextMenuItem onClick={() => setIsRenaming(true)}>Rename</ContextMenuItem>
+          <ContextMenuItem onClick={() => deleteFolder(folder.id)} className="text-red-400">Delete</ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+
+      {folder.isOpen && (
+        <div className="ml-4 border-l border-zinc-800 pl-1 mt-0.5 space-y-0.5">
+          {childFolders.map((f) => (
+            <FolderListItem
+              key={f.id}
+              folder={f}
+              currentDocumentId={currentDocumentId}
+              onSelect={onSelect}
+              onCreateDocument={onCreateDocument}
+              onCreateFolder={onCreateFolder}
+              formatDate={formatDate}
+              depth={depth + 1}
+            />
+          ))}
+          {childDocuments.map((doc) => (
+            <DocumentListItem
+              key={doc.id}
+              document={doc}
+              isActive={doc.id === currentDocumentId}
+              onSelect={() => onSelect(doc.id)}
+              formatDate={formatDate}
+            />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+interface DocumentListItemProps {
+  document: Document;
+  isActive: boolean;
+  onSelect: () => void;
+  formatDate: (date: Date) => string;
+}
+
+function DocumentListItem({ document, isActive, onSelect, formatDate }: DocumentListItemProps) {
+  const documentTypes = use$(documentStore$.documentTypes);
+  const typeDef = documentTypes[document.type] || documentTypes["general"];
+  const IconComponent = typeDef ? (iconMap[typeDef.icon] || FileText) : FileText;
+
+  const [isRenaming, setIsRenaming] = useState(false);
+
+  const handleRename = (newTitle: string) => {
+    if (newTitle.trim()) {
+      updateDocument(document.id, { title: newTitle.trim() });
+    }
+    setIsRenaming(false);
+  };
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData("application/worldcrafter-item", JSON.stringify({ type: "document", id: document.id }));
+  };
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger>
+        <div
+          draggable
+          onDragStart={handleDragStart}
+          onClick={onSelect}
+          className={`flex flex-col gap-1 p-3 rounded-md transition-colors cursor-pointer ${isActive ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:bg-zinc-800/30 hover:text-zinc-200"
+            }`}
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-4 shrink-0" />
+            <IconComponent className={`size-4 shrink-0 ${isActive ? "text-zinc-200" : "text-zinc-500"}`} />
+            {isRenaming ? (
+              <Input
+                autoFocus
+                defaultValue={document.title}
+                onBlur={(e) => handleRename(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleRename(e.currentTarget.value);
+                  if (e.key === "Escape") setIsRenaming(false);
+                }}
+                className="h-6 text-xs bg-zinc-800 border-zinc-700 text-zinc-100 px-1"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <span className="truncate text-sm font-medium">{document.title || "Untitled"}</span>
+            )}
+          </div>
+          {!isRenaming && document.content && (
+            <p className="text-xs text-zinc-500 line-clamp-1 ml-6">
+              {document.content}
+            </p>
+          )}
+          {!isRenaming && (
+            <div className="flex items-center justify-between ml-6 mt-1">
+              <span className="text-[10px] text-zinc-600 font-mono">
+                {formatDate(document.updatedAt)}
+              </span>
+              <div className="flex gap-1">
+                {document.tags.slice(0, 2).map(tag => (
+                  <span key={tag} className="text-[9px] px-1 py-0.5 rounded bg-zinc-800 border border-zinc-700/50 text-zinc-500">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+        <ContextMenuItem onClick={() => setIsRenaming(true)}>Rename</ContextMenuItem>
+        <ContextMenuSeparator className="bg-zinc-800" />
+        <ContextMenuItem onClick={() => deleteDocument(document.id)} className="text-red-400">Delete</ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }

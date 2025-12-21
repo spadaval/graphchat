@@ -1,13 +1,13 @@
 {
     "mcpServers": {
-        "plate": {
-            "enabled": true,
-            "type": "local",
-            "command": "bunx",
-            "args": ["--bun", "shadcn@latest", "mcp"],
-            "environment": {
-                "REGISTRY_URL": "https://platejs.org/r/registry.json"
-            }
-        }
+        // "plate": {
+        //     "enabled": true,
+        //     "type": "local",
+        //     "command": "bunx",
+        //     "args": ["--bun", "shadcn@latest", "mcp"],
+        //     "environment": {
+        //         "REGISTRY_URL": "https://platejs.org/r/registry.json"
+        //     }
+        // }
     }
 }

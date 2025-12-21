@@ -1,15 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "~/components/LayoutComponents";
 import { StorybookEditor } from "~/components/StorybookEditor";
 import { StorybookSidebar } from "~/components/StorybookSidebar";
 import type { DocumentId } from "~/lib/state/types";
 
 export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>): { id?: DocumentId } => {
+    return {
+      id: search.id as DocumentId | undefined,
+    };
+  },
   component: StorybookPage,
 });
 
 function StorybookPage() {
+  const { id: searchId } = Route.useSearch();
   const [openDocumentIds, setOpenDocumentIds] = useState<DocumentId[]>([]);
   const [activeDocumentId, setActiveDocumentId] = useState<DocumentId | undefined>(
     undefined,
@@ -21,6 +27,13 @@ function StorybookPage() {
     }
     setActiveDocumentId(id);
   };
+
+  // Sync active document with search param
+  useEffect(() => {
+    if (searchId && searchId !== activeDocumentId) {
+      handleSelectDocument(searchId);
+    }
+  }, [searchId]);
 
   const handleCloseDocument = (id: DocumentId) => {
     const newOpenIds = openDocumentIds.filter((docId) => docId !== id);
