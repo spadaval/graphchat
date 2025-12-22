@@ -48,10 +48,10 @@ interface DocumentStore {
   folders: Record<FolderId, Folder>;
   documentTypes: Record<string, DocumentTypeDefinition>;
   currentDocumentId: DocumentId | undefined;
+  openDocumentIds: DocumentId[];
 }
 
-let nextDocumentId = 1;
-let nextFolderId = 1;
+
 
 const defaultDocumentTypes: Record<string, DocumentTypeDefinition> = {
   general: {
@@ -79,21 +79,12 @@ const documentStore: DocumentStore = {
   folders: {} as Record<FolderId, Folder>,
   documentTypes: defaultDocumentTypes,
   currentDocumentId: undefined,
+  openDocumentIds: [],
 };
 
 export const documentStore$ = observable<DocumentStore>(documentStore);
 
-// Helper to get next IDs based on existing ones to avoid collisions after refresh
-const getNextIds = () => {
-  const docs = documentStore$.documents.get();
-  const folders = documentStore$.folders.get();
-  
-  const docIds = Object.keys(docs).map(id => parseInt(id.replace("doc-", "")));
-  const folderIds = Object.keys(folders).map(id => parseInt(id.replace("folder-", "")));
-  
-  nextDocumentId = Math.max(0, ...docIds.filter(id => !isNaN(id))) + 1;
-  nextFolderId = Math.max(0, ...folderIds.filter(id => !isNaN(id))) + 1;
-};
+
 
 import { createBlock, blocks$ } from "./block";
 import type { BlockId } from "./types";
@@ -106,8 +97,7 @@ export const createDocument = (
   tags: string[] = [],
   parentId: FolderId | "root" = "root",
 ): DocumentId => {
-  if (nextDocumentId === 1) getNextIds();
-  const id: DocumentId = `doc-${nextDocumentId++}`;
+  const id: DocumentId = `doc-${crypto.randomUUID()}`;
   const now = new Date();
 
   // Use template if initialContent is empty and type has a template
@@ -146,9 +136,8 @@ export const createFolder = (
   name: string,
   parentId: FolderId | "root" = "root",
 ): FolderId => {
-  if (nextFolderId === 1) getNextIds();
-  const id: FolderId = `folder-${nextFolderId++}`;
-  
+  const id: FolderId = `folder-${crypto.randomUUID()}`;
+
   const folder: Folder = {
     id,
     name,
@@ -218,14 +207,14 @@ export const moveFolder = (folderId: FolderId, newParentId: FolderId | "root") =
 export const syncDocumentContent = (id: DocumentId) => {
   const doc = documentStore$.documents[id].get();
   if (!doc) return;
-  
+
   const blockIds = doc.blocks || [];
   const allBlocks = blocks$.get();
-  
+
   const content = blockIds
     .map(bid => allBlocks[bid]?.text || "")
     .join("\n\n");
-    
+
   documentStore$.documents[id].content.set(content);
 };
 
@@ -270,10 +259,31 @@ export const deleteDocument = (id: DocumentId) => {
   if (currentDocumentId === id) {
     documentStore$.currentDocumentId.set(undefined);
   }
+
+  // Remove from open documents
+  const openIds = documentStore$.openDocumentIds.get();
+  if (openIds.includes(id)) {
+    documentStore$.openDocumentIds.set(openIds.filter((oid) => oid !== id));
+  }
 };
 
-export const setCurrentDocument = (id: DocumentId) => {
+export const setCurrentDocument = (id: DocumentId | undefined) => {
   documentStore$.currentDocumentId.set(id);
+  if (id && !documentStore$.openDocumentIds.get().includes(id)) {
+    documentStore$.openDocumentIds.push(id);
+  }
+};
+
+export const closeDocument = (id: DocumentId) => {
+  const openIds = documentStore$.openDocumentIds.get();
+  const newOpenIds = openIds.filter((oid) => oid !== id);
+  documentStore$.openDocumentIds.set(newOpenIds);
+
+  if (documentStore$.currentDocumentId.get() === id) {
+    documentStore$.currentDocumentId.set(
+      newOpenIds.length > 0 ? newOpenIds[newOpenIds.length - 1] : undefined,
+    );
+  }
 };
 
 export const getAllDocuments = (): Document[] => {
@@ -309,6 +319,5 @@ syncObservable(documentStore$, {
 
 // Run initialization check
 ensureDefaultDocumentTypes();
-getNextIds();
 
 export default documentStore$;

@@ -1,8 +1,28 @@
 import { use$ } from "@legendapp/state/react";
 import { modelProps$ } from "~/lib/state";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip";
+import { Info } from "lucide-react";
 
 export function ModelProperties() {
   const modelProperties = use$(modelProps$);
+
+  const TooltipWrapper = ({ label, content }: { label: string; content: string }) => (
+    <div className="flex items-center gap-1.5 mb-1.5">
+      <label className="text-sm font-medium text-zinc-300">
+        {label}
+      </label>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button type="button" className="text-zinc-500 hover:text-zinc-300 transition-colors">
+            <Info size={12} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="max-w-[200px] bg-zinc-800 border-zinc-700 text-zinc-200">
+          {content}
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -12,12 +32,10 @@ export function ModelProperties() {
 
       {/* Temperature */}
       <div className="space-y-2">
-        <label
-          htmlFor="temperature"
-          className="block text-sm font-medium text-zinc-300"
-        >
-          Temperature
-        </label>
+        <TooltipWrapper
+          label="Temperature"
+          content="Higher values make the output more random, while lower values make it more focused and deterministic."
+        />
         <input
           type="range"
           min="0"
@@ -38,12 +56,10 @@ export function ModelProperties() {
 
       {/* Top K */}
       <div className="space-y-2">
-        <label
-          htmlFor="top-k"
-          className="block text-sm font-medium text-zinc-300"
-        >
-          Top K
-        </label>
+        <TooltipWrapper
+          label="Top K"
+          content="Limits the next token selection to the K most likely tokens. Reduces the risk of long-tail low-probability tokens."
+        />
         <input
           type="range"
           min="1"
@@ -64,12 +80,10 @@ export function ModelProperties() {
 
       {/* Top P */}
       <div className="space-y-2">
-        <label
-          htmlFor="top-p"
-          className="block text-sm font-medium text-zinc-300"
-        >
-          Top P
-        </label>
+        <TooltipWrapper
+          label="Top P"
+          content="Nucleus sampling: only considers tokens with a cumulative probability above P. Balances diversity and quality."
+        />
         <input
           type="range"
           min="0"
@@ -90,12 +104,10 @@ export function ModelProperties() {
 
       {/* Max Tokens */}
       <div className="space-y-2">
-        <label
-          htmlFor="max-tokens"
-          className="block text-sm font-medium text-zinc-300"
-        >
-          Max Tokens
-        </label>
+        <TooltipWrapper
+          label="Max Tokens"
+          content="The maximum number of tokens to generate in one go. Useful for preventing runaway generation."
+        />
         <input
           type="number"
           min="1"
@@ -112,12 +124,10 @@ export function ModelProperties() {
 
       {/* Repeat Penalty */}
       <div className="space-y-2">
-        <label
-          htmlFor="repeat-penalty"
-          className="block text-sm font-medium text-zinc-300"
-        >
-          Repeat Penalty
-        </label>
+        <TooltipWrapper
+          label="Repeat Penalty"
+          content="Applies a penalty to tokens that have already appeared. Higher values strongly discourage repetition."
+        />
         <input
           type="range"
           min="1.0"
@@ -140,12 +150,10 @@ export function ModelProperties() {
 
       {/* Presence Penalty */}
       <div className="space-y-2">
-        <label
-          htmlFor="presence-penalty"
-          className="block text-sm font-medium text-zinc-300"
-        >
-          Presence Penalty
-        </label>
+        <TooltipWrapper
+          label="Presence Penalty"
+          content="Penalizes tokens based on whether they have appeared so far. Encourages the model to talk about new topics."
+        />
         <input
           type="range"
           min="-2.0"
@@ -168,12 +176,10 @@ export function ModelProperties() {
 
       {/* Frequency Penalty */}
       <div className="space-y-2">
-        <label
-          htmlFor="frequency-penalty"
-          className="block text-sm font-medium text-zinc-300"
-        >
-          Frequency Penalty
-        </label>
+        <TooltipWrapper
+          label="Frequency Penalty"
+          content="Penalizes tokens based on how many times they've appeared. Further discourages overused words."
+        />
         <input
           type="range"
           min="-2.0"
@@ -198,12 +204,10 @@ export function ModelProperties() {
 
       {/* Mirostat Mode */}
       <div className="space-y-2">
-        <label
-          htmlFor="mirostat-mode"
-          className="block text-sm font-medium text-zinc-300"
-        >
-          Mirostat Mode
-        </label>
+        <TooltipWrapper
+          label="Mirostat Mode"
+          content="An algorithm that controls the perplexity of the generated text, keeping it within a target range."
+        />
         <select
           value={modelProperties.mirostat}
           onChange={(e) =>
@@ -222,12 +226,10 @@ export function ModelProperties() {
       {/* Mirostat Tau */}
       {modelProperties.mirostat > 0 && (
         <div className="space-y-2">
-          <label
-            htmlFor="mirostat-tau"
-            className="block text-sm font-medium text-zinc-300"
-          >
-            Mirostat Tau
-          </label>
+          <TooltipWrapper
+            label="Mirostat Tau"
+            content="The target perplexity (bit per token) for the Mirostat algorithm. Typical values are 3.0 to 5.0."
+          />
           <input
             type="range"
             min="0"
@@ -252,12 +254,10 @@ export function ModelProperties() {
       {/* Mirostat Eta */}
       {modelProperties.mirostat > 0 && (
         <div className="space-y-2">
-          <label
-            htmlFor="mirostat-eta"
-            className="block text-sm font-medium text-zinc-300"
-          >
-            Mirostat Eta
-          </label>
+          <TooltipWrapper
+            label="Mirostat Eta"
+            content="The learning rate for the Mirostat algorithm. Controls how quickly it adjusts to maintain target perplexity."
+          />
           <input
             type="range"
             min="0"

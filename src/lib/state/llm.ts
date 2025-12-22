@@ -5,13 +5,13 @@ import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { postV1ChatCompletions } from "../../client";
 import { client } from "../../client/client.gen";
 import { type AppError, type AppResult, createLLMError } from "../errors";
-import type { Block } from "./block";
+
 import { getDocumentById } from "./documents";
-import type { DocumentId, LLMRequest, ModelProperties } from "./types";
+import { uiPreferences$ } from "./ui";
+import type { Block, DocumentId, LLMRequest, ModelProperties } from "./types";
 
 // Helper function to generate unique request IDs
-let nextRequestId = 1;
-const generateRequestId = (): string => `req-${nextRequestId++}`;
+const generateRequestId = (): string => `req-${crypto.randomUUID()}`;
 
 // Helper function to create LLMRequest object
 const createLLMRequest = (
@@ -23,16 +23,19 @@ const createLLMRequest = (
   model,
   parameters: { ...parameters }, // Clone to avoid mutations
   success: false, // Will be updated when request completes
+  sourceMessages: [], // Will be filled with the actual messages sent
 });
 
 export interface LLMResponse {
   content: string;
+  probabilities?: any[];
 }
 
 export interface StreamingLLMResponse {
   content: string;
   done: boolean;
   error?: string;
+  probabilities?: any[];
 }
 
 import { blocks$ } from "./block";
@@ -104,10 +107,10 @@ export async function callLLM(
 ): Promise<AppResult<{ response: LLMResponse; request: LLMRequest }>> {
   // Collect all document IDs from all messages
   const directDocumentIds = messages.flatMap((msg) => msg.linkedDocuments || []);
-  
+
   // Get related documents from the graph
   const relatedDocumentIds = directDocumentIds.flatMap(id => getRelatedDocuments(id));
-  
+
   const allDocumentIds = [...directDocumentIds, ...relatedDocumentIds];
   const uniqueDocumentIds = [...new Set(allDocumentIds)];
 
@@ -139,7 +142,9 @@ export async function callLLM(
 
   // Create request metadata
   const request = createLLMRequest("llama", modelProperties);
+  request.sourceMessages = messagesForAPI;
   const startTime = Date.now();
+  const uiPrefs = uiPreferences$.get();
 
   // Call the LLM server using ResultAsync
   const resultAsync = ResultAsync.fromPromise(
@@ -153,7 +158,8 @@ export async function callLLM(
         presence_penalty: modelProperties.presence_penalty,
         frequency_penalty: modelProperties.frequency_penalty,
         stream: false, // Non-streaming call
-      },
+        ...(uiPrefs.enableTokenProbabilities ? { n_probs: modelProperties.n_probs || 10 } : {}),
+      } as any,
     }),
     (error) =>
       createLLMError("Failed to call LLM API", "llama", error as Error),
@@ -164,15 +170,13 @@ export async function callLLM(
         response.data?.choices?.[0]?.message?.content ||
         "Sorry, I couldn't generate a response.";
 
-      // Update request metadata with success info
-      const duration = Date.now() - startTime;
-      request.duration = duration;
-      request.success = true;
-      // Note: tokensUsed and tokensGenerated would need to be extracted from response if available
+      // Extract probabilities if available
+      const probabilities = (response.data as any).completion_probabilities || (response.data as any).choices?.[0]?.logprobs;
 
       return ok({
         response: {
           content: assistantContent,
+          probabilities,
         },
         request,
       });
@@ -184,12 +188,10 @@ export async function callLLM(
       request.success = false;
       request.error = error.message;
 
-      return err(
-        createLLMError(
-          "Failed to get response from LLM server",
-          "llama",
-          error.cause,
-        ),
+      return createLLMError(
+        "Failed to get response from LLM server",
+        "llama",
+        error.cause,
       );
     });
 
@@ -236,10 +238,10 @@ export async function* callLLMStreaming(
 > {
   // Collect all document IDs from all messages
   const directDocumentIds = messages.flatMap((msg) => msg.linkedDocuments || []);
-  
+
   // Get related documents from the graph
   const relatedDocumentIds = directDocumentIds.flatMap(id => getRelatedDocuments(id));
-  
+
   const allDocumentIds = [...directDocumentIds, ...relatedDocumentIds];
   const uniqueDocumentIds = [...new Set(allDocumentIds)];
 
@@ -271,7 +273,9 @@ export async function* callLLMStreaming(
 
   // Create request metadata
   const request = createLLMRequest("llama", modelProperties);
+  request.sourceMessages = messagesForAPI;
   const startTime = Date.now();
+  const uiPrefs = uiPreferences$.get();
 
   // Use ResultAsync to handle the SSE client creation
   const sseResultAsync = ResultAsync.fromPromise(
@@ -286,7 +290,8 @@ export async function* callLLMStreaming(
         presence_penalty: modelProperties.presence_penalty,
         frequency_penalty: modelProperties.frequency_penalty,
         stream: true, // Enable streaming
-      },
+        ...(uiPrefs.enableTokenProbabilities ? { n_probs: modelProperties.n_probs || 10 } : {}),
+      } as any,
       headers: {
         "Content-Type": "application/json",
       },
@@ -334,10 +339,13 @@ export async function* callLLMStreaming(
     }
 
     const typedEvent = event as any; // Type assertion since the event type is unknown
+    const content = typedEvent.choices[0].delta.content ?? "";
+    const probabilities = typedEvent.choices[0].logprobs;
     yield ok({
       response: {
-        content: typedEvent.choices[0].delta.content ?? "",
+        content,
         done: false,
+        probabilities: probabilities ? [probabilities] : undefined, // Simplistic for now, we'll need to aggregate
       },
       request,
     });

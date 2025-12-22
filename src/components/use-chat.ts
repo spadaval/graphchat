@@ -13,6 +13,10 @@ import { type TNode, KEYS, nanoid, NodeApi, TextApi } from 'platejs';
 import { type PlateEditor, useEditorRef, usePluginOption } from 'platejs/react';
 
 import { aiChatPlugin } from '~/components/ai-kit';
+import { callLLMStreaming, modelProps$ } from '~/lib/state/llm';
+import { uiPreferences$ } from '~/lib/state/ui';
+import type { Block } from '~/lib/state/types';
+import { blocks$ } from '~/lib/state/block';
 
 import { discussionPlugin } from '~/components/discussion-kit';
 
@@ -55,60 +59,138 @@ export const useChat = () => {
       api: options.api || '/api/ai/command',
       // Mock the API response. Remove it when you implement the route /api/ai/command
       fetch: (async (input, init) => {
+        const url = input.toString();
+        const isCopilot = url.includes('/api/ai/copilot');
         const bodyOptions = editor.getOptions(aiChatPlugin).chatOptions?.body;
-
         const initBody = JSON.parse(init?.body as string);
+        const { messages, prompt, toolName, mode } = { ...initBody, ...bodyOptions };
 
-        const body = {
-          ...initBody,
-          ...bodyOptions,
-        };
-
-        const res = await fetch(input, {
-          ...init,
-          body: JSON.stringify(body),
-        });
-
-        if (!res.ok) {
-          let sample: 'comment' | 'markdown' | 'mdx' | null = null;
-
-          try {
-            const content = JSON.parse(init?.body as string)
-              .messages.at(-1)
-              .parts.find((p: any) => p.type === 'text')?.text;
-
-            if (content.includes('Generate a markdown sample')) {
-              sample = 'markdown';
-            } else if (content.includes('Generate a mdx sample')) {
-              sample = 'mdx';
-            } else if (content.includes('comment')) {
-              sample = 'comment';
-            }
-          } catch {
-            sample = null;
-          }
-
-          abortControllerRef.current = new AbortController();
-
-          await new Promise((resolve) => setTimeout(resolve, 400));
-
-          const stream = fakeStreamText({
-            editor,
-            sample,
-            signal: abortControllerRef.current.signal,
-          });
-
-          const response = new Response(stream, {
-            headers: {
-              Connection: 'keep-alive',
-              'Content-Type': 'text/plain',
-            },
-          });
-
-          return response;
+        const { aiEnabled, inlineCompletion } = uiPreferences$.get();
+        if (!aiEnabled) {
+          return new Response("AI is disabled in settings.", { status: 403 });
         }
 
-        return res;
+        if (isCopilot && !inlineCompletion) {
+          return new Response("Inline completion is disabled.", { status: 403 });
+        }
+
+        // Convert AI SDK messages to our Block format
+        let blockMessages: Block[] = [];
+
+        if (isCopilot) {
+          // Copilot usually sends 'prompt' as the context
+          blockMessages = [{
+            id: `blk-${crypto.randomUUID()}` as any,
+            messageId: `msg-${crypto.randomUUID()}` as any,
+            text: initBody.prompt || "",
+            role: 'user',
+            type: 'paragraph',
+            isGenerating: false,
+            createdAt: new Date(),
+            linkedDocuments: [],
+            viewMode: 'preview',
+          }];
+        } else {
+          blockMessages = messages.map((m: any, i: number) => ({
+            id: `blk-${crypto.randomUUID()}` as any,
+            messageId: `msg-${crypto.randomUUID()}` as any,
+            text: m.content,
+            role: m.role,
+            type: 'paragraph',
+            isGenerating: false,
+            createdAt: new Date(),
+            linkedDocuments: [],
+            viewMode: 'preview',
+          }));
+
+          // If there's a specific prompt passed in (like from AI menu actions), 
+          // we might want to prepend it or use it as the last message.
+          if (prompt) {
+            // Plate AI menu often sends instructions in the 'prompt' field
+            // We can append it as a system message or wrap the last message
+            blockMessages.push({
+              id: `blk-${crypto.randomUUID()}` as any,
+              messageId: `msg-${crypto.randomUUID()}` as any,
+              text: typeof prompt === 'string' ? prompt : (prompt.selecting || prompt.default || ""),
+              role: 'system',
+              type: 'paragraph',
+              isGenerating: false,
+              createdAt: new Date(),
+              linkedDocuments: [],
+              viewMode: 'preview',
+            });
+          }
+        }
+
+        const stream = new ReadableStream({
+          async start(controller) {
+            const encoder = new TextEncoder();
+            const responseStream = callLLMStreaming(blockMessages, modelProps$.get());
+
+            if (isCopilot) {
+              // Plain text stream for useComplete
+              try {
+                for await (const chunkResult of responseStream) {
+                  chunkResult.match(
+                    (chunk) => {
+                      if (chunk.response.done) return;
+                      controller.enqueue(encoder.encode(chunk.response.content));
+                    },
+                    (error) => console.error("Copilot Stream error:", error)
+                  );
+                }
+              } finally {
+                controller.close();
+              }
+              return;
+            }
+
+            // Structured data stream for AIChat
+            // AI SDK expects specific stream format if we want to support tools/data,
+            // but for simple text completion, we just send chunks.
+            // However, Plate's UI expects data-toolName if it's an edit.
+
+            if (toolName) {
+              controller.enqueue(encoder.encode(`data: {"type":"data-toolName","data":"${toolName}"}\n\n`));
+            }
+
+            // Start markers for AI SDK compatible stream
+            controller.enqueue(encoder.encode('data: {"type":"start"}\n\n'));
+            controller.enqueue(encoder.encode('data: {"type":"start-step"}\n\n'));
+            const messageId = `msg_${nanoid()}`;
+            controller.enqueue(encoder.encode(`data: {"type":"text-start","id":"${messageId}"}\n\n`));
+
+            try {
+              for await (const chunkResult of responseStream) {
+                chunkResult.match(
+                  (chunk) => {
+                    if (chunk.response.done) return;
+                    const escapedContent = JSON.stringify(chunk.response.content).slice(1, -1);
+                    controller.enqueue(encoder.encode(`data: {"type":"text-delta","id":"${messageId}","delta":"${escapedContent}"}\n\n`));
+                  },
+                  (error) => {
+                    console.error("LLM Stream error:", error);
+                  }
+                );
+              }
+            } catch (err) {
+              console.error("Critical stream error:", err);
+            } finally {
+              controller.enqueue(encoder.encode(`data: {"type":"text-end","id":"${messageId}"}\n\n`));
+              controller.enqueue(encoder.encode('data: {"type":"finish-step"}\n\n'));
+              controller.enqueue(encoder.encode('data: {"type":"finish"}\n\n'));
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              controller.close();
+            }
+          }
+        });
+
+        return new Response(stream, {
+          headers: {
+            'Content-Type': isCopilot ? 'text/plain; charset=utf-8' : 'text/plain',
+            'Connection': 'keep-alive',
+          },
+        });
       }) as typeof fetch,
     }),
     onData(data) {

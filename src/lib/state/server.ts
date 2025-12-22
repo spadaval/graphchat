@@ -1,9 +1,11 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
+import { client } from "../../client/client.gen";
 import type { ServerInfo } from "./types";
 
 interface ServerStore {
+  serverUrl: string;
   serverInfo: ServerInfo | null;
   loading: boolean;
   error: string | null;
@@ -11,6 +13,7 @@ interface ServerStore {
 }
 
 const serverStore: ServerStore = {
+  serverUrl: "http://localhost:8080",
   serverInfo: null,
   loading: false,
   error: null,
@@ -18,7 +21,19 @@ const serverStore: ServerStore = {
 
 export const serverStore$ = observable<ServerStore>(serverStore);
 
+// Sync client base URL with state
+serverStore$.serverUrl.onChange(({ value }) => {
+  client.setConfig({ baseUrl: value });
+});
+
+// Initial sync
+client.setConfig({ baseUrl: serverStore$.serverUrl.get() });
+
 // Actions
+export const setServerUrl = (url: string) => {
+  serverStore$.serverUrl.set(url);
+};
+
 export const setServerInfo = (info: ServerInfo | null) => {
   serverStore$.serverInfo.set(info);
 };

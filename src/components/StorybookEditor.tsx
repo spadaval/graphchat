@@ -1,13 +1,13 @@
-import { 
+import {
   X,
-  FileText, 
-  Map as MapIcon, 
-  User, 
-  Sparkles, 
-  Ghost, 
-  Building, 
-  Book, 
-  Scroll 
+  FileText,
+  Map as MapIcon,
+  User,
+  Sparkles,
+  Ghost,
+  Building,
+  Book,
+  Scroll
 } from "lucide-react";
 import { PlateDocumentEditor } from "~/components/editor/PlateDocumentEditor";
 import { documentStore$, DocumentIcon } from "~/lib/state/documents";
@@ -47,9 +47,9 @@ export function StorybookEditor({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-zinc-950">
+    <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-zinc-950">
       {/* Tabs */}
-      <div className="flex items-center bg-zinc-900 border-b border-zinc-800 overflow-x-auto">
+      <div className="flex items-center bg-zinc-900 border-b border-zinc-800 shrink-0 overflow-x-auto">
         {openDocumentIds.map((id) => (
           <Tab
             key={id}
@@ -65,7 +65,7 @@ export function StorybookEditor({
       </div>
 
       {/* Editor Area */}
-      <div className="flex-1 min-h-0 relative">
+      <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden">
         {activeDocumentId && (
           <PlateDocumentEditor
             key={activeDocumentId} // Force re-mount on doc switch to ensure clean state if needed, though observable should handle it.
@@ -87,9 +87,9 @@ interface TabProps {
 function Tab({ id, isActive, onClick, onClose }: TabProps) {
   const document = use$(documentStore$.documents[id]);
   const documentTypes = use$(documentStore$.documentTypes);
-  
+
   const title = document?.title || "Untitled";
-  
+
   const typeDef = document && (documentTypes[document.type] || documentTypes["general"]);
   const IconComponent = typeDef ? (iconMap[typeDef.icon] || FileText) : FileText;
 

@@ -2,7 +2,7 @@ import { EmptyState, MessagesList } from "~/components/ChatAreaComponents";
 import { TabContent, TabNavigation } from "~/components/ModelServerComponents";
 import { SidebarContent, SidebarHeader } from "~/components/Sidebar";
 import { useThread } from "~/lib/state/hooks";
-import type { ChatId } from "~/lib/state/types";
+import type { ActiveTab, ChatId } from "~/lib/state/types";
 
 // Chat Threads Sidebar Component
 interface ChatThreadsSidebarProps {
@@ -64,8 +64,8 @@ export function ChatArea({ currentThreadId, sendMessage }: ChatAreaProps) {
 
 // Model Server Sidebar Component
 interface ModelServerSidebarProps {
-  activeTab: "model" | "server" | "documents";
-  setActiveTab: (tab: "model" | "server" | "documents") => void;
+  activeTab: ActiveTab;
+  setActiveTab: (tab: ActiveTab) => void;
 }
 
 export function ModelServerSidebar({
@@ -73,7 +73,7 @@ export function ModelServerSidebar({
   setActiveTab,
 }: ModelServerSidebarProps) {
   return (
-    <div className="w-80 bg-zinc-900 border-l border-zinc-800 flex flex-col">
+    <div className="w-80 bg-zinc-900 border-l border-zinc-800 flex flex-col h-full">
       <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
       <TabContent activeTab={activeTab} />
     </div>

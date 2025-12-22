@@ -9,7 +9,12 @@ import type {
 } from "./types";
 
 const uiPreferences: UIPreferences = {
-  activeTab: "model",
+  activeTab: "settings",
+  aiEnabled: true,
+  inlineCompletion: true,
+  documentWidth: 800,
+  tokenizerModelId: "default", // Assuming a default value for the new required property
+  enableTokenProbabilities: false,
 };
 
 export const uiPreferences$ = observable<UIPreferences>(uiPreferences);
@@ -26,6 +31,34 @@ export const documentLinking$ =
 // Actions
 export const setActiveTab = (tab: UIPreferences["activeTab"]) => {
   uiPreferences$.activeTab.set(tab);
+};
+
+export const setAIEnabled = (enabled: boolean) => {
+  uiPreferences$.aiEnabled.set(enabled);
+};
+
+export const setInlineCompletionEnabled = (enabled: boolean) => {
+  uiPreferences$.inlineCompletion.set(enabled);
+};
+
+export const setEnableTokenProbabilities = (enabled: boolean) => {
+  uiPreferences$.enableTokenProbabilities.set(enabled);
+};
+
+export const setActiveSamplerPreset = (presetId: string | undefined) => {
+  uiPreferences$.activeSamplerPreset.set(presetId);
+};
+
+export const setDocumentWidth = (width: number) => {
+  uiPreferences$.documentWidth.set(width);
+};
+
+export const setTokenizerModelId = (id: string) => {
+  uiPreferences$.tokenizerModelId.set(id);
+};
+
+export const setHuggingfaceToken = (token: string) => {
+  uiPreferences$.huggingfaceToken.set(token);
 };
 
 // Document linking actions

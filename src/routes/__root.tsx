@@ -30,8 +30,9 @@ export const Route = createRootRouteWithContext<{
         content: "width=device-width, initial-scale=1",
       },
       ...seo({
-              title: "WorldCrafter",
-              description: `WorldCrafter is a tool for creating imaginary worlds`,      }),
+        title: "WorldCrafter",
+        description: `WorldCrafter is a tool for creating imaginary worlds`,
+      }),
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -72,7 +73,7 @@ function RootComponent() {
     <RootDocument>
       <TooltipProvider>
         <div className="flex flex-col h-screen">
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden flex flex-col">
             <Outlet />
           </div>
         </div>

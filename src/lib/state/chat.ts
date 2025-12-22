@@ -2,13 +2,12 @@ import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
 import {
-  type Block,
   blocks$,
   createBlock,
   setBlockLinkedDocuments,
 } from "./block";
 import { callLLM, callLLMStreaming, modelProps$ } from "./llm";
-import type { BlockId, ChatId } from "./types";
+import type { Block, BlockId, ChatId, MessageId } from "./types";
 
 // Global configuration
 
@@ -26,7 +25,7 @@ ${firstMessage}
 
   try {
     const result = await callLLM(
-      [{ role: "user", text: prompt, linkedDocuments: [] }],
+      [createBlock(prompt, "user")],
       {
         ...modelProps$.get(),
         temperature: 0.3, // Lower temperature for more consistent titles
@@ -71,11 +70,11 @@ interface ChatStore {
 }
 
 // Create a global observable for the chat store
-let nextThreadId = 1;
+
 
 const newThread = (title?: string, initialMessage?: string): ChatThread => {
   const thread: ChatThread = {
-    id: `chat-${nextThreadId++}`,
+    id: `chat-${crypto.randomUUID()}`,
     title: title || (initialMessage ? "Generating title..." : "New Chat"),
     messages: [],
     createdAt: new Date(),
@@ -117,7 +116,7 @@ export const createNewThread = (initialMessage?: string) => {
   console.log("initialMessage", initialMessage);
   const title = initialMessage
     ? initialMessage.trim().substring(0, 30) +
-      (initialMessage.trim().length > 30 ? "..." : "")
+    (initialMessage.trim().length > 30 ? "..." : "")
     : "New Chat";
 
   const thread = newThread(title, initialMessage);
@@ -164,7 +163,7 @@ export const duplicateThread = (threadId: ChatId) => {
 
   // Create a new thread with the same title and messages
   const newThread: ChatThread = {
-    id: `chat-${nextThreadId++}`,
+    id: `chat-${crypto.randomUUID()}`,
     title: `${originalThread.title} (Copy)`,
     messages: [...originalThread.messages], // Copy message IDs
     createdAt: new Date(),
@@ -323,6 +322,7 @@ export const sendMessage = async (text?: string) => {
 
   let accumulatedContent = "";
   let lastUpdate = Date.now();
+  let allProbabilities: any[] = [];
   let finalRequest: any = null;
 
   for await (const chunkResult of responseStream) {
@@ -335,6 +335,9 @@ export const sendMessage = async (text?: string) => {
         }
         // Accumulate content
         accumulatedContent += chunk.response.content;
+        if (chunk.response.probabilities) {
+          allProbabilities = [...allProbabilities, ...chunk.response.probabilities];
+        }
         // Batch updates to reduce render frequency
         if (Date.now() - lastUpdate > 50) {
           blocks$[assistantBlock.id].text.set(accumulatedContent);
@@ -353,6 +356,16 @@ export const sendMessage = async (text?: string) => {
 
   // Ensure final content is set
   blocks$[assistantBlock.id].text.set(accumulatedContent);
+
+  // Update block metadata with request info
+  if (finalRequest) {
+    blocks$[assistantBlock.id].metadata.set({
+      ...blocks$[assistantBlock.id].metadata.get(),
+      sourceMessages: finalRequest.sourceMessages,
+      tokenProbabilities: allProbabilities,
+      aiGenerated: true,
+    });
+  }
 
   // Attach the LLM request metadata to the assistant block
   if (finalRequest && blocks$[assistantBlock.id].llmRequests) {
@@ -423,6 +436,7 @@ export const regenerateMessage = async (blockId: BlockId) => {
 
   let accumulatedContent = "";
   let lastUpdate = Date.now();
+  let allProbabilities: any[] = [];
   let finalRequest: any = null;
 
   for await (const chunkResult of responseStream) {
@@ -435,6 +449,9 @@ export const regenerateMessage = async (blockId: BlockId) => {
         }
         // Accumulate content
         accumulatedContent += chunk.response.content;
+        if (chunk.response.probabilities) {
+          allProbabilities = [...allProbabilities, ...chunk.response.probabilities];
+        }
         // Batch updates to reduce render frequency
         if (Date.now() - lastUpdate > 50) {
           blocks$[newBlock.id].text.set(accumulatedContent);
@@ -453,6 +470,16 @@ export const regenerateMessage = async (blockId: BlockId) => {
 
   // Ensure final content is set
   blocks$[newBlock.id].text.set(accumulatedContent);
+
+  // Update block metadata with request info
+  if (finalRequest) {
+    blocks$[newBlock.id].metadata.set({
+      ...blocks$[newBlock.id].metadata.get(),
+      sourceMessages: finalRequest.sourceMessages,
+      tokenProbabilities: allProbabilities,
+      aiGenerated: true,
+    });
+  }
 
   // Attach the LLM request metadata to the new block
   if (finalRequest && blocks$[newBlock.id].llmRequests) {

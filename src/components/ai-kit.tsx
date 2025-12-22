@@ -7,12 +7,14 @@ import {
   applyAISuggestions,
   streamInsertChunk,
   useChatChunk,
+  CopilotPlugin,
 } from '@platejs/ai/react';
 import { getPluginType, KEYS, PathApi } from 'platejs';
 import { usePluginOption } from 'platejs/react';
 
 import { AILoadingBar, AIMenu } from '~/components/ui/ai-menu';
 import { AIAnchorElement, AILeaf } from '~/components/ui/ai-node';
+import { GhostText } from '~/components/ui/ghost-text';
 
 import { useChat } from '~/components/use-chat';
 import { CursorOverlayKit } from './cursor-overlay-kit';
@@ -97,4 +99,12 @@ export const AIKit = [
   ...MarkdownKit,
   AIPlugin.withComponent(AILeaf),
   aiChatPlugin,
+  CopilotPlugin.configure({
+    options: {
+      completeOptions: {
+        api: '/api/ai/copilot',
+      },
+    },
+    render: { afterEditable: GhostText },
+  }),
 ];

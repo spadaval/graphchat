@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { MainLayout } from "~/components/LayoutComponents";
+import { MainLayout, ModelServerSidebar } from "~/components/LayoutComponents";
 import { StorybookEditor } from "~/components/StorybookEditor";
 import { StorybookSidebar } from "~/components/StorybookSidebar";
+import { uiPreferences$, setActiveTab } from "~/lib/state/ui";
+import { use$ } from "@legendapp/state/react";
+import { documentStore$, setCurrentDocument, closeDocument } from "~/lib/state/documents";
 import type { DocumentId } from "~/lib/state/types";
 
 export const Route = createFileRoute("/")({
@@ -16,16 +19,11 @@ export const Route = createFileRoute("/")({
 
 function StorybookPage() {
   const { id: searchId } = Route.useSearch();
-  const [openDocumentIds, setOpenDocumentIds] = useState<DocumentId[]>([]);
-  const [activeDocumentId, setActiveDocumentId] = useState<DocumentId | undefined>(
-    undefined,
-  );
+  const { activeTab } = use$(uiPreferences$);
+  const { openDocumentIds, currentDocumentId: activeDocumentId } = use$(documentStore$);
 
   const handleSelectDocument = (id: DocumentId) => {
-    if (!openDocumentIds.includes(id)) {
-      setOpenDocumentIds([...openDocumentIds, id]);
-    }
-    setActiveDocumentId(id);
+    setCurrentDocument(id);
   };
 
   // Sync active document with search param
@@ -36,13 +34,7 @@ function StorybookPage() {
   }, [searchId]);
 
   const handleCloseDocument = (id: DocumentId) => {
-    const newOpenIds = openDocumentIds.filter((docId) => docId !== id);
-    setOpenDocumentIds(newOpenIds);
-
-    if (activeDocumentId === id) {
-      // If we closed the active tab, switch to the last one, or undefined if none left
-      setActiveDocumentId(newOpenIds.length > 0 ? newOpenIds[newOpenIds.length - 1] : undefined);
-    }
+    closeDocument(id);
   };
 
   return (
@@ -53,11 +45,17 @@ function StorybookPage() {
           onSelectDocument={handleSelectDocument}
         />
       }
+      modelServer={
+        <ModelServerSidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+        />
+      }
     >
       <StorybookEditor
         openDocumentIds={openDocumentIds}
         activeDocumentId={activeDocumentId}
-        onSelectDocument={setActiveDocumentId}
+        onSelectDocument={handleSelectDocument}
         onCloseDocument={handleCloseDocument}
       />
     </MainLayout>

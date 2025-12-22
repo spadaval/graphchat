@@ -1,22 +1,29 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
-import type { Block, BlockId, BlockType, DocumentId, LLMRequest } from "./types";
+import type {
+  Block,
+  BlockId,
+  BlockType,
+  BlockViewMode,
+  DocumentId,
+  LLMRequest,
+} from "./types";
 
 // Block storage
 export const blocks$ = observable<Record<BlockId, Block>>({});
 
 // Block creation function
-let nextMessageId = 0;
-let nextBlockId = 1;
+// Block creation function
 export const createBlock = (
   text: string,
   role: "user" | "assistant" | "system" = "user",
   type: BlockType = "paragraph",
   metadata?: Record<string, any>,
+  viewMode: BlockViewMode = "preview",
 ): Block => ({
-  id: `blk-${nextBlockId++}`,
-  messageId: nextMessageId++,
+  id: `blk-${crypto.randomUUID()}`,
+  messageId: `msg-${crypto.randomUUID()}`,
   text,
   role,
   type,
@@ -25,6 +32,7 @@ export const createBlock = (
   createdAt: new Date(),
   linkedDocuments: [],
   llmRequests: role === "assistant" ? [] : undefined, // Only assistant messages have LLM requests
+  viewMode,
 });
 
 // Helper functions for document linking

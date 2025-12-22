@@ -1,11 +1,11 @@
 // Type definitions for the state module
 
 // IDs
-export type ChatId = `chat-${number}`;
-export type MessageId = `msg-${number}`;
-export type BlockId = `blk-${number}`;
-export type DocumentId = `doc-${number}`;
-export type FolderId = `folder-${number}`;
+export type ChatId = `chat-${string}`;
+export type MessageId = `msg-${string}`;
+export type BlockId = `blk-${string}`;
+export type DocumentId = `doc-${string}`;
+export type FolderId = `folder-${string}`;
 
 // Message types
 export type MessageType = "user" | "assistant" | "system";
@@ -33,10 +33,17 @@ export interface ServerInfo {
 }
 
 // UI preferences
-export type ActiveTab = "model" | "server" | "documents";
+export type ActiveTab = "server" | "documents" | "settings";
 
 export interface UIPreferences {
   activeTab: ActiveTab;
+  aiEnabled: boolean;
+  inlineCompletion: boolean;
+  activeSamplerPreset?: string;
+  documentWidth?: number;
+  tokenizerModelId: string;
+  huggingfaceToken?: string;
+  enableTokenProbabilities: boolean;
 }
 
 // Document linking state
@@ -56,6 +63,7 @@ export interface LLMRequest {
   duration?: number; // Request duration in ms
   success: boolean;
   error?: string;
+  sourceMessages?: any[];
 }
 
 export interface ModelProperties {
@@ -85,17 +93,33 @@ export interface GraphEdge {
 }
 
 // Block types
-export type BlockType = "paragraph" | "heading" | "list-item" | "code" | "quote";
+export type BlockType =
+  | "paragraph"
+  | "heading"
+  | "list-item"
+  | "code"
+  | "quote";
+export type BlockViewMode = "edit" | "preview" | "tokens";
+
+export interface BlockMetadata {
+  aiGenerated?: boolean;
+  sourcePrompt?: string;
+  sourceMessages?: any[]; // Store the messages used for generation for regeneration
+  tokenProbabilities?: any[]; // Store token probabilities from the LLM
+  originalText?: string;
+  [key: string]: any;
+}
 
 export interface Block {
   id: BlockId;
-  messageId: number; // Message ID for backward compatibility
+  messageId: MessageId; // Message ID for backward compatibility
   text: string;
   role: "user" | "assistant" | "system";
   type: BlockType;
-  metadata?: Record<string, any>;
+  metadata?: BlockMetadata;
   isGenerating: boolean;
   createdAt: Date;
   linkedDocuments: DocumentId[]; // Track linked documents
   llmRequests?: LLMRequest[]; // LLM request attribution for assistant messages
+  viewMode: BlockViewMode;
 }
