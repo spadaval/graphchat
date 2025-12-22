@@ -1,7 +1,7 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
-import { client } from "../../client/client.gen";
+import { client } from "../../llamacpp-client/client.gen";
 import type { ServerInfo } from "./types";
 
 interface ServerStore {

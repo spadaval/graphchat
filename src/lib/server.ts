@@ -1,5 +1,5 @@
 import { ResultAsync } from "neverthrow";
-import { getProps } from "../client";
+import { getProps } from "../llamacpp-client";
 import { createNetworkError, toAppError } from "./errors";
 
 export interface ServerInfo {

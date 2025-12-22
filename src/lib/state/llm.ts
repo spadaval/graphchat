@@ -2,8 +2,8 @@ import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
-import { postV1ChatCompletions } from "../../client";
-import { client } from "../../client/client.gen";
+import { postV1ChatCompletions } from "../../llamacpp-client";
+import { client } from "../../llamacpp-client/client.gen";
 import { type AppError, type AppResult, createLLMError } from "../errors";
 
 import { getDocumentById } from "./documents";
