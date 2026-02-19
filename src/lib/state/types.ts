@@ -6,6 +6,14 @@ export type MessageId = `msg-${string}`;
 export type BlockId = `blk-${string}`;
 export type DocumentId = `doc-${string}`;
 export type FolderId = `folder-${string}`;
+export type WorldId = `world-${string}`;
+
+export interface World {
+  id: WorldId;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // Message types
 export type MessageType = "user" | "assistant" | "system";

@@ -39,6 +39,7 @@ import {
   updateFolder,
 } from "~/lib/state/documents";
 import type { DocumentId, FolderId } from "~/lib/state/types";
+import { worldStore$ } from "~/lib/state/worlds";
 
 interface DocumentListProps {
   currentDocumentId?: DocumentId;
@@ -67,6 +68,7 @@ export function DocumentList({
   const documents = use$(documentStore$.documents);
   const folders = use$(documentStore$.folders);
   const documentTypes = use$(documentStore$.documentTypes);
+  const currentWorldId = use$(worldStore$.currentWorldId);
 
   // Format date without external libraries
   const formatDate = (date: Date) => {
@@ -93,18 +95,22 @@ export function DocumentList({
 
   const filteredDocuments = Object.values(documents).filter(
     (doc) =>
-      doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (doc.content || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.tags.some((tag) =>
-        tag.toLowerCase().includes(searchTerm.toLowerCase()),
-      ),
+      doc.worldId === currentWorldId &&
+      (doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (doc.content || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.tags.some((tag) =>
+          tag.toLowerCase().includes(searchTerm.toLowerCase()),
+        )),
   );
 
   const rootDocuments = Object.values(documents).filter(
-    (doc) => !doc.parentId || doc.parentId === "root",
+    (doc) =>
+      (!doc.parentId || doc.parentId === "root") &&
+      doc.worldId === currentWorldId,
   );
   const rootFolders = Object.values(folders).filter(
-    (f) => !f.parentId || f.parentId === "root",
+    (f) =>
+      (!f.parentId || f.parentId === "root") && f.worldId === currentWorldId,
   );
 
   return (
@@ -220,10 +226,10 @@ function FolderListItem({
   const [isDragOver, setIsDragOver] = useState(false);
 
   const childDocuments = Object.values(documents).filter(
-    (doc) => doc.parentId === folder.id,
+    (doc) => doc.parentId === folder.id && doc.worldId === folder.worldId,
   );
   const childFolders = Object.values(folders).filter(
-    (f) => f.parentId === folder.id,
+    (f) => f.parentId === folder.id && f.worldId === folder.worldId,
   );
 
   const handleToggle = (e: React.MouseEvent | React.KeyboardEvent) => {

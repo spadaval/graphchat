@@ -15,7 +15,6 @@ import { usePluginOption } from "platejs/react";
 import { AILoadingBar, AIMenu } from "~/components/ui/ai-menu";
 import { AIAnchorElement, AILeaf } from "~/components/ui/ai-node";
 
-import { useChat } from "~/components/use-chat";
 import { CursorOverlayKit } from "./cursor-overlay-kit";
 import { MarkdownKit } from "./markdown-kit";
 
@@ -33,8 +32,6 @@ export const aiChatPlugin = AIChatPlugin.extend({
   },
   shortcuts: { show: { keys: "mod+j" } },
   useHooks: ({ editor, getOption }) => {
-    useChat();
-
     const mode = usePluginOption(AIChatPlugin, "mode");
     const toolName = usePluginOption(AIChatPlugin, "toolName");
     useChatChunk({

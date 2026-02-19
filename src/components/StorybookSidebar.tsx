@@ -57,6 +57,8 @@ import {
   updateFolder,
 } from "~/lib/state/documents";
 import type { DocumentId, FolderId } from "~/lib/state/types";
+import { worldStore$ } from "~/lib/state/worlds";
+import { WorldSwitcher } from "./WorldSwitcher";
 
 interface StorybookSidebarProps {
   activeDocumentId: DocumentId | undefined;
@@ -84,6 +86,7 @@ export function StorybookSidebar({
   const documents = use$(documentStore$.documents);
   const folders = use$(documentStore$.folders);
   const documentTypes = use$(documentStore$.documentTypes);
+  const currentWorldId = use$(worldStore$.currentWorldId);
 
   const [changeTypeDocId, setChangeTypeDocId] = useState<DocumentId | null>(
     null,
@@ -110,19 +113,25 @@ export function StorybookSidebar({
     }
   };
 
-  // Get root items
+  // Get root items for current world
   const rootDocuments = Object.values(documents).filter(
-    (doc) => !doc.parentId || doc.parentId === "root",
+    (doc) =>
+      (!doc.parentId || doc.parentId === "root") &&
+      doc.worldId === currentWorldId,
   );
   const rootFolders = Object.values(folders).filter(
-    (f) => !f.parentId || f.parentId === "root",
+    (f) =>
+      (!f.parentId || f.parentId === "root") && f.worldId === currentWorldId,
   );
 
   return (
     <div className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col h-full">
-      <div className="p-4 border-b border-zinc-800">
+      <WorldSwitcher />
+      <div className="p-4 border-b border-zinc-800 pt-0">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-zinc-100">Storybook</h2>
+          <h2 className="text-base font-semibold text-zinc-100 uppercase tracking-widest text-[10px] opacity-50">
+            Content
+          </h2>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -282,10 +291,10 @@ function FolderItem({
   const [isDragOver, setIsDragOver] = useState(false);
 
   const childDocuments = Object.values(documents).filter(
-    (doc) => doc.parentId === folder.id,
+    (doc) => doc.parentId === folder.id && doc.worldId === folder.worldId,
   );
   const childFolders = Object.values(folders).filter(
-    (f) => f.parentId === folder.id,
+    (f) => f.parentId === folder.id && f.worldId === folder.worldId,
   );
 
   const handleRename = (newName: string) => {

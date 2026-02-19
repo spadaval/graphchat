@@ -68,6 +68,7 @@ export type {
   ModelProperties,
   ServerInfo,
   TokenProbability,
+  WorldId,
 } from "./types";
 // UI exports
 export {
@@ -83,3 +84,11 @@ export {
   setMessageDocumentLinks,
   uiPreferences$,
 } from "./ui";
+// World exports
+export {
+  createWorld,
+  deleteWorld,
+  setCurrentWorld,
+  updateWorld,
+  worldStore$,
+} from "./worlds";

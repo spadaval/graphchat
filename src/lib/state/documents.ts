@@ -2,7 +2,8 @@ import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
 import { removeDocumentFromAllBlocks } from "./block";
-import type { DocumentId, FolderId } from "./types";
+import type { DocumentId, FolderId, WorldId } from "./types";
+import { worldStore$ } from "./worlds";
 
 export enum DocumentIcon {
   FileText = "FileText",
@@ -27,6 +28,7 @@ export interface Folder {
   name: string;
   parentId: FolderId | "root";
   isOpen: boolean;
+  worldId: WorldId;
 }
 
 export interface Document {
@@ -39,6 +41,7 @@ export interface Document {
   tags: string[];
   type: string;
   parentId: FolderId | "root";
+  worldId: WorldId;
 }
 
 // export type DocumentType = "character" | "location" | "magic" | "general";
@@ -92,9 +95,12 @@ export const createDocument = (
   type: string = "general",
   tags: string[] = [],
   parentId: FolderId | "root" = "root",
+  worldId?: WorldId,
 ): DocumentId => {
   const id: DocumentId = `doc-${crypto.randomUUID()}`;
   const now = new Date();
+  const finalWorldId =
+    worldId || worldStore$.currentWorldId.get() || "world-default";
 
   // Use template if initialContent is empty and type has a template
   let contentToUse = initialContent;
@@ -122,6 +128,7 @@ export const createDocument = (
     tags,
     type,
     parentId,
+    worldId: finalWorldId as WorldId,
   };
 
   documentStore$.documents[id].set(document);
@@ -131,14 +138,18 @@ export const createDocument = (
 export const createFolder = (
   name: string,
   parentId: FolderId | "root" = "root",
+  worldId?: WorldId,
 ): FolderId => {
   const id: FolderId = `folder-${crypto.randomUUID()}`;
+  const finalWorldId =
+    worldId || worldStore$.currentWorldId.get() || "world-default";
 
   const folder: Folder = {
     id,
     name,
     parentId,
     isOpen: true,
+    worldId: finalWorldId as WorldId,
   };
 
   documentStore$.folders[id].set(folder);
@@ -311,6 +322,25 @@ export const ensureDefaultDocumentTypes = () => {
   }
 };
 
+export const migrateToWorlds = () => {
+  const defaultWorldId = (worldStore$.currentWorldId.get() ||
+    "world-default") as WorldId;
+
+  const docs = documentStore$.documents.get();
+  Object.values(docs).forEach((doc) => {
+    if (!doc.worldId) {
+      documentStore$.documents[doc.id].worldId.set(defaultWorldId);
+    }
+  });
+
+  const folders = documentStore$.folders.get();
+  Object.values(folders).forEach((f) => {
+    if (!f.worldId) {
+      documentStore$.folders[f.id].worldId.set(defaultWorldId);
+    }
+  });
+};
+
 // Persist state
 syncObservable(documentStore$, {
   persist: {
@@ -321,5 +351,6 @@ syncObservable(documentStore$, {
 
 // Run initialization check
 ensureDefaultDocumentTypes();
+migrateToWorlds();
 
 export default documentStore$;
