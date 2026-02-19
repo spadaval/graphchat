@@ -56,7 +56,7 @@ export const suggestionPlugin = toTPlatePlugin<SuggestionConfig>(
         const isBlockSuggestion = leaf.dataset.blockSuggestion === "true";
 
         if (leaf.classList.contains(`slate-${type}`) || isBlockSuggestion) {
-          const suggestionEntry = api.suggestion!.node({
+          const suggestionEntry = api.suggestion?.node({
             isText: !isBlockSuggestion,
           });
 
@@ -66,7 +66,7 @@ export const suggestionPlugin = toTPlatePlugin<SuggestionConfig>(
             break;
           }
 
-          const id = api.suggestion!.nodeId(suggestionEntry[0]);
+          const id = api.suggestion?.nodeId(suggestionEntry[0]);
           setOption("activeId", id ?? null);
 
           isSet = true;
@@ -81,6 +81,7 @@ export const suggestionPlugin = toTPlatePlugin<SuggestionConfig>(
     },
   },
   render: {
+    // biome-ignore lint/suspicious/noExplicitAny: complex Plate plugin type
     belowNodes: SuggestionLineBreak as any,
     node: SuggestionLeaf,
   },

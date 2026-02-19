@@ -62,9 +62,12 @@ export type {
   BlockId,
   ChatId,
   DocumentId,
+  LLMMessage,
+  LLMRequest,
   MessageId,
   ModelProperties,
   ServerInfo,
+  TokenProbability,
 } from "./types";
 // UI exports
 export {

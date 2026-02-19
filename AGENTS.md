@@ -6,7 +6,7 @@
 ## Commands
 Use bun for all commands.
 - **Build**: `bun run build` | **Start**: `bun run start`
-- **Lint**: `bun run lint` | **Format**: `bun run format`
+- **Format**: `bun run format` | - **Lint**: `bun run lint --fix` (run after all changes)
 
 ## Architecture
 - **State**: `@legendapp/state` for persistent/shared state, `useState` only for ephemeral UI state
@@ -22,3 +22,7 @@ Use bun for all commands.
 - **Styling**: Tailwind CSS, semantic colors, responsive with `lg:`, consistent spacing
 - **File Org**: `routes/` (pages), `components/` (UI), `lib/` (logic), `utils/` (helpers), `client/` (API)
 - **Formatting**: Space indentation, double quotes, semicolons, trailing commas
+
+## Rules
+Avoid using `any` type. Use `unknown` type instead. 
+Using comments to suppress type errors is a last resort. Always try to fix the type error instead. If necessary, use `unknown` type and add a comment explaining why the type is unknown.

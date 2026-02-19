@@ -53,6 +53,8 @@ export function MediaPreviewDialog() {
         !isOpen && "hidden",
       )}
       onContextMenu={(e) => e.stopPropagation()}
+      role="dialog"
+      aria-modal="true"
       {...maskLayerProps}
     >
       <div className="absolute inset-0 size-full bg-black opacity-30"></div>
@@ -66,7 +68,14 @@ export function MediaPreviewDialog() {
           />
           <div
             className="absolute bottom-0 left-1/2 z-40 flex w-fit -translate-x-1/2 justify-center gap-4 p-2 text-center text-white"
+            role="toolbar"
+            aria-label="Image preview controls"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.stopPropagation();
+              }
+            }}
           >
             <div className="flex gap-1">
               <button

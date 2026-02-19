@@ -1,7 +1,6 @@
 import { use$ } from "@legendapp/state/react";
 import { CheckCircle2, Link2, RefreshCw, XCircle } from "lucide-react";
-import { useEffect } from "react";
-import { useServerInfo } from "~/lib/state/hooks";
+import { useCallback, useEffect } from "react";
 import {
   serverStore$,
   setError,
@@ -16,7 +15,7 @@ import { Button } from "./ui/button";
 export function ServerInfoComponent() {
   const { serverInfo, loading, error, serverUrl } = use$(serverStore$);
 
-  const loadServerInfo = async () => {
+  const loadServerInfo = useCallback(async () => {
     try {
       setLoading(true);
       const data = await fetchServerInfo();
@@ -29,13 +28,13 @@ export function ServerInfoComponent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadServerInfo();
     const interval = setInterval(loadServerInfo, 10000); // 10s refresh instead of 5s
     return () => clearInterval(interval);
-  }, []);
+  }, [loadServerInfo]);
 
   const handleTestConnection = () => {
     loadServerInfo();
@@ -51,12 +50,16 @@ export function ServerInfoComponent() {
         </h3>
 
         <div className="space-y-2">
-          <label className="text-[10px] uppercase tracking-wider font-bold text-zinc-500">
+          <label
+            htmlFor="server-url"
+            className="text-[10px] uppercase tracking-wider font-bold text-zinc-500"
+          >
             Base URL
           </label>
           <div className="flex gap-2">
             <input
               type="text"
+              id="server-url"
               value={serverUrl}
               onChange={(e) => setServerUrl(e.target.value)}
               placeholder="http://localhost:8080"

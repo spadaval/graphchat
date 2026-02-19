@@ -3,7 +3,6 @@ import { RadicalIcon } from "lucide-react";
 import type { TEquationElement } from "platejs";
 import type { SlateElementProps } from "platejs/static";
 import { SlateElement } from "platejs/static";
-import * as React from "react";
 
 import { cn } from "~/lib/utils";
 
@@ -39,6 +38,7 @@ export function EquationElementStatic(
       >
         {element.texExpression.length > 0 ? (
           <span
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: KaTeX output is safe here
             dangerouslySetInnerHTML={{
               __html: html,
             }}
@@ -91,6 +91,7 @@ export function InlineEquationElementStatic(
             props.element.texExpression.length === 0 && "hidden",
             "font-mono leading-none",
           )}
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: KaTeX output is safe here
           dangerouslySetInnerHTML={{ __html: html }}
         />
       </div>

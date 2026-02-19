@@ -7,7 +7,15 @@ import { client } from "../../llamacpp-client/client.gen";
 import { type AppError, type AppResult, createLLMError } from "../errors";
 
 import { getDocumentById } from "./documents";
-import type { Block, DocumentId, LLMRequest, ModelProperties } from "./types";
+import type {
+  Block,
+  DocumentId,
+  LLMMessage,
+  LLMRequest,
+  MessageType,
+  ModelProperties,
+  TokenProbability,
+} from "./types";
 import { uiPreferences$ } from "./ui";
 
 // Helper function to generate unique request IDs
@@ -28,14 +36,14 @@ const createLLMRequest = (
 
 export interface LLMResponse {
   content: string;
-  probabilities?: any[];
+  probabilities?: TokenProbability[];
 }
 
 export interface StreamingLLMResponse {
   content: string;
   done: boolean;
   error?: string;
-  probabilities?: any[];
+  probabilities?: TokenProbability[];
 }
 
 import { blocks$ } from "./block";
@@ -102,12 +110,14 @@ import { getRelatedDocuments } from "./graph";
  * Calls the LLM server with the provided messages and returns the response with attribution
  */
 export async function callLLM(
-  messages: Block[],
+  messages: (Block | LLMMessage)[],
   modelProperties: ModelProperties,
 ): Promise<AppResult<{ response: LLMResponse; request: LLMRequest }>> {
   // Collect all document IDs from all messages
-  const directDocumentIds = messages.flatMap(
-    (msg) => msg.linkedDocuments || [],
+  const directDocumentIds = messages.flatMap((msg) =>
+    "linkedDocuments" in msg
+      ? msg.linkedDocuments || []
+      : (msg as LLMMessage).linkedDocuments || [],
   );
 
   // Get related documents from the graph
@@ -123,8 +133,8 @@ export async function callLLM(
 
   // Prepare messages for API call
   const messagesForAPI = messages.map((msg) => ({
-    role: msg.role,
-    content: msg.text,
+    role: msg.role as MessageType,
+    content: "text" in msg ? msg.text : (msg as LLMMessage).content,
   }));
 
   // If we have document context, prepend it to the first user message
@@ -163,9 +173,12 @@ export async function callLLM(
         frequency_penalty: modelProperties.frequency_penalty,
         stream: false, // Non-streaming call
         ...(uiPrefs.enableTokenProbabilities
-          ? { n_probs: modelProperties.n_probs || 10 }
+          ? ({ n_probs: modelProperties.n_probs || 10 } as Record<
+              string,
+              unknown
+            >)
           : {}),
-      } as any,
+      },
     }),
     (error) =>
       createLLMError("Failed to call LLM API", "llama", error as Error),
@@ -177,9 +190,13 @@ export async function callLLM(
         "Sorry, I couldn't generate a response.";
 
       // Extract probabilities if available
+      const data = response.data as Record<string, unknown>;
+      // choices is an unknown external type from the LLM response
+      const choices = data.choices as unknown[];
+      const typedChoices = choices as { logprobs?: TokenProbability[] }[];
       const probabilities =
-        (response.data as any).completion_probabilities ||
-        (response.data as any).choices?.[0]?.logprobs;
+        (data.completion_probabilities as TokenProbability[]) ||
+        (typedChoices?.[0]?.logprobs as TokenProbability[]);
 
       return ok({
         response: {
@@ -237,7 +254,7 @@ export function parseStreamingResponse(
  * Calls the LLM server with streaming enabled using the generated client
  */
 export async function* callLLMStreaming(
-  messages: Block[],
+  messages: (Block | LLMMessage)[],
   modelProperties: ModelProperties,
 ): AsyncGenerator<
   Result<{ response: StreamingLLMResponse; request: LLMRequest }, AppError>,
@@ -245,8 +262,10 @@ export async function* callLLMStreaming(
   unknown
 > {
   // Collect all document IDs from all messages
-  const directDocumentIds = messages.flatMap(
-    (msg) => msg.linkedDocuments || [],
+  const directDocumentIds = messages.flatMap((msg) =>
+    "linkedDocuments" in msg
+      ? msg.linkedDocuments || []
+      : (msg as LLMMessage).linkedDocuments || [],
   );
 
   // Get related documents from the graph
@@ -262,8 +281,8 @@ export async function* callLLMStreaming(
 
   // Prepare messages for API call
   const messagesForAPI = messages.map((msg) => ({
-    role: msg.role,
-    content: msg.text,
+    role: msg.role as MessageType,
+    content: "text" in msg ? msg.text : (msg as LLMMessage).content,
   }));
 
   // If we have document context, prepend it to the first user message
@@ -303,9 +322,12 @@ export async function* callLLMStreaming(
         frequency_penalty: modelProperties.frequency_penalty,
         stream: true, // Enable streaming
         ...(uiPrefs.enableTokenProbabilities
-          ? { n_probs: modelProperties.n_probs || 10 }
+          ? ({ n_probs: modelProperties.n_probs || 10 } as Record<
+              string,
+              unknown
+            >)
           : {}),
-      } as any,
+      },
       headers: {
         "Content-Type": "application/json",
       },
@@ -352,20 +374,30 @@ export async function* callLLMStreaming(
       break;
     }
 
-    const typedEvent = event as any; // Type assertion since the event type is unknown
+    const typedEvent = event as {
+      choices: {
+        delta: { content?: string };
+        // logprobs is an unknown external type from the streaming event
+        logprobs?: unknown;
+      }[];
+    };
     const content = typedEvent.choices[0].delta.content ?? "";
-    const probabilities = typedEvent.choices[0].logprobs;
+    const logprobs = typedEvent.choices[0].logprobs as
+      | undefined
+      | TokenProbability[]
+      | { content?: TokenProbability[] };
+
     yield ok({
       response: {
         content,
         done: false,
         // If probability data exists, it might be an array or an object with 'content'
-        probabilities: Array.isArray(probabilities)
-          ? probabilities
-          : probabilities?.content
-            ? probabilities.content
-            : probabilities
-              ? [probabilities]
+        probabilities: Array.isArray(logprobs)
+          ? logprobs
+          : (logprobs as { content?: TokenProbability[] })?.content
+            ? (logprobs as { content: TokenProbability[] }).content
+            : logprobs
+              ? [logprobs as TokenProbability]
               : undefined,
       },
       request,

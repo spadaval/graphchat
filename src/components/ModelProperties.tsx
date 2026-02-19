@@ -3,7 +3,6 @@ import { Info } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { modelProps$ } from "~/lib/state";
@@ -19,7 +18,7 @@ export function ModelProperties() {
     content: string;
   }) => (
     <div className="flex items-center gap-1.5 mb-1.5">
-      <label className="text-sm font-medium text-zinc-300">{label}</label>
+      <span className="text-sm font-medium text-zinc-300">{label}</span>
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -298,6 +297,7 @@ export function ModelProperties() {
       <div className="flex items-center space-x-2">
         <input
           type="checkbox"
+          id="streaming"
           checked={modelProperties.stream}
           onChange={(e) => modelProps$.assign({ stream: e.target.checked })}
           className="w-4 h-4 text-zinc-600 bg-zinc-700 border-zinc-600 rounded focus:ring-zinc-500"
@@ -314,6 +314,7 @@ export function ModelProperties() {
       <div className="flex items-center space-x-2">
         <input
           type="checkbox"
+          id="cache-prompt"
           checked={modelProperties.cache_prompt}
           onChange={(e) =>
             modelProps$.assign({ cache_prompt: e.target.checked })
@@ -332,6 +333,7 @@ export function ModelProperties() {
       <div className="flex items-center space-x-2">
         <input
           type="checkbox"
+          id="return-tokens"
           checked={modelProperties.return_tokens}
           onChange={(e) =>
             modelProps$.assign({ return_tokens: e.target.checked })

@@ -21,18 +21,21 @@ const TRAILING_COLON_REGEX = /:$/;
 
 export function EmojiInputElement(props: PlateElementProps) {
   const { children, editor, element } = props;
-  const data = usePluginOption(EmojiPlugin, "data")!;
+  const data = usePluginOption(EmojiPlugin, "data");
   const [value, setValue] = React.useState("");
+
   const debouncedValue = useDebounce(value, 100);
   const isPending = value !== debouncedValue;
 
   const filteredEmojis = React.useMemo(() => {
-    if (debouncedValue.trim().length === 0) return [];
+    if (!data || debouncedValue.trim().length === 0) return [];
 
     return EmojiInlineIndexSearch.getInstance(data)
       .search(debouncedValue.replace(TRAILING_COLON_REGEX, ""))
       .get();
   }, [data, debouncedValue]);
+
+  if (!data) return null;
 
   return (
     <PlateElement as="span" {...props}>

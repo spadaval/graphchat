@@ -8,7 +8,6 @@ import {
 } from "@platejs/selection/react";
 import { RangeApi } from "platejs";
 import { usePluginOption } from "platejs/react";
-import * as React from "react";
 
 import { cn } from "~/lib/utils";
 
@@ -39,9 +38,9 @@ function Cursor({
 
   return (
     <>
-      {selectionRects.map((position, i) => (
+      {selectionRects.map((position, _i) => (
         <div
-          key={i}
+          key={`${position.top}-${position.left}-${position.width}`}
           className={cn(
             "pointer-events-none absolute z-10",
             id === "selection" && "bg-brand/25",

@@ -1,5 +1,5 @@
 import { useObservable } from "@legendapp/state/react";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { blocks$, createBlock } from "../lib/state/block";
 import { documentStore$, updateDocument } from "../lib/state/documents";
@@ -12,7 +12,7 @@ interface DocumentEditorProps {
 
 export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const document = useObservable(documentStore$.documents[documentId]);
-  const blocks = useObservable(blocks$);
+  const _blocks = useObservable(blocks$);
 
   if (!document.get()) {
     return (
@@ -56,6 +56,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       </div>
 
       <button
+        type="button"
         onClick={() => addBlock()}
         className="mt-8 px-4 py-2 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
       >

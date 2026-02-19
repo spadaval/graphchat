@@ -5,7 +5,6 @@ import { ResizableProvider } from "@platejs/resizable";
 import type { TAudioElement } from "platejs";
 import type { PlateElementProps } from "platejs/react";
 import { PlateElement, withHOC } from "platejs/react";
-import * as React from "react";
 
 import { Caption, CaptionTextarea } from "./caption";
 
@@ -21,7 +20,9 @@ export const AudioElement = withHOC(
           contentEditable={false}
         >
           <div className="h-16">
-            <audio className="size-full" src={unsafeUrl} controls />
+            <audio className="size-full" src={unsafeUrl} controls>
+              <track kind="captions" />
+            </audio>
           </div>
 
           <Caption style={{ width: "100%" }} align={align}>

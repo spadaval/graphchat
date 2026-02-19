@@ -16,8 +16,9 @@ import {
   Wand,
   X,
 } from "lucide-react";
-import { NodeApi } from "platejs";
+import { NodeApi, type SlateEditor } from "platejs";
 import {
+  type PlateEditor,
   useEditorPlugin,
   useEditorRef,
   useFocusedLast,
@@ -54,7 +55,13 @@ export function DocumentAIMenu() {
 
   const chat = useChat();
 
-  const { input, messages, setInput, status } = chat;
+  // chat is an unknown external type from useChat
+  const { input, messages, setInput, status } = chat as unknown as {
+    input: string;
+    messages: { content: string; role: string }[];
+    setInput: (value: string) => void;
+    status: string;
+  };
   const [anchorElement, setAnchorElement] = React.useState<HTMLElement | null>(
     null,
   );
@@ -149,7 +156,9 @@ export function DocumentAIMenu() {
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal={false}>
-      <PopoverAnchor virtualRef={{ current: anchorElement || null }} />
+      {anchorElement && (
+        <PopoverAnchor virtualRef={{ current: anchorElement }} />
+      )}
 
       <PopoverContent
         className="border-none bg-transparent p-0 shadow-none"
@@ -192,7 +201,10 @@ export function DocumentAIMenu() {
                 }
                 if (e.key === "Enter" && !e.shiftKey && !value) {
                   e.preventDefault();
-                  void api.aiChat.submit();
+                  // api.aiChat is an external type from @platejs/ai
+                  void (
+                    api.aiChat as unknown as { submit: (input: string) => void }
+                  ).submit(input);
                 }
               }}
               onValueChange={setInput}
@@ -204,7 +216,7 @@ export function DocumentAIMenu() {
 
           {!isLoading && (
             <CommandList>
-              <DocumentAIMenuItems setValue={setValue} />
+              <DocumentAIMenuItems input={input} setValue={setValue} />
             </CommandList>
           )}
         </Command>
@@ -224,7 +236,7 @@ const aiChatItems = {
     icon: <Check />,
     label: "Accept",
     value: "accept",
-    onSelect: ({ editor }: { editor: any }) => {
+    onSelect: ({ editor }: { editor: PlateEditor; input: string }) => {
       editor.getTransforms(AIChatPlugin).aiChat.accept();
       editor.tf.focus({ edge: "end" });
     },
@@ -233,14 +245,14 @@ const aiChatItems = {
     icon: <PenLine />,
     label: "Continue writing",
     value: "continueWrite",
-    onSelect: ({ editor }: { editor: any }) => {
+    onSelect: ({ editor, input }: { editor: PlateEditor; input: string }) => {
       const ancestorNode = editor.api.block({ highest: true });
 
       if (!ancestorNode) return;
 
       const isEmpty = NodeApi.string(ancestorNode[0]).trim().length === 0;
 
-      void editor.getApi(AIChatPlugin).aiChat.submit({
+      void editor.getApi(AIChatPlugin).aiChat.submit(input, {
         mode: "insert",
         prompt: isEmpty
           ? `<Document>
@@ -256,7 +268,7 @@ Start writing a new paragraph AFTER <Document> ONLY ONE SENTENCE`
     label: "Discard",
     shortcut: "Escape",
     value: "discard",
-    onSelect: ({ editor }: { editor: any }) => {
+    onSelect: ({ editor }: { editor: PlateEditor; input: string }) => {
       editor.getTransforms(AIPlugin).ai.undo();
       editor.getApi(AIChatPlugin).aiChat.hide();
     },
@@ -265,8 +277,8 @@ Start writing a new paragraph AFTER <Document> ONLY ONE SENTENCE`
     icon: <SmileIcon />,
     label: "Emojify",
     value: "emojify",
-    onSelect: ({ editor }: { editor: any }) => {
-      void editor.getApi(AIChatPlugin).aiChat.submit({
+    onSelect: ({ editor, input }: { editor: PlateEditor; input: string }) => {
+      void editor.getApi(AIChatPlugin).aiChat.submit(input, {
         prompt: "Emojify",
       });
     },
@@ -275,8 +287,8 @@ Start writing a new paragraph AFTER <Document> ONLY ONE SENTENCE`
     icon: <Check />,
     label: "Fix spelling & grammar",
     value: "fixSpelling",
-    onSelect: ({ editor }: { editor: any }) => {
-      void editor.getApi(AIChatPlugin).aiChat.submit({
+    onSelect: ({ editor, input }: { editor: PlateEditor; input: string }) => {
+      void editor.getApi(AIChatPlugin).aiChat.submit(input, {
         prompt: "Fix spelling and grammar",
       });
     },
@@ -285,8 +297,8 @@ Start writing a new paragraph AFTER <Document> ONLY ONE SENTENCE`
     icon: <Wand />,
     label: "Improve writing",
     value: "improveWriting",
-    onSelect: ({ editor }: { editor: any }) => {
-      void editor.getApi(AIChatPlugin).aiChat.submit({
+    onSelect: ({ editor, input }: { editor: PlateEditor; input: string }) => {
+      void editor.getApi(AIChatPlugin).aiChat.submit(input, {
         prompt: "Improve the writing",
       });
     },
@@ -295,7 +307,14 @@ Start writing a new paragraph AFTER <Document> ONLY ONE SENTENCE`
     icon: <ListEnd />,
     label: "Insert below",
     value: "insertBelow",
-    onSelect: ({ aiEditor, editor }: { aiEditor: any; editor: any }) => {
+    onSelect: ({
+      aiEditor,
+      editor,
+    }: {
+      aiEditor: import("platejs").SlateEditor;
+      editor: PlateEditor;
+      input: string;
+    }) => {
       /** Format: 'none' Fix insert table */
       void editor
         .getTransforms(AIChatPlugin)
@@ -306,8 +325,8 @@ Start writing a new paragraph AFTER <Document> ONLY ONE SENTENCE`
     icon: <ListPlus />,
     label: "Make longer",
     value: "makeLonger",
-    onSelect: ({ editor }: { editor: any }) => {
-      void editor.getApi(AIChatPlugin).aiChat.submit({
+    onSelect: ({ editor, input }: { editor: PlateEditor; input: string }) => {
+      void editor.getApi(AIChatPlugin).aiChat.submit(input, {
         prompt: "Make longer",
       });
     },
@@ -316,8 +335,8 @@ Start writing a new paragraph AFTER <Document> ONLY ONE SENTENCE`
     icon: <ListMinus />,
     label: "Make shorter",
     value: "makeShorter",
-    onSelect: ({ editor }: { editor: any }) => {
-      void editor.getApi(AIChatPlugin).aiChat.submit({
+    onSelect: ({ editor, input }: { editor: PlateEditor; input: string }) => {
+      void editor.getApi(AIChatPlugin).aiChat.submit(input, {
         prompt: "Make shorter",
       });
     },
@@ -326,7 +345,14 @@ Start writing a new paragraph AFTER <Document> ONLY ONE SENTENCE`
     icon: <Check />,
     label: "Replace selection",
     value: "replace",
-    onSelect: ({ aiEditor, editor }: { aiEditor: any; editor: any }) => {
+    onSelect: ({
+      aiEditor,
+      editor,
+    }: {
+      aiEditor: import("platejs").SlateEditor;
+      editor: PlateEditor;
+      input: string;
+    }) => {
       void editor.getTransforms(AIChatPlugin).aiChat.replaceSelection(aiEditor);
     },
   },
@@ -334,8 +360,8 @@ Start writing a new paragraph AFTER <Document> ONLY ONE SENTENCE`
     icon: <FeatherIcon />,
     label: "Simplify language",
     value: "simplifyLanguage",
-    onSelect: ({ editor }: { editor: any }) => {
-      void editor.getApi(AIChatPlugin).aiChat.submit({
+    onSelect: ({ editor, input }: { editor: PlateEditor; input: string }) => {
+      void editor.getApi(AIChatPlugin).aiChat.submit(input, {
         prompt: "Simplify the language",
       });
     },
@@ -344,7 +370,7 @@ Start writing a new paragraph AFTER <Document> ONLY ONE SENTENCE`
     icon: <CornerUpLeft />,
     label: "Try again",
     value: "tryAgain",
-    onSelect: ({ editor }: { editor: any }) => {
+    onSelect: ({ editor }: { editor: PlateEditor; input: string }) => {
       void editor.getApi(AIChatPlugin).aiChat.reload();
     },
   },
@@ -392,8 +418,10 @@ const menuStateItems: Record<
 };
 
 export const DocumentAIMenuItems = ({
+  input,
   setValue,
 }: {
+  input: string;
   setValue: (value: string) => void;
 }) => {
   const editor = useEditorRef();
@@ -423,8 +451,11 @@ export const DocumentAIMenuItems = ({
 
   return (
     <>
-      {menuGroups.map((group, index) => (
-        <CommandGroup key={`group-${index}`} heading={group.heading}>
+      {menuGroups.map((group, _index) => (
+        <CommandGroup
+          key={group.heading || group.items[0]?.value}
+          heading={group.heading}
+        >
           {group.items.map((menuItem) => (
             <CommandItem
               key={menuItem.value}
@@ -432,8 +463,9 @@ export const DocumentAIMenuItems = ({
               value={menuItem.value}
               onSelect={() => {
                 menuItem.onSelect?.({
-                  aiEditor,
+                  aiEditor: aiEditor as SlateEditor,
                   editor: editor,
+                  input,
                 });
               }}
             >

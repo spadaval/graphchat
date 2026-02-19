@@ -41,9 +41,8 @@ type InlineComboboxContextValue = {
   setHasEmpty: (hasEmpty: boolean) => void;
 };
 
-const InlineComboboxContext = React.createContext<InlineComboboxContextValue>(
-  null as unknown as InlineComboboxContextValue,
-);
+const InlineComboboxContext =
+  React.createContext<InlineComboboxContextValue | null>(null);
 
 const defaultFilter: FilterFn = (
   { group, keywords = [], label, value },
@@ -54,7 +53,7 @@ const defaultFilter: FilterFn = (
   );
 
   return Array.from(uniqueTerms).some((keyword) =>
-    filterWords(keyword!, search),
+    filterWords(keyword as string, search),
   );
 };
 
@@ -152,15 +151,7 @@ const InlineCombobox = ({
       showTrigger,
       trigger,
     }),
-    [
-      trigger,
-      showTrigger,
-      filter,
-      inputRef,
-      inputProps,
-      removeInput,
-      setHasEmpty,
-    ],
+    [trigger, showTrigger, filter, inputProps, removeInput],
   );
 
   const store = useComboboxStore({
@@ -178,7 +169,7 @@ const InlineCombobox = ({
     if (!store.getState().activeId) {
       store.setActiveId(store.first());
     }
-  }, [items, store]);
+  }, [store]);
 
   return (
     <span contentEditable={false}>
@@ -211,10 +202,13 @@ const InlineComboboxInput = ({
     trigger,
   } = React.useContext(InlineComboboxContext);
 
-  const store = useComboboxContext()!;
+  const contextStore = useComboboxContext();
+  const store = contextStore as NonNullable<typeof contextStore>;
   const value = store.useState("value");
 
   const ref = useComposedRef(propRef, contextRef);
+
+  if (!contextStore) return null;
 
   /**
    * To create an auto-resizing input, we render a visually hidden span
@@ -304,17 +298,20 @@ const InlineComboboxItem = ({
   const { value } = props;
 
   const { filter, removeInput } = React.useContext(InlineComboboxContext);
-
-  const store = useComboboxContext()!;
+  const contextStore = useComboboxContext();
+  const store = contextStore as NonNullable<typeof contextStore>;
 
   // Optimization: Do not subscribe to value if filter is false
-  const search = filter && store.useState("value");
+  const storeValue = store.useState("value");
+  const search = filter && storeValue;
 
   const visible = React.useMemo(
     () =>
       !filter || filter({ group, keywords, label, value }, search as string),
     [filter, group, keywords, label, value, search],
   );
+
+  if (!contextStore) return null;
 
   if (!visible) return null;
 
@@ -335,8 +332,8 @@ const InlineComboboxEmpty = ({
   className,
 }: React.HTMLAttributes<HTMLDivElement>) => {
   const { setHasEmpty } = React.useContext(InlineComboboxContext);
-  const store = useComboboxContext()!;
-  const items = store.useState("items");
+  const store = useComboboxContext();
+  const items = store?.useState("items") || [];
 
   React.useEffect(() => {
     setHasEmpty(true);

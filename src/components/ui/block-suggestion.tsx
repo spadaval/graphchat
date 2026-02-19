@@ -108,9 +108,10 @@ export function BlockSuggestionCard({
   const [editingId, setEditingId] = React.useState<string | null>(null);
 
   return (
-    <div
+    <section
       key={`${suggestion.suggestionId}-${idx}`}
       className="relative"
+      aria-label={`Suggestion ${idx + 1}`}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
@@ -134,53 +135,62 @@ export function BlockSuggestionCard({
         <div className="relative mt-1 mb-4 pl-[32px]">
           <div className="flex flex-col gap-2">
             {suggestion.type === "remove" &&
-              suggestionText2Array(suggestion.text!).map((text, index) => (
-                <div key={index} className="flex items-center gap-2">
+              suggestion.text &&
+              suggestionText2Array(suggestion.text).map((text, index) => (
+                <div
+                  key={`remove-${index}-${text.slice(0, 10)}`}
+                  className="flex items-center gap-2"
+                >
                   <span className="text-muted-foreground text-sm">Delete:</span>
 
-                  <span key={index} className="text-sm">
-                    {text}
-                  </span>
+                  <span className="text-sm">{text}</span>
                 </div>
               ))}
 
             {suggestion.type === "insert" &&
-              suggestionText2Array(suggestion.newText!).map((text, index) => (
-                <div key={index} className="flex items-center gap-2">
+              suggestion.newText &&
+              suggestionText2Array(suggestion.newText).map((text, index) => (
+                <div
+                  key={`insert-${index}-${text.slice(0, 10)}`}
+                  className="flex items-center gap-2"
+                >
                   <span className="text-muted-foreground text-sm">Add:</span>
 
-                  <span key={index} className="text-sm">
-                    {text || "line breaks"}
-                  </span>
+                  <span className="text-sm">{text || "line breaks"}</span>
                 </div>
               ))}
 
             {suggestion.type === "replace" && (
               <div className="flex flex-col gap-2">
-                {suggestionText2Array(suggestion.newText!).map(
-                  (text, index) => (
-                    <React.Fragment key={index}>
-                      <div
-                        key={index}
-                        className="flex items-start gap-2 text-brand/80"
+                {suggestion.newText &&
+                  suggestionText2Array(suggestion.newText).map(
+                    (text, index) => (
+                      <React.Fragment
+                        key={`replace-new-${index}-${text.slice(0, 10)}`}
                       >
-                        <span className="text-sm">with:</span>
+                        <div className="flex items-start gap-2 text-brand/80">
+                          <span className="text-sm">with:</span>
+                          <span className="text-sm">
+                            {text || "line breaks"}
+                          </span>
+                        </div>
+                      </React.Fragment>
+                    ),
+                  )}
+
+                {suggestion.text &&
+                  suggestionText2Array(suggestion.text).map((text, index) => (
+                    <React.Fragment
+                      key={`replace-old-${index}-${text.slice(0, 10)}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="text-muted-foreground text-sm">
+                          {index === 0 ? "Replace:" : "Delete:"}
+                        </span>
                         <span className="text-sm">{text || "line breaks"}</span>
                       </div>
                     </React.Fragment>
-                  ),
-                )}
-
-                {suggestionText2Array(suggestion.text!).map((text, index) => (
-                  <React.Fragment key={index}>
-                    <div key={index} className="flex items-start gap-2">
-                      <span className="text-muted-foreground text-sm">
-                        {index === 0 ? "Replace:" : "Delete:"}
-                      </span>
-                      <span className="text-sm">{text || "line breaks"}</span>
-                    </div>
-                  </React.Fragment>
-                ))}
+                  ))}
               </div>
             )}
 
@@ -239,7 +249,7 @@ export function BlockSuggestionCard({
       </div>
 
       {!isLast && <div className="h-px w-full bg-muted" />}
-    </div>
+    </section>
   );
 }
 
@@ -336,8 +346,8 @@ export const useResolveSuggestion = (
 
       let newText = "";
       let text = "";
-      let properties: any = {};
-      let newProperties: any = {};
+      let properties: Record<string, unknown> = {};
+      let newProperties: Record<string, unknown> = {};
 
       // overlapping suggestion
       entries.forEach(([node]) => {

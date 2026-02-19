@@ -44,8 +44,7 @@ interface ChatAreaProps {
 }
 
 export function ChatArea({ currentThreadId, sendMessage }: ChatAreaProps) {
-  // Fetch the current thread using our new hook
-  const currentThread = useThread(currentThreadId!);
+  const currentThread = useThread(currentThreadId);
 
   if (!currentThreadId) {
     return <EmptyState sendMessage={sendMessage} />;

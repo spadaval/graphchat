@@ -1,0 +1,1 @@
+Always read the AGENTS.md file for instructions, gotchas, and other important information.

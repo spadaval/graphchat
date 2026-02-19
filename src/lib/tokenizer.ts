@@ -8,7 +8,7 @@ async function initTokenizer(modelId: string): Promise<Tokenizer> {
   const token = uiPreferences$.huggingfaceToken.get();
   const headers: Record<string, string> = {};
   if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`;
   }
 
   const [tokenizerJson, tokenizerConfig] = await Promise.all([
@@ -67,7 +67,7 @@ export async function testTokenizerMetadata(
   const token = uiPreferences$.huggingfaceToken.get();
   const headers: Record<string, string> = {};
   if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`;
   }
 
   try {

@@ -1,5 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
 import { getSlots } from "../llamacpp-client";
+import type { _Error } from "../llamacpp-client/types.gen";
+
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  if (error && typeof error === "object") {
+    const maybeError = error as _Error;
+    if (
+      maybeError.error &&
+      typeof maybeError.error === "object" &&
+      maybeError.error !== null
+    ) {
+      if (typeof maybeError.error.message === "string") {
+        return maybeError.error.message;
+      }
+      return JSON.stringify(maybeError.error);
+    }
+    return JSON.stringify(error);
+  }
+  return "An unknown error occurred";
+}
 
 export function SlotsComponent() {
   const {
@@ -11,14 +36,13 @@ export function SlotsComponent() {
     queryFn: async () => {
       const response = await getSlots();
       if (response.error) {
-        // Use type assertion to access the message property
         const errorMessage =
-          (response.error as any).error?.message || "Failed to fetch slots";
+          response.error.error?.message || "Failed to fetch slots";
         throw new Error(errorMessage);
       }
       return response.data;
     },
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 5000,
   });
 
   if (isLoading) {
@@ -30,30 +54,7 @@ export function SlotsComponent() {
   }
 
   if (error) {
-    // Bypass TypeScript error by using any
-    const errorAny: any = error;
-    let errorMessage = "Failed to fetch slots";
-
-    if (errorAny instanceof Error) {
-      errorMessage = errorAny.message;
-    } else if (typeof errorAny === "string") {
-      errorMessage = errorAny;
-    } else if (errorAny && typeof errorAny === "object") {
-      // Try to extract message from the _Error type
-      if (
-        errorAny.error &&
-        typeof errorAny.error === "object" &&
-        errorAny.error !== null
-      ) {
-        if (typeof errorAny.error.message === "string") {
-          errorMessage = errorAny.error.message;
-        } else {
-          errorMessage = JSON.stringify(errorAny.error);
-        }
-      } else {
-        errorMessage = JSON.stringify(errorAny);
-      }
-    }
+    const errorMessage = extractErrorMessage(error);
     return (
       <div className="p-4 text-center text-red-500">Error: {errorMessage}</div>
     );

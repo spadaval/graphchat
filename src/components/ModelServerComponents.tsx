@@ -1,5 +1,4 @@
 import { use$ } from "@legendapp/state/react";
-import { useNavigate } from "@tanstack/react-router";
 import {
   AlertCircle,
   Binary,
@@ -7,24 +6,14 @@ import {
   CheckCircle2,
   Loader2,
   Settings,
-  Sparkles,
 } from "lucide-react";
 import { useState } from "react";
-import { DocumentList } from "~/components/DocumentList";
 import { ModelProperties } from "~/components/ModelProperties";
 import { ServerInfoComponent } from "~/components/ServerInfo";
 import { SettingsModal } from "~/components/SettingsModal";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import {
-  chatStore$,
-  createDocument,
-  documentStore$,
-  getAllDocuments,
-  getThreadMessages,
-} from "~/lib/state";
-import { callLLMStreaming, modelProps$ } from "~/lib/state/llm";
 import type { ActiveTab } from "~/lib/state/types";
 import {
   setHuggingfaceToken,

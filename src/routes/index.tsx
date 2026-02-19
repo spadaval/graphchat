@@ -1,6 +1,6 @@
 import { use$ } from "@legendapp/state/react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { MainLayout, ModelServerSidebar } from "~/components/LayoutComponents";
 import { StorybookEditor } from "~/components/StorybookEditor";
 import { StorybookSidebar } from "~/components/StorybookSidebar";
@@ -27,20 +27,20 @@ function StorybookPage() {
   const { openDocumentIds, currentDocumentId: activeDocumentId } =
     use$(documentStore$);
 
-  const handleSelectDocument = (id: DocumentId) => {
+  const handleSelectDocument = useCallback((id: DocumentId) => {
     setCurrentDocument(id);
-  };
+  }, []);
+
+  const handleCloseDocument = useCallback((id: DocumentId) => {
+    closeDocument(id);
+  }, []);
 
   // Sync active document with search param
   useEffect(() => {
     if (searchId && searchId !== activeDocumentId) {
       handleSelectDocument(searchId);
     }
-  }, [searchId]);
-
-  const handleCloseDocument = (id: DocumentId) => {
-    closeDocument(id);
-  };
+  }, [searchId, activeDocumentId, handleSelectDocument]);
 
   return (
     <MainLayout

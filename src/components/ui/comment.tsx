@@ -167,14 +167,10 @@ export function Comment(props: {
   const isLast = index === discussionLength - 1;
   const isEditing = editingId && editingId === comment.id;
 
-  const [hovering, setHovering] = React.useState(false);
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
 
   return (
-    <div
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
-    >
+    <div className="group/comment relative">
       <div className="relative flex items-center">
         <Avatar className="size-5">
           <AvatarImage alt={userInfo?.name} src={userInfo?.avatarUrl} />
@@ -192,8 +188,13 @@ export function Comment(props: {
           {comment.isEdited && <span>(edited)</span>}
         </div>
 
-        {isMyComment && (hovering || dropdownOpen) && (
-          <div className="absolute top-0 right-0 flex space-x-1">
+        {isMyComment && (
+          <div
+            className={cn(
+              "absolute top-0 right-0 flex space-x-1",
+              !dropdownOpen && "hidden group-hover/comment:flex",
+            )}
+          >
             {index === 0 && (
               <Button
                 variant="ghost"
@@ -387,7 +388,7 @@ function CommentMoreDropdown(props: {
 
 const useCommentEditor = (
   options: Omit<CreatePlateEditorOptions, "plugins"> = {},
-  deps: any[] = [],
+  deps: React.DependencyList = [],
 ) => {
   const commentEditor = usePlateEditor(
     {

@@ -88,13 +88,17 @@ export function AIMenu() {
   React.useEffect(() => {
     if (streaming) {
       const anchor = api.aiChat.node({ anchor: true });
-      setTimeout(() => {
-        const anchorDom = editor.api.toDOMNode(anchor![0])!;
-        setAnchorElement(anchorDom);
-      }, 0);
+      if (anchor) {
+        setTimeout(() => {
+          const anchorDom = editor.api.toDOMNode(anchor[0]);
+          if (anchorDom) {
+            setAnchorElement(anchorDom);
+          }
+        }, 0);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streaming]);
+  }, [streaming, api.aiChat.node, editor.api.toDOMNode]);
 
   const setOpen = (open: boolean) => {
     if (open) {
@@ -111,7 +115,13 @@ export function AIMenu() {
 
   useEditorChat({
     onOpenBlockSelection: (blocks: NodeEntry[]) => {
-      show(editor.api.toDOMNode(blocks.at(-1)![0])!);
+      const lastBlock = blocks.at(-1);
+      if (lastBlock) {
+        const domNode = editor.api.toDOMNode(lastBlock[0]);
+        if (domNode) {
+          show(domNode);
+        }
+      }
     },
     onOpenChange: (open) => {
       if (!open) {
@@ -120,7 +130,10 @@ export function AIMenu() {
       }
     },
     onOpenCursor: () => {
-      const [ancestor] = editor.api.block({ highest: true })!;
+      const blockEntry = editor.api.block({ highest: true });
+      if (!blockEntry) return;
+
+      const [ancestor] = blockEntry;
 
       if (!editor.api.isAt({ end: true }) && !editor.api.isEmpty(ancestor)) {
         editor
@@ -128,10 +141,19 @@ export function AIMenu() {
           .blockSelection.set(ancestor.id as string);
       }
 
-      show(editor.api.toDOMNode(ancestor)!);
+      const domNode = editor.api.toDOMNode(ancestor);
+      if (domNode) {
+        show(domNode);
+      }
     },
     onOpenSelection: () => {
-      show(editor.api.toDOMNode(editor.api.blocks().at(-1)![0])!);
+      const lastBlock = editor.api.blocks().at(-1);
+      if (lastBlock) {
+        const domNode = editor.api.toDOMNode(lastBlock[0]);
+        if (domNode) {
+          show(domNode);
+        }
+      }
     },
   });
 
@@ -139,7 +161,7 @@ export function AIMenu() {
     api.aiChat.stop();
 
     // remove when you implement the route /api/ai/command
-    (chat as any)._abortFakeStream();
+    (chat as unknown as { _abortFakeStream: () => void })._abortFakeStream?.();
   });
 
   const isLoading = status === "streaming" || status === "submitted";
@@ -162,10 +184,23 @@ export function AIMenu() {
       if (!anchorNode) return;
 
       const block = editor.api.block({ at: anchorNode[1] });
-      setAnchorElement(editor.api.toDOMNode(block![0]!)!);
+      if (block) {
+        const domNode = editor.api.toDOMNode(block[0]);
+        if (domNode) {
+          setAnchorElement(domNode);
+        }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading]);
+  }, [
+    isLoading,
+    editor.getApi,
+    editor.api.block,
+    editor.api.node,
+    editor.api.toDOMNode,
+    mode,
+    toolName,
+  ]);
 
   if (isLoading && mode === "insert") return null;
 
@@ -175,7 +210,9 @@ export function AIMenu() {
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal={false}>
-      <PopoverAnchor virtualRef={{ current: anchorElement! }} />
+      {anchorElement && (
+        <PopoverAnchor virtualRef={{ current: anchorElement }} />
+      )}
 
       <PopoverContent
         className="border-none bg-transparent p-0 shadow-none"
@@ -263,7 +300,9 @@ const AICommentIcon = () => (
     viewBox="0 0 24 24"
     width="24"
     xmlns="http://www.w3.org/2000/svg"
+    role="img"
   >
+    <title>AI Comment</title>
     <path d="M0 0h24v24H0z" fill="none" stroke="none" />
     <path d="M8 9h8" />
     <path d="M8 13h4.5" />
@@ -562,7 +601,7 @@ export const AIMenuItems = ({
 }) => {
   const editor = useEditorRef();
   const { messages } = usePluginOption(AIChatPlugin, "chat");
-  const aiEditor = usePluginOption(AIChatPlugin, "aiEditor")!;
+  const aiEditor = usePluginOption(AIChatPlugin, "aiEditor");
   const isSelecting = useIsSelecting();
 
   const menuState = React.useMemo(() => {
@@ -585,10 +624,15 @@ export const AIMenuItems = ({
     }
   }, [menuGroups, setValue]);
 
+  if (!aiEditor) return null;
+
   return (
     <>
-      {menuGroups.map((group, index) => (
-        <CommandGroup key={index} heading={group.heading}>
+      {menuGroups.map((group, _index) => (
+        <CommandGroup
+          key={group.heading || group.items[0]?.value}
+          heading={group.heading}
+        >
           {group.items.map((menuItem) => (
             <CommandItem
               key={menuItem.value}
@@ -647,7 +691,7 @@ export function AILoadingBar() {
     api.aiChat.stop();
 
     // remove when you implement the route /api/ai/command
-    (chat as any)._abortFakeStream();
+    (chat as unknown as { _abortFakeStream: () => void })._abortFakeStream?.();
   });
 
   if (

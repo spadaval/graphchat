@@ -10,7 +10,6 @@ import {
   FolderPlus,
   Ghost,
   Map as MapIcon,
-  MoreVertical,
   Plus,
   Scroll,
   Sparkles,
@@ -83,7 +82,7 @@ export function DocumentList({
     parentId: FolderId | "root" = "root",
   ) => {
     const typeDef = documentTypes[typeId];
-    const title = typeDef ? "Untitled " + typeDef.name : "Untitled";
+    const title = typeDef ? `Untitled ${typeDef.name}` : "Untitled";
     const id = createDocument(title, "", typeId, [], parentId);
     onSelect(id);
   };
@@ -215,7 +214,7 @@ function FolderListItem({
 }: FolderListItemProps) {
   const documents = use$(documentStore$.documents);
   const folders = use$(documentStore$.folders);
-  const documentTypes = use$(documentStore$.documentTypes);
+  const _documentTypes = use$(documentStore$.documentTypes);
 
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -227,7 +226,7 @@ function FolderListItem({
     (f) => f.parentId === folder.id,
   );
 
-  const handleToggle = (e: React.MouseEvent) => {
+  const handleToggle = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     updateFolder(folder.id, { isOpen: !folder.isOpen });
   };
@@ -262,7 +261,8 @@ function FolderListItem({
     <div className="flex flex-col">
       <ContextMenu>
         <ContextMenuTrigger>
-          <div
+          <button
+            type="button"
             draggable
             onDragStart={handleDragStart}
             onDragOver={(e) => {
@@ -273,7 +273,13 @@ function FolderListItem({
             onDragLeave={() => setIsDragOver(false)}
             onDrop={handleDrop}
             onClick={handleToggle}
-            className={`flex items-center gap-2 p-2 rounded-md transition-colors cursor-pointer group ${
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleToggle(e);
+              }
+            }}
+            className={`w-full flex items-center gap-2 p-2 rounded-md transition-colors cursor-pointer group text-left ${
               isDragOver ? "bg-zinc-800" : "hover:bg-zinc-800/50"
             }`}
           >
@@ -306,7 +312,7 @@ function FolderListItem({
                 </span>
               )}
             </div>
-          </div>
+          </button>
         </ContextMenuTrigger>
         <ContextMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
           <ContextMenuItem onClick={() => onCreateFolder(folder.id)}>
@@ -373,7 +379,7 @@ function DocumentListItem({
   formatDate,
 }: DocumentListItemProps) {
   const documentTypes = use$(documentStore$.documentTypes);
-  const typeDef = documentTypes[document.type] || documentTypes["general"];
+  const typeDef = documentTypes[document.type] || documentTypes.general;
   const IconComponent = typeDef ? iconMap[typeDef.icon] || FileText : FileText;
 
   const [isRenaming, setIsRenaming] = useState(false);
@@ -395,11 +401,18 @@ function DocumentListItem({
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        <div
+        <button
+          type="button"
           draggable
           onDragStart={handleDragStart}
           onClick={onSelect}
-          className={`flex flex-col gap-1 p-3 rounded-md transition-colors cursor-pointer ${
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onSelect();
+            }
+          }}
+          className={`w-full flex flex-col gap-1 p-3 rounded-md transition-colors cursor-pointer text-left ${
             isActive
               ? "bg-zinc-800 text-zinc-100"
               : "text-zinc-400 hover:bg-zinc-800/30 hover:text-zinc-200"
@@ -450,7 +463,7 @@ function DocumentListItem({
               </div>
             </div>
           )}
-        </div>
+        </button>
       </ContextMenuTrigger>
       <ContextMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
         <ContextMenuItem onClick={() => setIsRenaming(true)}>

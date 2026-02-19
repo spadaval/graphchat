@@ -141,6 +141,7 @@ function SuggestionLineBreakContent({
           </span>
         </>
       ) : (
+        // biome-ignore lint/a11y/noStaticElementInteractions: suggestion hover sync
         <div
           className={cn(
             suggestionVariants({

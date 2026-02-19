@@ -4,10 +4,10 @@ import { syncObservable } from "@legendapp/state/sync";
 import type {
   Block,
   BlockId,
+  BlockMetadata,
   BlockType,
   BlockViewMode,
   DocumentId,
-  LLMRequest,
 } from "./types";
 
 // Block storage
@@ -19,7 +19,7 @@ export const createBlock = (
   text: string,
   role: "user" | "assistant" | "system" = "user",
   type: BlockType = "paragraph",
-  metadata?: Record<string, any>,
+  metadata?: BlockMetadata,
   viewMode: BlockViewMode = "preview",
 ): Block => ({
   id: `blk-${crypto.randomUUID()}`,

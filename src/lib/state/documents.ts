@@ -100,7 +100,7 @@ export const createDocument = (
   let contentToUse = initialContent;
   if (!contentToUse) {
     const typeDef = documentStore$.documentTypes[type].get();
-    if (typeDef && typeDef.template) {
+    if (typeDef?.template) {
       contentToUse = typeDef.template;
     }
   }

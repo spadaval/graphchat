@@ -63,7 +63,7 @@ export function MediaToolbar({
       FloatingMediaStore.set("isEditing", false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, isEditing]);
 
   const element = useElement();
   const { props: buttonProps } = useRemoveNodeButton({ element });

@@ -94,23 +94,34 @@ function Tab({ id, isActive, onClick, onClose }: TabProps) {
   const title = document?.title || "Untitled";
 
   const typeDef =
-    document && (documentTypes[document.type] || documentTypes["general"]);
+    document && (documentTypes[document.type] || documentTypes.general);
   const IconComponent = typeDef ? iconMap[typeDef.icon] || FileText : FileText;
 
   return (
     <div
-      onClick={onClick}
       className={`
-        group flex items-center gap-2 px-4 py-2 text-sm border-r border-zinc-800 cursor-pointer select-none min-w-[120px] max-w-[200px]
+        group flex items-center gap-2 px-4 py-2 text-sm border-r border-zinc-800 select-none min-w-[120px] max-w-[200px] transition-colors
         ${isActive ? "bg-zinc-800 text-zinc-100" : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"}
       `}
     >
-      <IconComponent className="size-3 shrink-0 opacity-70" />
-      <span className="truncate flex-1">{title}</span>
+      <button
+        type="button"
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        className="flex items-center gap-2 flex-1 min-w-0 text-left hover:text-zinc-100 transition-colors"
+      >
+        <IconComponent className="size-3 shrink-0 opacity-70" />
+        <span className="truncate flex-1">{title}</span>
+      </button>
       <button
         type="button"
         onClick={onClose}
-        className={`p-0.5 rounded-sm opacity-0 group-hover:opacity-100 hover:bg-zinc-700 ${isActive ? "opacity-100" : ""}`}
+        className={`p-0.5 rounded-sm opacity-0 group-hover:opacity-100 hover:bg-zinc-700 transition-opacity ${isActive ? "opacity-100" : ""}`}
       >
         <X className="size-3" />
       </button>

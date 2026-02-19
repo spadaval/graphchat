@@ -15,7 +15,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
@@ -27,12 +27,18 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { blocks$ } from "~/lib/state/block";
-import { syncDocumentContent, updateDocument } from "~/lib/state/documents";
+import { syncDocumentContent } from "~/lib/state/documents";
 import { callLLMStreaming, modelProps$ } from "~/lib/state/llm";
-import type { Block, BlockId, DocumentId } from "~/lib/state/types";
-import { uiPreferences$ } from "~/lib/state/ui";
+import type {
+  BlockId,
+  DocumentId,
+  LLMMessage,
+  LLMRequest,
+  TokenProbability,
+} from "~/lib/state/types";
 import { getTokenCount, getTokens } from "~/lib/tokenizer";
 import { cn } from "~/lib/utils";
+import type { MyEditor, MyValue } from "./plate-types";
 import { UnifiedEditorKitWithAI } from "./unified-editor-kit";
 
 interface BlockCardProps {
@@ -65,10 +71,10 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
     value: block.text
       ? (editor) => {
           try {
-            return (editor.api as any).markdown.deserialize(block.text);
+            return (editor as MyEditor).api.markdown.deserialize(block.text);
           } catch (error) {
             console.error("Error deserializing initial value:", error);
-            return [{ type: "p", children: [{ text: block.text }] }];
+            return [{ type: "p", children: [{ text: block.text }] }] as MyValue;
           }
         }
       : undefined,
@@ -76,13 +82,12 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
 
   // Update editor content when block.text changes externally
   useEffect(() => {
-    if ((editor.api as any)?.markdown && block.text !== undefined) {
-      const currentMarkdown = (editor.api as any).markdown.serialize();
+    const myEditor = editor as MyEditor;
+    if (myEditor.api.markdown && block.text !== undefined) {
+      const currentMarkdown = myEditor.api.markdown.serialize();
       if (currentMarkdown !== block.text) {
         try {
-          const deserialized = (editor.api as any).markdown.deserialize(
-            block.text,
-          );
+          const deserialized = myEditor.api.markdown.deserialize(block.text);
           editor.tf.setValue(deserialized);
         } catch (error) {
           console.error("Error updating editor content:", error);
@@ -96,7 +101,6 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
   const [tokens, setTokens] = useState<string[]>([]);
   const tokenTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { tokenizerModelId } = use$(uiPreferences$);
   useEffect(() => {
     if (tokenTimeoutRef.current) clearTimeout(tokenTimeoutRef.current);
 
@@ -110,13 +114,13 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
     return () => {
       if (tokenTimeoutRef.current) clearTimeout(tokenTimeoutRef.current);
     };
-  }, [block.text, block.viewMode, tokenizerModelId]);
+  }, [block.text, block.viewMode]);
 
   // Debounce syncDocumentContent to avoid re-rendering the whole document list too often
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleContentChange = () => {
-    const content = (editor.api as any).markdown.serialize();
+    const content = (editor as MyEditor).api.markdown.serialize();
     block$.text.set(content);
 
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
@@ -140,8 +144,8 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
     try {
       const stream = callLLMStreaming(sourceMessages, modelProps$.get());
       let fullText = "";
-      let allProbabilities: any[] = [];
-      let finalRequest: any = null;
+      let allProbabilities: TokenProbability[] = [];
+      let finalRequest: LLMRequest | null = null;
 
       for await (const chunkResult of stream) {
         chunkResult.match(
@@ -164,9 +168,10 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
       }
 
       if (finalRequest) {
+        const request = finalRequest as LLMRequest;
         block$.metadata.set({
           ...block.metadata,
-          sourceMessages: finalRequest.sourceMessages,
+          sourceMessages: request.sourceMessages,
           tokenProbabilities: allProbabilities,
           aiGenerated: true,
         });
@@ -183,7 +188,7 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
     try {
       // Create a continuation prompt
       const previousText = block.text;
-      const continuationMessage = {
+      const continuationMessage: LLMMessage = {
         role: "user",
         content:
           "Continue writing from the previous text. Do not repeat the previous text. Just continue.",
@@ -191,7 +196,7 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
 
       // Construct messages history for context
       // If we have source messages, use them, otherwise treat current text as context
-      const messages = block.metadata?.sourceMessages
+      const messages: LLMMessage[] = block.metadata?.sourceMessages
         ? [...block.metadata.sourceMessages]
         : [];
 
@@ -221,8 +226,9 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
       // So chunk.response.content is a DELTA.
 
       let newGeneratedText = "";
-      let finalRequest: any = null;
-      let allProbabilities: any[] = block.metadata?.tokenProbabilities || [];
+      let finalRequest: LLMRequest | null = null;
+      let allProbabilities: TokenProbability[] =
+        block.metadata?.tokenProbabilities || [];
 
       for await (const chunkResult of stream) {
         chunkResult.match(
@@ -256,7 +262,7 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
         // The "sourceMessages" for THIS block should probably reflect that it was generated from the original prompt + continuation?
         // Or we just update the last assistant message in sourceMessages to be the FULL text.
 
-        const updatedMessages = [...messages];
+        const _updatedMessages = [...messages];
         // Remove the "Continue" user prompt we added, and merge the result?
         // Or keep the "Continue" prompt in history to show how we got here?
         // If we keep it, it becomes a chat history.
@@ -275,7 +281,7 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
         // user: continue
         // assistant: [new part]
 
-        const newHistory = [
+        const newHistory: LLMMessage[] = [
           ...messages,
           { role: "assistant", content: newGeneratedText },
         ];
@@ -323,6 +329,7 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
         </div>
         <div className="flex items-center gap-1">
           <button
+            type="button"
             onClick={() => onDelete(blockId)}
             className="p-1 hover:text-red-400 transition-colors"
             title="Delete block"
@@ -382,11 +389,11 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
             >
               {(block.metadata?.tokenProbabilities?.length
                 ? block.metadata.tokenProbabilities
-                : tokens.map((t) => ({ token: t }) as any)
-              ).map((tokenData: any, i: number) => {
+                : tokens.map((t) => ({ token: t }) as TokenProbability)
+              ).map((tokenData: TokenProbability, i: number) => {
                 const tokenText = tokenData.token || "";
                 // If we have prob info, use it. If not (local tokens), default to 0/undefined
-                const probInfo = block.metadata?.tokenProbabilities?.[i];
+                const _probInfo = block.metadata?.tokenProbabilities?.[i];
                 // Check if we are using the probability data directly
                 const isProbData =
                   !!tokenData.logprob || tokenData.logprob === 0;
@@ -470,11 +477,14 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
                             </div>
                             <div className="flex flex-col gap-1">
                               {tokenData.top_logprobs.map(
-                                (alt: any, j: number) => {
+                                (
+                                  alt: { token: string; logprob: number },
+                                  j: number,
+                                ) => {
                                   const altProb = Math.exp(alt.logprob);
                                   return (
                                     <div
-                                      key={j}
+                                      key={`${tokenData.token}-${j}`}
                                       className="flex justify-between items-center font-mono text-xs bg-zinc-800/30 p-1 px-2 rounded hover:bg-zinc-800/50 transition-colors"
                                     >
                                       <span className="text-zinc-300">
@@ -534,6 +544,7 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
             {isAi && (
               <>
                 <button
+                  type="button"
                   onClick={handleContinue}
                   className="p-1.5 rounded-md bg-zinc-800/80 text-blue-400 hover:text-blue-300 hover:bg-zinc-700 transition-all"
                   title="Continue generating"
@@ -545,6 +556,7 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
                   />
                 </button>
                 <button
+                  type="button"
                   onClick={handleRegenerate}
                   className="p-1.5 rounded-md bg-zinc-800/80 text-blue-400 hover:text-blue-300 hover:bg-zinc-700 transition-all"
                   title="Regenerate block"
@@ -556,6 +568,7 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
                   />
                 </button>
                 <button
+                  type="button"
                   onClick={convertToRegular}
                   className="p-1.5 rounded-md bg-zinc-800/80 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-all"
                   title="Convert to regular block"
@@ -568,10 +581,11 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
             {/* AI Rewrite Button */}
             {!isAi && (
               <button
+                type="button"
                 onClick={() => {
                   block$.viewMode.set("edit");
                   setTimeout(() => {
-                    (editor.api as any).aiChat.show();
+                    (editor as MyEditor).api.aiChat.show();
                   }, 50);
                 }}
                 className="p-1.5 rounded-md bg-zinc-800/50 text-blue-400 hover:text-blue-300 hover:bg-zinc-700 transition-all"
@@ -583,6 +597,7 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
 
             {/* Mode Toggle Button */}
             <button
+              type="button"
               onClick={() =>
                 block$.viewMode.set(
                   block.viewMode === "preview"
@@ -614,6 +629,7 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
 
             {/* Tokens Toggle Button */}
             <button
+              type="button"
               onClick={() =>
                 block$.viewMode.set(
                   block.viewMode === "tokens" ? "preview" : "tokens",

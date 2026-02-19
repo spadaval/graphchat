@@ -22,7 +22,7 @@ export function DocumentChip({
   }
 
   const handleClick = () => {
-    navigate({ to: "/documents", search: { id: documentId } });
+    navigate({ to: "/", search: { id: documentId } });
   };
 
   const handleRemove = (e: React.MouseEvent) => {
@@ -31,15 +31,16 @@ export function DocumentChip({
   };
 
   return (
-    <div className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600 rounded-md text-xs text-zinc-200 hover:from-zinc-600 hover:to-zinc-700 transition-all duration-200 cursor-pointer group">
-      <FileText size={12} className="text-zinc-400" />
-      <span
+    <div className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600 rounded-md text-xs text-zinc-200 hover:from-zinc-600 hover:to-zinc-700 transition-all duration-200 group">
+      <button
+        type="button"
         onClick={handleClick}
-        className="truncate max-w-32 hover:text-zinc-100"
+        className="flex items-center gap-1 hover:text-zinc-100 transition-colors"
         title={document.title}
       >
-        {document.title}
-      </span>
+        <FileText size={12} className="text-zinc-400" />
+        <span className="truncate max-w-32">{document.title}</span>
+      </button>
       {showRemove && onRemove && (
         <button
           type="button"

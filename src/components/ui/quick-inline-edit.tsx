@@ -18,7 +18,7 @@ export function QuickInlineEdit({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
-  const displayRef = useRef<HTMLDivElement>(null);
+  const displayRef = useRef<HTMLButtonElement>(null);
 
   // Focus input when editing starts
   useEffect(() => {
@@ -77,13 +77,20 @@ export function QuickInlineEdit({
           className="text-lg font-semibold h-10 px-3"
         />
       ) : (
-        <div
+        <button
+          type="button"
           ref={displayRef}
-          className="text-lg font-semibold text-zinc-100 truncate cursor-text hover:bg-zinc-800/50 rounded px-3 py-2"
+          className="w-full text-lg font-semibold text-zinc-100 truncate cursor-text hover:bg-zinc-800/50 rounded px-3 py-2 text-left"
           onClick={handleStartEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleStartEdit();
+            }
+          }}
         >
           {value || <span className="text-zinc-500">{placeholder}</span>}
-        </div>
+        </button>
       )}
     </div>
   );

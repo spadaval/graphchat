@@ -20,7 +20,13 @@ import { use$ } from "@legendapp/state/react";
 import { Loader2, Plus, Send, Sparkles, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
-import type { Block, BlockId, Document } from "~/lib/state";
+import type {
+  Block,
+  BlockId,
+  Document,
+  LLMRequest,
+  TokenProbability,
+} from "~/lib/state";
 import { blocks$, createBlock, updateDocument } from "~/lib/state";
 import { syncDocumentContent } from "~/lib/state/documents";
 import { callLLMStreaming, modelProps$ } from "~/lib/state/llm";
@@ -32,10 +38,7 @@ interface PlateDocumentEditorProps {
   onCancel?: () => void;
 }
 
-export function PlateDocumentEditor({
-  document$,
-  onCancel,
-}: PlateDocumentEditorProps) {
+export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   const docTitle = use$(document$.title);
   const blockIds = use$(document$.blocks) || [];
   const docId = document$.id.peek();
@@ -54,8 +57,8 @@ export function PlateDocumentEditor({
   // Migration: If document has content but no blocks, create a block from content
   useEffect(() => {
     const doc = document$.get();
-    if ((!doc.blocks || doc.blocks.length === 0) && (doc as any).content) {
-      const newBlock = createBlock((doc as any).content, "user", "paragraph");
+    if ((!doc.blocks || doc.blocks.length === 0) && doc.content) {
+      const newBlock = createBlock(doc.content, "user", "paragraph");
       blocks$.assign({ [newBlock.id]: newBlock });
       updateDocument(doc.id, { blocks: [newBlock.id] });
     }
@@ -141,8 +144,8 @@ export function PlateDocumentEditor({
       );
 
       let fullText = "";
-      let allProbabilities: any[] = [];
-      let finalRequest: any = null;
+      let allProbabilities: TokenProbability[] = [];
+      let finalRequest: LLMRequest | null = null;
 
       for await (const chunkResult of stream) {
         chunkResult.match(
@@ -162,7 +165,7 @@ export function PlateDocumentEditor({
           },
           (error) => {
             console.error("AI Generation error:", error);
-            blocks$[newBlock.id].text.set("Error: " + error.message);
+            blocks$[newBlock.id].text.set(`Error: ${error.message}`);
           },
         );
       }
@@ -170,7 +173,7 @@ export function PlateDocumentEditor({
       if (finalRequest) {
         blocks$[newBlock.id].metadata.set({
           ...blocks$[newBlock.id].metadata.get(),
-          sourceMessages: finalRequest.sourceMessages,
+          sourceMessages: (finalRequest as LLMRequest).sourceMessages,
           tokenProbabilities: allProbabilities,
           aiGenerated: true,
         });
@@ -184,7 +187,7 @@ export function PlateDocumentEditor({
     }
   };
 
-  const aiFillBetween = async (beforeId: BlockId, afterId: BlockId) => {
+  const aiFillBetween = async (beforeId: BlockId, _afterId: BlockId) => {
     if (isAiGenerating) return;
     setIsAiGenerating(true);
 

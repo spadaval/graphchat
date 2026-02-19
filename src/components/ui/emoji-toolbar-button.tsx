@@ -252,7 +252,7 @@ function EmojiPickerContent({
   const getRowWidth = settings.perLine.value * settings.buttonSize.value;
 
   const isCategoryVisible = React.useCallback(
-    (categoryId: any) =>
+    (categoryId: EmojiCategoryList) =>
       visibleCategories.has(categoryId)
         ? visibleCategories.get(categoryId)
         : false,
@@ -376,7 +376,6 @@ function EmojiPickerSearchBar({
           aria-label="Search"
           autoComplete="off"
           type="text"
-          autoFocus
         />
         {children}
       </div>
@@ -549,7 +548,9 @@ const emojiCategoryIcons: Record<
         strokeWidth="2"
         viewBox="0 0 24 24"
         xmlns="http://www.w3.org/2000/svg"
+        role="img"
       >
+        <title>Activity</title>
         <circle cx="12" cy="12" r="10" />
         <path d="M2.1 13.4A10.1 10.1 0 0 0 13.4 2.1" />
         <path d="m5 4.9 14 14.2" />
@@ -566,7 +567,9 @@ const emojiCategoryIcons: Record<
         strokeWidth="2"
         viewBox="0 0 24 24"
         xmlns="http://www.w3.org/2000/svg"
+        role="img"
       >
+        <title>Activity</title>
         <circle cx="12" cy="12" r="10" />
         <path d="M2.1 13.4A10.1 10.1 0 0 0 13.4 2.1" />
         <path d="m5 4.9 14 14.2" />

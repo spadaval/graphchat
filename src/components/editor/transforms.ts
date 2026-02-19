@@ -143,9 +143,8 @@ export const setBlockType = (
         editor.tf.unsetNodes([KEYS.listType, "indent"], { at: path });
       }
       if (type in setBlockMap) {
-        return setBlockMap[type](editor, type, entry);
-      }
-      if (node.type !== type) {
+        setBlockMap[type](editor, type, entry);
+      } else if (node.type !== type) {
         editor.tf.setNodes({ type }, { at: path });
       }
     };
@@ -162,7 +161,9 @@ export const setBlockType = (
 
     const entries = editor.api.blocks({ mode: "lowest" });
 
-    entries.forEach((entry) => setEntry(entry));
+    entries.forEach((entry) => {
+      setEntry(entry);
+    });
   });
 };
 

@@ -2,7 +2,6 @@ import type { TCaptionProps, TImageElement, TResizableProps } from "platejs";
 import { NodeApi } from "platejs";
 import type { SlateElementProps } from "platejs/static";
 import { SlateElement } from "platejs/static";
-import * as React from "react";
 
 import { cn } from "~/lib/utils";
 
@@ -23,7 +22,9 @@ export function ImageElementStatic(
               "w-full max-w-full cursor-default object-cover px-0",
               "rounded-sm",
             )}
-            alt={(props.attributes as any).alt}
+            alt={
+              ((props.element as Record<string, unknown>).alt as string) || ""
+            }
             src={url}
           />
           {caption && (

@@ -10,8 +10,9 @@ import {
 import type { BlockId, ChatId, DocumentId } from "./types";
 
 // Hook to get a thread by ID
-export const useThread = (threadId: ChatId) => {
+export const useThread = (threadId: ChatId | undefined) => {
   const threads = use$(chatStore$.threads);
+  if (!threadId) return undefined;
   return threads[threadId];
 };
 

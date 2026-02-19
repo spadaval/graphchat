@@ -4,13 +4,11 @@ import type { Observable } from "@legendapp/state";
 import { use$ } from "@legendapp/state/react";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
 import { useEffect } from "react";
-import {
-  UnifiedEditorKit,
-  UnifiedEditorKitWithAI,
-} from "~/components/editor/unified-editor-kit";
+import { UnifiedEditorKitWithAI } from "~/components/editor/unified-editor-kit";
 import { Button } from "~/components/ui/button";
 import { QuickInlineEdit } from "~/components/ui/quick-inline-edit";
-import { type DocumentId, updateDocument } from "~/lib/state";
+import { type Document, type DocumentId, updateDocument } from "~/lib/state";
+import type { MyEditor } from "./plate-types";
 
 export interface EditorConfig {
   placeholder?: string;
@@ -31,9 +29,10 @@ export interface EditorProps {
   onCancel?: () => void;
   onDelete?: () => void;
   config?: EditorConfig;
-  plugins?: any[];
+  // plugins is an external type from Plate
+  plugins?: unknown[];
   disabled?: boolean;
-  document$?: Observable<any>; // For document mode
+  document$?: Observable<Document>; // For document mode
   documentId?: DocumentId; // For document mode
 }
 
@@ -56,11 +55,12 @@ export function Editor({
 
   const editor = usePlateEditor({
     id: "editor",
-    plugins: editorPlugins,
+    // biome-ignore lint/suspicious/noExplicitAny: unknown external type
+    plugins: editorPlugins as any,
     value: currentValue
       ? (editor) => {
           try {
-            return editor.api.markdown.deserialize(currentValue);
+            return (editor as MyEditor).api.markdown.deserialize(currentValue);
           } catch (error) {
             console.error("Error deserializing initial value:", error);
             return [];
@@ -71,9 +71,10 @@ export function Editor({
 
   // Update editor content when currentValue changes externally
   useEffect(() => {
-    if (editor.api?.markdown && currentValue !== undefined) {
+    const myEditor = editor as unknown as MyEditor;
+    if (myEditor.api.markdown && currentValue !== undefined) {
       try {
-        const deserialized = editor.api.markdown.deserialize(currentValue);
+        const deserialized = myEditor.api.markdown.deserialize(currentValue);
         editor.tf.setValue(deserialized);
       } catch (error) {
         console.error("Error updating editor content:", error);
@@ -83,9 +84,10 @@ export function Editor({
 
   // Handle content changes
   const handleContentChange = () => {
-    if (editor.api?.markdown) {
+    const myEditor = editor as unknown as MyEditor;
+    if (myEditor.api.markdown) {
       try {
-        const content = editor.api.markdown.serialize();
+        const content = myEditor.api.markdown.serialize();
         if (config.autoUpdateDocument && documentId) {
           // Update the document directly
           updateDocument(documentId, { content });

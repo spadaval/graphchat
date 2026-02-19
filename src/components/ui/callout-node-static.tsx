@@ -1,19 +1,24 @@
+import type { TElement } from "platejs";
 import type { SlateElementProps } from "platejs/static";
 import { SlateElement } from "platejs/static";
-import * as React from "react";
 
 import { cn } from "~/lib/utils";
+
+export interface TCalloutElement extends TElement {
+  backgroundColor?: string;
+  icon?: string;
+}
 
 export function CalloutElementStatic({
   children,
   className,
   ...props
-}: SlateElementProps) {
+}: SlateElementProps<TCalloutElement>) {
   return (
     <SlateElement
       className={cn("my-1 flex rounded-sm bg-muted p-4 pl-3", className)}
       style={{
-        backgroundColor: props.element.backgroundColor as any,
+        backgroundColor: props.element.backgroundColor,
       }}
       {...props}
     >
@@ -26,7 +31,7 @@ export function CalloutElementStatic({
           }}
         >
           <span data-plate-prevent-deserialization>
-            {(props.element.icon as any) || "💡"}
+            {props.element.icon || "💡"}
           </span>
         </div>
         <div className="w-full">{children}</div>

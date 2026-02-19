@@ -32,7 +32,7 @@ interface ChatMessageProps {
 }
 
 interface MessageAvatarProps {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system";
 }
 
 const _MessageAvatar = ({ role }: MessageAvatarProps) => (
@@ -49,7 +49,7 @@ const _MessageAvatar = ({ role }: MessageAvatarProps) => (
 
 interface MessageBubbleProps {
   text: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system";
   isStreaming: boolean;
   isEditing?: boolean;
   onSave?: () => void;
@@ -385,11 +385,11 @@ const ChatMessage = ({ blockId, isStreaming }: ChatMessageProps) => {
 
   return (
     <div className="group flex gap-3">
-      <_MessageAvatar role={block.role as any} />
+      <_MessageAvatar role={block.role} />
       <div className="flex-1 min-w-0">
         <_MessageBubble
           text={isEditing ? editText : block.text}
-          role={block.role as any}
+          role={block.role}
           isStreaming={isStreaming}
           isEditing={isEditing}
           onSave={handleSave}

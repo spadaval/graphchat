@@ -56,7 +56,7 @@ export function FontColorToolbarButton({
     (value = !open) => {
       setOpen(value);
     },
-    [open, setOpen],
+    [open],
   );
 
   const updateColor = React.useCallback(
@@ -233,7 +233,7 @@ function ColorCustom({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const updateCustomColorDebounced = React.useCallback(
     debounce(updateCustomColor, 100),
-    [updateCustomColor],
+    [],
   );
 
   return (

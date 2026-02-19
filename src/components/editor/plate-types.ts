@@ -21,6 +21,7 @@ import type {
   TText,
   TTextAlignProps,
 } from "platejs";
+import type { PlateEditor } from "platejs/react";
 
 export interface MyBlockElement extends TElement, TListProps {
   id?: string;
@@ -161,3 +162,16 @@ export type MyValue = (
   | MyTableElement
   | MyToggleElement
 )[];
+
+export interface MyEditor extends PlateEditor {
+  api: {
+    markdown: {
+      serialize: () => string;
+      deserialize: (content: string) => MyValue;
+    };
+    aiChat: {
+      show: () => void;
+      hide: () => void;
+    };
+  } & PlateEditor["api"];
+}

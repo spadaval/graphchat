@@ -52,7 +52,13 @@ export interface DocumentLinkingState {
   messageDocumentLinks: Record<BlockId, DocumentId[]>; // Documents linked to specific messages
 }
 
-// LLM request attribution
+// LLM types
+export interface LLMMessage {
+  role: MessageType;
+  content: string;
+  linkedDocuments?: DocumentId[];
+}
+
 export interface LLMRequest {
   id: string; // Unique request ID
   timestamp: Date;
@@ -63,7 +69,7 @@ export interface LLMRequest {
   duration?: number; // Request duration in ms
   success: boolean;
   error?: string;
-  sourceMessages?: any[];
+  sourceMessages?: LLMMessage[];
 }
 
 export interface ModelProperties {
@@ -101,13 +107,20 @@ export type BlockType =
   | "quote";
 export type BlockViewMode = "edit" | "preview" | "tokens";
 
+export interface TokenProbability {
+  token: string;
+  logprob: number;
+  prob?: number;
+  top_logprobs?: { token: string; logprob: number }[];
+}
+
 export interface BlockMetadata {
   aiGenerated?: boolean;
   sourcePrompt?: string;
-  sourceMessages?: any[]; // Store the messages used for generation for regeneration
-  tokenProbabilities?: any[]; // Store token probabilities from the LLM
+  sourceMessages?: LLMMessage[]; // Store the messages used for generation for regeneration
+  tokenProbabilities?: TokenProbability[]; // Store token probabilities from the LLM
   originalText?: string;
-  [key: string]: any;
+  [key: string]: string | number | boolean | undefined | null | object;
 }
 
 export interface Block {

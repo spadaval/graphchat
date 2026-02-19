@@ -3,7 +3,13 @@ import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/
 import { syncObservable } from "@legendapp/state/sync";
 import { blocks$, createBlock, setBlockLinkedDocuments } from "./block";
 import { callLLM, callLLMStreaming, modelProps$ } from "./llm";
-import type { Block, BlockId, ChatId, MessageId } from "./types";
+import type {
+  Block,
+  BlockId,
+  ChatId,
+  LLMRequest,
+  TokenProbability,
+} from "./types";
 
 // Global configuration
 
@@ -314,8 +320,8 @@ export const sendMessage = async (text?: string) => {
 
   let accumulatedContent = "";
   let lastUpdate = Date.now();
-  let allProbabilities: any[] = [];
-  let finalRequest: any = null;
+  let allProbabilities: TokenProbability[] = [];
+  let finalRequest: LLMRequest | null = null;
 
   for await (const chunkResult of responseStream) {
     chunkResult.match(
@@ -431,8 +437,8 @@ export const regenerateMessage = async (blockId: BlockId) => {
 
   let accumulatedContent = "";
   let lastUpdate = Date.now();
-  let allProbabilities: any[] = [];
-  let finalRequest: any = null;
+  let allProbabilities: TokenProbability[] = [];
+  let finalRequest: LLMRequest | null = null;
 
   for await (const chunkResult of responseStream) {
     chunkResult.match(

@@ -10,13 +10,12 @@ import {
   FolderPlus,
   Ghost,
   Map as MapIcon,
-  MoreVertical,
   Plus,
   Scroll,
   Sparkles,
   User,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
   ContextMenu,
@@ -95,7 +94,7 @@ export function StorybookSidebar({
     parentId: FolderId | "root" = "root",
   ) => {
     const typeDef = documentTypes[typeId];
-    const title = typeDef ? "Untitled " + typeDef.name : "Untitled";
+    const title = typeDef ? `Untitled ${typeDef.name}` : "Untitled";
     const id = createDocument(title, "", typeId, [], parentId);
     onSelectDocument(id);
   };
@@ -176,8 +175,9 @@ export function StorybookSidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 min-h-0">
-        <div
+        <section
           className="space-y-1 h-full"
+          aria-label="Document list"
           onDragOver={(e) => {
             e.preventDefault();
             e.currentTarget.classList.add("bg-zinc-800/20");
@@ -222,7 +222,7 @@ export function StorybookSidebar({
               No documents yet.
             </div>
           )}
-        </div>
+        </section>
       </div>
 
       <Dialog
@@ -295,7 +295,7 @@ function FolderItem({
     setIsRenaming(false);
   };
 
-  const handleToggle = (e: React.MouseEvent) => {
+  const handleToggle = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     updateFolder(folder.id, { isOpen: !folder.isOpen });
   };
@@ -325,7 +325,8 @@ function FolderItem({
     <div className="flex flex-col">
       <ContextMenu>
         <ContextMenuTrigger>
-          <div
+          <button
+            type="button"
             draggable
             onDragStart={handleDragStart}
             onDragOver={(e) => {
@@ -335,12 +336,18 @@ function FolderItem({
             }}
             onDragLeave={() => setIsDragOver(false)}
             onDrop={handleDrop}
-            className={`flex items-center gap-1 p-2 rounded-md text-sm transition-colors cursor-pointer group ${
+            className={`w-full flex items-center gap-1 p-2 rounded-md text-sm transition-colors cursor-pointer group text-left ${
               isDragOver
                 ? "bg-zinc-800/50 outline-2 outline-dashed outline-zinc-700"
                 : "hover:bg-zinc-800/30"
             }`}
             onClick={handleToggle}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleToggle(e);
+              }
+            }}
           >
             <div className="flex items-center gap-1 flex-1 min-w-0">
               {folder.isOpen ? (
@@ -371,7 +378,7 @@ function FolderItem({
                 </span>
               )}
             </div>
-          </div>
+          </button>
         </ContextMenuTrigger>
         <ContextMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
           <ContextMenuItem
@@ -479,7 +486,7 @@ function DocumentItem({
   onChangeTypeRequest,
 }: DocumentItemProps) {
   const documentTypes = use$(documentStore$.documentTypes);
-  const typeDef = documentTypes[document.type] || documentTypes["general"];
+  const typeDef = documentTypes[document.type] || documentTypes.general;
   const IconComponent = typeDef ? iconMap[typeDef.icon] || FileText : FileText;
 
   const [isRenaming, setIsRenaming] = useState(false);

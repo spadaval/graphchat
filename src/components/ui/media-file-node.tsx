@@ -6,7 +6,6 @@ import { FileUp } from "lucide-react";
 import type { TFileElement } from "platejs";
 import type { PlateElementProps } from "platejs/react";
 import { PlateElement, useReadOnly, withHOC } from "platejs/react";
-import * as React from "react";
 
 import { Caption, CaptionTextarea } from "./caption";
 
@@ -24,7 +23,6 @@ export const FileElement = withHOC(
           download={name}
           href={unsafeUrl}
           rel="noopener noreferrer"
-          role="button"
           target="_blank"
         >
           <div className="flex items-center gap-1 p-1">
