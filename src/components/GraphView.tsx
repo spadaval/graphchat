@@ -1,7 +1,7 @@
 import { useObservable } from "@legendapp/state/react";
+import { Link } from "@tanstack/react-router";
 import { documentStore$ } from "../lib/state/documents";
 import { graphStore$ } from "../lib/state/graph";
-import { Link } from "@tanstack/react-router";
 
 export function GraphView() {
   const documents = useObservable(documentStore$.documents);
@@ -12,7 +12,7 @@ export function GraphView() {
   return (
     <div className="p-8">
       <h2 className="text-2xl font-bold mb-6">World Graph</h2>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {docsList.map((doc) => (
           <Link
@@ -26,8 +26,11 @@ export function GraphView() {
               {doc.blocks.length} blocks
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              {doc.tags.map(tag => (
-                <span key={tag} className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600">
+              {doc.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600"
+                >
                   {tag}
                 </span>
               ))}

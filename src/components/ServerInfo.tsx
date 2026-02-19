@@ -1,11 +1,17 @@
+import { use$ } from "@legendapp/state/react";
+import { CheckCircle2, Link2, RefreshCw, XCircle } from "lucide-react";
 import { useEffect } from "react";
 import { useServerInfo } from "~/lib/state/hooks";
-import { setError, setLoading, setServerInfo, setServerUrl, serverStore$ } from "~/lib/state/server";
+import {
+  serverStore$,
+  setError,
+  setLoading,
+  setServerInfo,
+  setServerUrl,
+} from "~/lib/state/server";
 import { fetchServerInfo } from "../lib/server";
 import { SlotsComponent } from "./Slots";
-import { Link2, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "./ui/button";
-import { use$ } from "@legendapp/state/react";
 
 export function ServerInfoComponent() {
   const { serverInfo, loading, error, serverUrl } = use$(serverStore$);
@@ -62,7 +68,11 @@ export function ServerInfoComponent() {
               disabled={loading}
               className="h-8 px-3"
             >
-              {loading ? <RefreshCw size={14} className="animate-spin" /> : "Test"}
+              {loading ? (
+                <RefreshCw size={14} className="animate-spin" />
+              ) : (
+                "Test"
+              )}
             </Button>
           </div>
         </div>
@@ -76,8 +86,14 @@ export function ServerInfoComponent() {
           ) : (
             <RefreshCw size={14} className="text-zinc-500" />
           )}
-          <span className={`text-[11px] font-medium ${error ? "text-red-400" : "text-zinc-400"}`}>
-            {error ? "Connection Failed" : serverInfo ? "Connected" : "Not Connected"}
+          <span
+            className={`text-[11px] font-medium ${error ? "text-red-400" : "text-zinc-400"}`}
+          >
+            {error
+              ? "Connection Failed"
+              : serverInfo
+                ? "Connected"
+                : "Not Connected"}
           </span>
         </div>
 
@@ -93,10 +109,14 @@ export function ServerInfoComponent() {
       {serverInfo ? (
         <div className="space-y-6">
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-zinc-100">Model Details</h3>
+            <h3 className="text-sm font-semibold text-zinc-100">
+              Model Details
+            </h3>
             <div className="bg-zinc-800/20 p-3 rounded-lg border border-zinc-700/30 space-y-3">
               <div>
-                <div className="text-xs font-medium text-zinc-200">{serverInfo.model_name}</div>
+                <div className="text-xs font-medium text-zinc-200">
+                  {serverInfo.model_name}
+                </div>
                 <div className="text-[10px] text-zinc-500 font-mono mt-1 break-all">
                   {serverInfo.model_path}
                 </div>
@@ -104,13 +124,21 @@ export function ServerInfoComponent() {
 
               <div className="grid grid-cols-2 gap-4 pt-1">
                 <div>
-                  <div className="text-[10px] uppercase text-zinc-500 font-bold mb-1">Architecture</div>
-                  <div className="text-xs text-zinc-300">{serverInfo.model_type}</div>
+                  <div className="text-[10px] uppercase text-zinc-500 font-bold mb-1">
+                    Architecture
+                  </div>
+                  <div className="text-xs text-zinc-300">
+                    {serverInfo.model_type}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase text-zinc-500 font-bold mb-1">Context</div>
+                  <div className="text-[10px] uppercase text-zinc-500 font-bold mb-1">
+                    Context
+                  </div>
                   <div className="text-xs text-zinc-300">
-                    {serverInfo.context_size ? serverInfo.context_size.toLocaleString() : "N/A"}
+                    {serverInfo.context_size
+                      ? serverInfo.context_size.toLocaleString()
+                      : "N/A"}
                   </div>
                 </div>
               </div>
@@ -155,19 +183,27 @@ export function ServerInfoComponent() {
               <div className="flex justify-between">
                 <span className="text-zinc-500">CPU Usage</span>
                 <span className="text-zinc-300">
-                  {serverInfo.cpu_usage ? serverInfo.cpu_usage.toFixed(1) : "N/A"}%
+                  {serverInfo.cpu_usage
+                    ? serverInfo.cpu_usage.toFixed(1)
+                    : "N/A"}
+                  %
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-500">RAM Usage</span>
                 <span className="text-zinc-300">
-                  {serverInfo.ram_usage ? serverInfo.ram_usage.toFixed(1) : "N/A"}%
+                  {serverInfo.ram_usage
+                    ? serverInfo.ram_usage.toFixed(1)
+                    : "N/A"}
+                  %
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-500">VRAM Usage</span>
                 <span className="text-zinc-300">
-                  {serverInfo.vram_usage ? serverInfo.vram_usage.toFixed(1) : "N/A"}
+                  {serverInfo.vram_usage
+                    ? serverInfo.vram_usage.toFixed(1)
+                    : "N/A"}
                   %
                 </span>
               </div>
@@ -187,8 +223,12 @@ export function ServerInfoComponent() {
         <div className="flex-1 flex flex-col items-center justify-center space-y-4 p-8 text-center text-zinc-500">
           <RefreshCw size={32} className="text-zinc-700 animate-pulse" />
           <div className="space-y-1">
-            <p className="text-sm font-medium text-zinc-400">No server connected</p>
-            <p className="text-xs text-zinc-600">Enter a valid URL and click Test to begin</p>
+            <p className="text-sm font-medium text-zinc-400">
+              No server connected
+            </p>
+            <p className="text-xs text-zinc-600">
+              Enter a valid URL and click Test to begin
+            </p>
           </div>
         </div>
       )}

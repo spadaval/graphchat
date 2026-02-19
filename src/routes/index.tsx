@@ -1,12 +1,16 @@
+import { use$ } from "@legendapp/state/react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MainLayout, ModelServerSidebar } from "~/components/LayoutComponents";
 import { StorybookEditor } from "~/components/StorybookEditor";
 import { StorybookSidebar } from "~/components/StorybookSidebar";
-import { uiPreferences$, setActiveTab } from "~/lib/state/ui";
-import { use$ } from "@legendapp/state/react";
-import { documentStore$, setCurrentDocument, closeDocument } from "~/lib/state/documents";
+import {
+  closeDocument,
+  documentStore$,
+  setCurrentDocument,
+} from "~/lib/state/documents";
 import type { DocumentId } from "~/lib/state/types";
+import { setActiveTab, uiPreferences$ } from "~/lib/state/ui";
 
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): { id?: DocumentId } => {
@@ -20,7 +24,8 @@ export const Route = createFileRoute("/")({
 function StorybookPage() {
   const { id: searchId } = Route.useSearch();
   const { activeTab } = use$(uiPreferences$);
-  const { openDocumentIds, currentDocumentId: activeDocumentId } = use$(documentStore$);
+  const { openDocumentIds, currentDocumentId: activeDocumentId } =
+    use$(documentStore$);
 
   const handleSelectDocument = (id: DocumentId) => {
     setCurrentDocument(id);
@@ -46,10 +51,7 @@ function StorybookPage() {
         />
       }
       modelServer={
-        <ModelServerSidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
+        <ModelServerSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       }
     >
       <StorybookEditor

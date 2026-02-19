@@ -14,7 +14,11 @@ const graphStore = observable<GraphStore>({
 export const graphStore$ = graphStore;
 
 // Actions
-export const addEdge = (source: DocumentId, target: DocumentId, type: string) => {
+export const addEdge = (
+  source: DocumentId,
+  target: DocumentId,
+  type: string,
+) => {
   const edges = graphStore$.edges.get();
   // Check if edge already exists
   const exists = edges.some(
@@ -27,7 +31,11 @@ export const addEdge = (source: DocumentId, target: DocumentId, type: string) =>
   }
 };
 
-export const removeEdge = (source: DocumentId, target: DocumentId, type: string) => {
+export const removeEdge = (
+  source: DocumentId,
+  target: DocumentId,
+  type: string,
+) => {
   const edges = graphStore$.edges.get();
   const index = edges.findIndex(
     (edge) =>

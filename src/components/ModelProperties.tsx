@@ -1,23 +1,38 @@
 import { use$ } from "@legendapp/state/react";
-import { modelProps$ } from "~/lib/state";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip";
 import { Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
+import { modelProps$ } from "~/lib/state";
 
 export function ModelProperties() {
   const modelProperties = use$(modelProps$);
 
-  const TooltipWrapper = ({ label, content }: { label: string; content: string }) => (
+  const TooltipWrapper = ({
+    label,
+    content,
+  }: {
+    label: string;
+    content: string;
+  }) => (
     <div className="flex items-center gap-1.5 mb-1.5">
-      <label className="text-sm font-medium text-zinc-300">
-        {label}
-      </label>
+      <label className="text-sm font-medium text-zinc-300">{label}</label>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button type="button" className="text-zinc-500 hover:text-zinc-300 transition-colors">
+          <button
+            type="button"
+            className="text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
             <Info size={12} />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right" className="max-w-[200px] bg-zinc-800 border-zinc-700 text-zinc-200">
+        <TooltipContent
+          side="right"
+          className="max-w-[200px] bg-zinc-800 border-zinc-700 text-zinc-200"
+        >
           {content}
         </TooltipContent>
       </Tooltip>

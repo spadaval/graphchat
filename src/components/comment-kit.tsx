@@ -1,16 +1,15 @@
-'use client';
-
-import type { ExtendConfig, Path } from 'platejs';
+"use client";
 
 import {
   type BaseCommentConfig,
   BaseCommentPlugin,
   getDraftCommentKey,
-} from '@platejs/comment';
-import { isSlateString } from 'platejs';
-import { toTPlatePlugin } from 'platejs/react';
+} from "@platejs/comment";
+import type { ExtendConfig, Path } from "platejs";
+import { isSlateString } from "platejs";
+import { toTPlatePlugin } from "platejs/react";
 
-import { CommentLeaf } from '~/components/ui/comment-node';
+import { CommentLeaf } from "~/components/ui/comment-node";
 
 type CommentConfig = ExtendConfig<
   BaseCommentConfig,
@@ -29,7 +28,7 @@ export const commentPlugin = toTPlatePlugin<CommentConfig>(BaseCommentPlugin, {
       let isSet = false;
 
       const unsetActiveSuggestion = () => {
-        setOption('activeId', null);
+        setOption("activeId", null);
         isSet = true;
       };
 
@@ -47,7 +46,7 @@ export const commentPlugin = toTPlatePlugin<CommentConfig>(BaseCommentPlugin, {
 
           const id = api.comment!.nodeId(commentsEntry[0]);
 
-          setOption('activeId', id ?? null);
+          setOption("activeId", id ?? null);
           isSet = true;
 
           break;
@@ -82,15 +81,15 @@ export const commentPlugin = toTPlatePlugin<CommentConfig>(BaseCommentPlugin, {
         setDraft();
 
         editor.tf.collapse();
-        setOption('activeId', getDraftCommentKey());
-        setOption('commentingBlock', editor.selection!.focus.path.slice(0, 1));
+        setOption("activeId", getDraftCommentKey());
+        setOption("commentingBlock", editor.selection!.focus.path.slice(0, 1));
       },
-    })
+    }),
   )
   .configure({
     node: { component: CommentLeaf },
     shortcuts: {
-      setDraft: { keys: 'mod+shift+m' },
+      setDraft: { keys: "mod+shift+m" },
     },
   });
 

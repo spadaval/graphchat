@@ -1,15 +1,14 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import { useCalloutEmojiPicker } from "@platejs/callout/react";
+import { useEmojiDropdownMenuState } from "@platejs/emoji/react";
+import { PlateElement } from "platejs/react";
+import type * as React from "react";
 
-import { useCalloutEmojiPicker } from '@platejs/callout/react';
-import { useEmojiDropdownMenuState } from '@platejs/emoji/react';
-import { PlateElement } from 'platejs/react';
+import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 
-import { Button } from '~/components/ui/button';
-import { cn } from '~/lib/utils';
-
-import { EmojiPicker, EmojiPopover } from './emoji-toolbar-button';
+import { EmojiPicker, EmojiPopover } from "./emoji-toolbar-button";
 
 export function CalloutElement({
   attributes,
@@ -29,13 +28,13 @@ export function CalloutElement({
 
   return (
     <PlateElement
-      className={cn('my-1 flex rounded-sm bg-muted p-4 pl-3', className)}
+      className={cn("my-1 flex rounded-sm bg-muted p-4 pl-3", className)}
       style={{
         backgroundColor: props.element.backgroundColor as any,
       }}
       attributes={{
         ...attributes,
-        'data-plate-open-context-menu': true,
+        "data-plate-open-context-menu": true,
       }}
       {...props}
     >
@@ -52,7 +51,7 @@ export function CalloutElement({
               }}
               contentEditable={false}
             >
-              {(props.element.icon as any) || '💡'}
+              {(props.element.icon as any) || "💡"}
             </Button>
           }
         >

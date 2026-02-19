@@ -1,6 +1,5 @@
 // Primary API exports for the state module
 
-export type { Block } from "./types";
 // Block exports
 export {
   addDocumentToBlock,
@@ -52,8 +51,6 @@ export {
   useThreadsArray,
   useUIPreferences,
 } from "./hooks";
-export type { ModelProperties } from "./types";
-
 // LLM exports
 export { modelProps$ } from "./llm";
 // Server exports
@@ -61,10 +58,12 @@ export { serverStore$, setError, setLoading, setServerInfo } from "./server";
 // Types
 export type {
   ActiveTab,
+  Block,
   BlockId,
   ChatId,
   DocumentId,
   MessageId,
+  ModelProperties,
   ServerInfo,
 } from "./types";
 // UI exports

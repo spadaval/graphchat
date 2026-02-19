@@ -1,10 +1,10 @@
 import { useObservable } from "@legendapp/state/react";
+import { useEffect, useRef } from "react";
+import TextareaAutosize from "react-textarea-autosize";
 import { blocks$, createBlock } from "../lib/state/block";
 import { documentStore$, updateDocument } from "../lib/state/documents";
 import type { BlockId, DocumentId } from "../lib/state/types";
 import { cn } from "../lib/utils";
-import { useEffect, useRef } from "react";
-import TextareaAutosize from "react-textarea-autosize";
 
 interface DocumentEditorProps {
   documentId: DocumentId;
@@ -15,7 +15,9 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const blocks = useObservable(blocks$);
 
   if (!document.get()) {
-    return <div className="p-8 text-center text-gray-500">Document not found</div>;
+    return (
+      <div className="p-8 text-center text-gray-500">Document not found</div>
+    );
   }
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,13 +27,15 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const addBlock = (afterBlockId?: BlockId) => {
     const newBlock = createBlock("", "user", "paragraph");
     blocks$.assign({ [newBlock.id]: newBlock });
-    
+
     const currentBlocks = document.blocks.get() || [];
-    const index = afterBlockId ? currentBlocks.indexOf(afterBlockId) + 1 : currentBlocks.length;
-    
+    const index = afterBlockId
+      ? currentBlocks.indexOf(afterBlockId) + 1
+      : currentBlocks.length;
+
     const newBlocks = [...currentBlocks];
     newBlocks.splice(index, 0, newBlock.id);
-    
+
     document.blocks.set(newBlocks);
   };
 
@@ -72,16 +76,18 @@ function BlockEditor({ blockId }: { blockId: BlockId }) {
   };
 
   return (
-    <div className={cn(
-      "group relative p-4 rounded-lg border border-transparent hover:border-gray-200 transition-colors",
-      block.role.get() === "assistant" ? "bg-blue-50/50" : "bg-white"
-    )}>
+    <div
+      className={cn(
+        "group relative p-4 rounded-lg border border-transparent hover:border-gray-200 transition-colors",
+        block.role.get() === "assistant" ? "bg-blue-50/50" : "bg-white",
+      )}
+    >
       <div className="absolute left-0 top-4 opacity-0 group-hover:opacity-100 -translate-x-full pr-2 flex gap-1">
         <div className="text-xs text-gray-400 uppercase tracking-wider font-medium py-1">
           {block.role.get()}
         </div>
       </div>
-      
+
       <TextareaAutosize
         ref={textareaRef}
         value={block.text.get()}

@@ -33,7 +33,7 @@ export interface ServerInfo {
 }
 
 // UI preferences
-export type ActiveTab = "server" | "documents" | "settings";
+export type ActiveTab = "server" | "settings";
 
 export interface UIPreferences {
   activeTab: ActiveTab;

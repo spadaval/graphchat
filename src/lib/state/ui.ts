@@ -14,7 +14,7 @@ const uiPreferences: UIPreferences = {
   inlineCompletion: true,
   documentWidth: 800,
   tokenizerModelId: "default", // Assuming a default value for the new required property
-  enableTokenProbabilities: false,
+  enableTokenProbabilities: true,
 };
 
 export const uiPreferences$ = observable<UIPreferences>(uiPreferences);

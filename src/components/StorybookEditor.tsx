@@ -1,18 +1,18 @@
+import { use$ } from "@legendapp/state/react";
 import {
-  X,
-  FileText,
-  Map as MapIcon,
-  User,
-  Sparkles,
-  Ghost,
-  Building,
   Book,
-  Scroll
+  Building,
+  FileText,
+  Ghost,
+  Map as MapIcon,
+  Scroll,
+  Sparkles,
+  User,
+  X,
 } from "lucide-react";
 import { PlateDocumentEditor } from "~/components/editor/PlateDocumentEditor";
-import { documentStore$, DocumentIcon } from "~/lib/state/documents";
+import { DocumentIcon, documentStore$ } from "~/lib/state/documents";
 import type { DocumentId } from "~/lib/state/types";
-import { use$ } from "@legendapp/state/react";
 
 interface StorybookEditorProps {
   openDocumentIds: DocumentId[];
@@ -21,7 +21,10 @@ interface StorybookEditorProps {
   onCloseDocument: (id: DocumentId) => void;
 }
 
-const iconMap: Record<DocumentIcon, React.ComponentType<{ className?: string }>> = {
+const iconMap: Record<
+  DocumentIcon,
+  React.ComponentType<{ className?: string }>
+> = {
   [DocumentIcon.FileText]: FileText,
   [DocumentIcon.User]: User,
   [DocumentIcon.Map]: MapIcon,
@@ -90,8 +93,9 @@ function Tab({ id, isActive, onClick, onClose }: TabProps) {
 
   const title = document?.title || "Untitled";
 
-  const typeDef = document && (documentTypes[document.type] || documentTypes["general"]);
-  const IconComponent = typeDef ? (iconMap[typeDef.icon] || FileText) : FileText;
+  const typeDef =
+    document && (documentTypes[document.type] || documentTypes["general"]);
+  const IconComponent = typeDef ? iconMap[typeDef.icon] || FileText : FileText;
 
   return (
     <div

@@ -124,12 +124,13 @@ export function SlotsComponent() {
                 </div>
               </div>
               <div
-                className={`px-2 py-1 rounded text-xs font-medium flex items-center ${slot.is_processing
+                className={`px-2 py-1 rounded text-xs font-medium flex items-center ${
+                  slot.is_processing
                     ? "bg-green-900/30 text-green-400"
                     : slot.id_task
                       ? "bg-yellow-900/30 text-yellow-400"
                       : "bg-blue-900/30 text-blue-400"
-                  }`}
+                }`}
               >
                 {slot.is_processing && (
                   <span className="flex h-2 w-2 mr-1">

@@ -51,8 +51,6 @@ interface DocumentStore {
   openDocumentIds: DocumentId[];
 }
 
-
-
 const defaultDocumentTypes: Record<string, DocumentTypeDefinition> = {
   general: {
     id: "general",
@@ -84,9 +82,7 @@ const documentStore: DocumentStore = {
 
 export const documentStore$ = observable<DocumentStore>(documentStore);
 
-
-
-import { createBlock, blocks$ } from "./block";
+import { blocks$, createBlock } from "./block";
 import type { BlockId } from "./types";
 
 // Actions
@@ -167,14 +163,14 @@ export const deleteFolder = (id: FolderId) => {
   const parentId = folder.parentId;
 
   const docs = documentStore$.documents.get();
-  Object.values(docs).forEach(doc => {
+  Object.values(docs).forEach((doc) => {
     if (doc.parentId === id) {
       documentStore$.documents[doc.id].parentId.set(parentId);
     }
   });
 
   const folders = documentStore$.folders.get();
-  Object.values(folders).forEach(f => {
+  Object.values(folders).forEach((f) => {
     if (f.parentId === id) {
       documentStore$.folders[f.id].parentId.set(parentId);
     }
@@ -183,13 +179,19 @@ export const deleteFolder = (id: FolderId) => {
   documentStore$.folders[id].delete();
 };
 
-export const moveDocument = (docId: DocumentId, newParentId: FolderId | "root") => {
+export const moveDocument = (
+  docId: DocumentId,
+  newParentId: FolderId | "root",
+) => {
   const doc = documentStore$.documents[docId].get();
   if (!doc) return;
   documentStore$.documents[docId].parentId.set(newParentId);
 };
 
-export const moveFolder = (folderId: FolderId, newParentId: FolderId | "root") => {
+export const moveFolder = (
+  folderId: FolderId,
+  newParentId: FolderId | "root",
+) => {
   // Prevent moving a folder into itself or its descendants
   if (newParentId !== "root") {
     let current: FolderId | "root" = newParentId;
@@ -212,7 +214,7 @@ export const syncDocumentContent = (id: DocumentId) => {
   const allBlocks = blocks$.get();
 
   const content = blockIds
-    .map(bid => allBlocks[bid]?.text || "")
+    .map((bid) => allBlocks[bid]?.text || "")
     .join("\n\n");
 
   documentStore$.documents[id].content.set(content);

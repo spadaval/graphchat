@@ -1,7 +1,7 @@
 # Agent Guidelines for WorldCrafter
 
 ## ⚠️ CRITICAL WARNING
-**DO NOT RUN THE DEV SERVER!** `bun dev` is a watch command that never terminates. The dev server is always running - starting it will cause you to wait indefinitely.
+**DO NOT RUN THE DEV SERVER!** `bun dev` is a watch command that never terminates. The dev server is always running - starting it will duplicate the server _and_ cause you to wait indefinitely.
 
 ## Commands
 Use bun for all commands.

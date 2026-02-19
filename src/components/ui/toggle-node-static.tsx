@@ -1,9 +1,8 @@
-import * as React from 'react';
+import { ChevronRight } from "lucide-react";
 
-import type { SlateElementProps } from 'platejs/static';
-
-import { ChevronRight } from 'lucide-react';
-import { SlateElement } from 'platejs/static';
+import type { SlateElementProps } from "platejs/static";
+import { SlateElement } from "platejs/static";
+import * as React from "react";
 
 export function ToggleElementStatic(props: SlateElementProps) {
   return (

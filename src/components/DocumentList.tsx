@@ -1,37 +1,23 @@
-import { useState } from "react";
-import { Button } from "~/components/ui/button";
 import { use$ } from "@legendapp/state/react";
 import {
-  documentStore$,
-  DocumentIcon,
-  updateDocument,
-  createDocument,
-  deleteDocument,
-  createFolder,
-  updateFolder,
-  deleteFolder,
-  moveDocument,
-  moveFolder
-} from "~/lib/state/documents";
-import type { Document, Folder } from "~/lib/state/documents";
-import type { DocumentId, FolderId } from "~/lib/state/types";
-import {
-  FileText,
-  Map as MapIcon,
-  User,
-  Sparkles,
-  Ghost,
-  Building,
   Book,
-  Scroll,
-  MoreVertical,
-  Plus,
+  Building,
+  ChevronDown,
+  ChevronRight,
+  FileText,
   Folder as FolderIcon,
   FolderOpen,
-  ChevronRight,
-  ChevronDown,
   FolderPlus,
+  Ghost,
+  Map as MapIcon,
+  MoreVertical,
+  Plus,
+  Scroll,
+  Sparkles,
+  User,
 } from "lucide-react";
+import { useState } from "react";
+import { Button } from "~/components/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -40,13 +26,30 @@ import {
   ContextMenuTrigger,
 } from "~/components/ui/context-menu";
 import { Input } from "~/components/ui/input";
+import type { Document, Folder } from "~/lib/state/documents";
+import {
+  createDocument,
+  createFolder,
+  DocumentIcon,
+  deleteDocument,
+  deleteFolder,
+  documentStore$,
+  moveDocument,
+  moveFolder,
+  updateDocument,
+  updateFolder,
+} from "~/lib/state/documents";
+import type { DocumentId, FolderId } from "~/lib/state/types";
 
 interface DocumentListProps {
   currentDocumentId?: DocumentId;
   onSelect: (documentId: DocumentId) => void;
 }
 
-const iconMap: Record<DocumentIcon, React.ComponentType<{ className?: string }>> = {
+const iconMap: Record<
+  DocumentIcon,
+  React.ComponentType<{ className?: string }>
+> = {
   [DocumentIcon.FileText]: FileText,
   [DocumentIcon.User]: User,
   [DocumentIcon.Map]: MapIcon,
@@ -75,7 +78,10 @@ export function DocumentList({
     });
   };
 
-  const handleCreateDocument = (typeId: string = "general", parentId: FolderId | "root" = "root") => {
+  const handleCreateDocument = (
+    typeId: string = "general",
+    parentId: FolderId | "root" = "root",
+  ) => {
     const typeDef = documentTypes[typeId];
     const title = typeDef ? "Untitled " + typeDef.name : "Untitled";
     const id = createDocument(title, "", typeId, [], parentId);
@@ -95,8 +101,12 @@ export function DocumentList({
       ),
   );
 
-  const rootDocuments = Object.values(documents).filter(doc => !doc.parentId || doc.parentId === "root");
-  const rootFolders = Object.values(folders).filter(f => !f.parentId || f.parentId === "root");
+  const rootDocuments = Object.values(documents).filter(
+    (doc) => !doc.parentId || doc.parentId === "root",
+  );
+  const rootFolders = Object.values(folders).filter(
+    (f) => !f.parentId || f.parentId === "root",
+  );
 
   return (
     <div className="flex flex-col h-full bg-zinc-900">
@@ -201,7 +211,7 @@ function FolderListItem({
   onCreateDocument,
   onCreateFolder,
   formatDate,
-  depth = 0
+  depth = 0,
 }: FolderListItemProps) {
   const documents = use$(documentStore$.documents);
   const folders = use$(documentStore$.folders);
@@ -210,8 +220,12 @@ function FolderListItem({
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const childDocuments = Object.values(documents).filter(doc => doc.parentId === folder.id);
-  const childFolders = Object.values(folders).filter(f => f.parentId === folder.id);
+  const childDocuments = Object.values(documents).filter(
+    (doc) => doc.parentId === folder.id,
+  );
+  const childFolders = Object.values(folders).filter(
+    (f) => f.parentId === folder.id,
+  );
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -226,7 +240,10 @@ function FolderListItem({
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData("application/worldcrafter-item", JSON.stringify({ type: "folder", id: folder.id }));
+    e.dataTransfer.setData(
+      "application/worldcrafter-item",
+      JSON.stringify({ type: "folder", id: folder.id }),
+    );
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -237,7 +254,8 @@ function FolderListItem({
     if (!data) return;
     const { type, id } = JSON.parse(data);
     if (type === "document") moveDocument(id as DocumentId, folder.id);
-    else if (type === "folder" && id !== folder.id) moveFolder(id as FolderId, folder.id);
+    else if (type === "folder" && id !== folder.id)
+      moveFolder(id as FolderId, folder.id);
   };
 
   return (
@@ -247,16 +265,29 @@ function FolderListItem({
           <div
             draggable
             onDragStart={handleDragStart}
-            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true); }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDragOver(true);
+            }}
             onDragLeave={() => setIsDragOver(false)}
             onDrop={handleDrop}
             onClick={handleToggle}
-            className={`flex items-center gap-2 p-2 rounded-md transition-colors cursor-pointer group ${isDragOver ? "bg-zinc-800" : "hover:bg-zinc-800/50"
-              }`}
+            className={`flex items-center gap-2 p-2 rounded-md transition-colors cursor-pointer group ${
+              isDragOver ? "bg-zinc-800" : "hover:bg-zinc-800/50"
+            }`}
           >
             <div className="flex items-center gap-1.5 flex-1 min-w-0">
-              {folder.isOpen ? <ChevronDown className="size-3.5 text-zinc-500" /> : <ChevronRight className="size-3.5 text-zinc-500" />}
-              {folder.isOpen ? <FolderOpen className="size-4 text-blue-400/80" /> : <FolderIcon className="size-4 text-blue-400/80" />}
+              {folder.isOpen ? (
+                <ChevronDown className="size-3.5 text-zinc-500" />
+              ) : (
+                <ChevronRight className="size-3.5 text-zinc-500" />
+              )}
+              {folder.isOpen ? (
+                <FolderOpen className="size-4 text-blue-400/80" />
+              ) : (
+                <FolderIcon className="size-4 text-blue-400/80" />
+              )}
               {isRenaming ? (
                 <Input
                   autoFocus
@@ -278,11 +309,24 @@ function FolderListItem({
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
-          <ContextMenuItem onClick={() => onCreateFolder(folder.id)}>New Subfolder</ContextMenuItem>
-          <ContextMenuItem onClick={() => onCreateDocument("general", folder.id)}>New Document</ContextMenuItem>
+          <ContextMenuItem onClick={() => onCreateFolder(folder.id)}>
+            New Subfolder
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={() => onCreateDocument("general", folder.id)}
+          >
+            New Document
+          </ContextMenuItem>
           <ContextMenuSeparator className="bg-zinc-800" />
-          <ContextMenuItem onClick={() => setIsRenaming(true)}>Rename</ContextMenuItem>
-          <ContextMenuItem onClick={() => deleteFolder(folder.id)} className="text-red-400">Delete</ContextMenuItem>
+          <ContextMenuItem onClick={() => setIsRenaming(true)}>
+            Rename
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={() => deleteFolder(folder.id)}
+            className="text-red-400"
+          >
+            Delete
+          </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
 
@@ -322,10 +366,15 @@ interface DocumentListItemProps {
   formatDate: (date: Date) => string;
 }
 
-function DocumentListItem({ document, isActive, onSelect, formatDate }: DocumentListItemProps) {
+function DocumentListItem({
+  document,
+  isActive,
+  onSelect,
+  formatDate,
+}: DocumentListItemProps) {
   const documentTypes = use$(documentStore$.documentTypes);
   const typeDef = documentTypes[document.type] || documentTypes["general"];
-  const IconComponent = typeDef ? (iconMap[typeDef.icon] || FileText) : FileText;
+  const IconComponent = typeDef ? iconMap[typeDef.icon] || FileText : FileText;
 
   const [isRenaming, setIsRenaming] = useState(false);
 
@@ -337,7 +386,10 @@ function DocumentListItem({ document, isActive, onSelect, formatDate }: Document
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData("application/worldcrafter-item", JSON.stringify({ type: "document", id: document.id }));
+    e.dataTransfer.setData(
+      "application/worldcrafter-item",
+      JSON.stringify({ type: "document", id: document.id }),
+    );
   };
 
   return (
@@ -347,12 +399,17 @@ function DocumentListItem({ document, isActive, onSelect, formatDate }: Document
           draggable
           onDragStart={handleDragStart}
           onClick={onSelect}
-          className={`flex flex-col gap-1 p-3 rounded-md transition-colors cursor-pointer ${isActive ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:bg-zinc-800/30 hover:text-zinc-200"
-            }`}
+          className={`flex flex-col gap-1 p-3 rounded-md transition-colors cursor-pointer ${
+            isActive
+              ? "bg-zinc-800 text-zinc-100"
+              : "text-zinc-400 hover:bg-zinc-800/30 hover:text-zinc-200"
+          }`}
         >
           <div className="flex items-center gap-2">
             <div className="w-4 shrink-0" />
-            <IconComponent className={`size-4 shrink-0 ${isActive ? "text-zinc-200" : "text-zinc-500"}`} />
+            <IconComponent
+              className={`size-4 shrink-0 ${isActive ? "text-zinc-200" : "text-zinc-500"}`}
+            />
             {isRenaming ? (
               <Input
                 autoFocus
@@ -366,7 +423,9 @@ function DocumentListItem({ document, isActive, onSelect, formatDate }: Document
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span className="truncate text-sm font-medium">{document.title || "Untitled"}</span>
+              <span className="truncate text-sm font-medium">
+                {document.title || "Untitled"}
+              </span>
             )}
           </div>
           {!isRenaming && document.content && (
@@ -380,8 +439,11 @@ function DocumentListItem({ document, isActive, onSelect, formatDate }: Document
                 {formatDate(document.updatedAt)}
               </span>
               <div className="flex gap-1">
-                {document.tags.slice(0, 2).map(tag => (
-                  <span key={tag} className="text-[9px] px-1 py-0.5 rounded bg-zinc-800 border border-zinc-700/50 text-zinc-500">
+                {document.tags.slice(0, 2).map((tag) => (
+                  <span
+                    key={tag}
+                    className="text-[9px] px-1 py-0.5 rounded bg-zinc-800 border border-zinc-700/50 text-zinc-500"
+                  >
                     {tag}
                   </span>
                 ))}
@@ -391,9 +453,16 @@ function DocumentListItem({ document, isActive, onSelect, formatDate }: Document
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
-        <ContextMenuItem onClick={() => setIsRenaming(true)}>Rename</ContextMenuItem>
+        <ContextMenuItem onClick={() => setIsRenaming(true)}>
+          Rename
+        </ContextMenuItem>
         <ContextMenuSeparator className="bg-zinc-800" />
-        <ContextMenuItem onClick={() => deleteDocument(document.id)} className="text-red-400">Delete</ContextMenuItem>
+        <ContextMenuItem
+          onClick={() => deleteDocument(document.id)}
+          className="text-red-400"
+        >
+          Delete
+        </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );

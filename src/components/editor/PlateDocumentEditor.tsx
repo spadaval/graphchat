@@ -1,31 +1,31 @@
 "use client";
 
-import type { Observable } from "@legendapp/state";
-import { use$ } from "@legendapp/state/react";
-import { Plus, Sparkles, Loader2, X, Send } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
 import {
+  closestCenter,
   DndContext,
-  DragEndEvent,
+  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
-  closestCenter,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
 import {
-  SortableContext,
   arrayMove,
+  SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import type { Observable } from "@legendapp/state";
+import { use$ } from "@legendapp/state/react";
+import { Loader2, Plus, Send, Sparkles, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
-import type { Document, Block, BlockId } from "~/lib/state";
-import { updateDocument, createBlock, blocks$ } from "~/lib/state";
+import type { Block, BlockId, Document } from "~/lib/state";
+import { blocks$, createBlock, updateDocument } from "~/lib/state";
 import { syncDocumentContent } from "~/lib/state/documents";
-import { BlockCard } from "./BlockCard";
 import { callLLMStreaming, modelProps$ } from "~/lib/state/llm";
 import { uiPreferences$ } from "~/lib/state/ui";
+import { BlockCard } from "./BlockCard";
 
 interface PlateDocumentEditorProps {
   document$: Observable<Document>;
@@ -36,9 +36,10 @@ export function PlateDocumentEditor({
   document$,
   onCancel,
 }: PlateDocumentEditorProps) {
-  const docValue = use$(document$);
+  const docTitle = use$(document$.title);
+  const blockIds = use$(document$.blocks) || [];
+  const docId = document$.id.peek();
   const { aiEnabled, documentWidth = 800 } = use$(uiPreferences$);
-  const blockIds = docValue.blocks || [];
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [showAiInput, setShowAiInput] = useState(false);
   const [aiInstructions, setAiInstructions] = useState("");
@@ -75,7 +76,7 @@ export function PlateDocumentEditor({
       const newIndex = blockIds.indexOf(over.id as BlockId);
 
       const newBlocks = arrayMove(blockIds, oldIndex, newIndex);
-      updateDocument(docValue.id, { blocks: newBlocks });
+      updateDocument(docId, { blocks: newBlocks });
     }
   };
 
@@ -89,12 +90,12 @@ export function PlateDocumentEditor({
       : currentBlocks.length;
 
     currentBlocks.splice(index, 0, newBlock.id);
-    updateDocument(docValue.id, { blocks: currentBlocks });
+    updateDocument(docId, { blocks: currentBlocks });
   };
 
   const deleteBlock = (blockId: BlockId) => {
     const newBlocks = blockIds.filter((id) => id !== blockId);
-    updateDocument(docValue.id, { blocks: newBlocks });
+    updateDocument(docId, { blocks: newBlocks });
   };
 
   const generateNextBlock = async (instructions?: string) => {
@@ -108,7 +109,9 @@ export function PlateDocumentEditor({
     const allBlocks = blocks$.get();
 
     // Create the new block first
-    const newBlock = createBlock("", "assistant", "paragraph", { aiGenerated: true });
+    const newBlock = createBlock("", "assistant", "paragraph", {
+      aiGenerated: true,
+    });
 
     blocks$.assign({ [newBlock.id]: newBlock });
     blocks$[newBlock.id].isGenerating.set(true);
@@ -118,17 +121,24 @@ export function PlateDocumentEditor({
 
     try {
       // Format context from previous blocks
-      const contextBlocks = currentBlockIds.map(id => allBlocks[id]).filter(Boolean);
+      const contextBlocks = currentBlockIds
+        .map((id) => allBlocks[id])
+        .filter(Boolean);
 
       // If instructions are provided, add them as a user prompt
       if (instructions?.trim()) {
         contextBlocks.push(createBlock(instructions.trim(), "user"));
       } else if (contextBlocks.length === 0) {
         // If no blocks and no instructions, add a dummy user prompt to start
-        contextBlocks.push(createBlock("Please start writing a story.", "user"));
+        contextBlocks.push(
+          createBlock("Please start writing a story.", "user"),
+        );
       }
 
-      const stream = callLLMStreaming(contextBlocks as Block[], modelProps$.get());
+      const stream = callLLMStreaming(
+        contextBlocks as Block[],
+        modelProps$.get(),
+      );
 
       let fullText = "";
       let allProbabilities: any[] = [];
@@ -143,14 +153,17 @@ export function PlateDocumentEditor({
             }
             fullText += chunk.response.content;
             if (chunk.response.probabilities) {
-              allProbabilities = [...allProbabilities, ...chunk.response.probabilities];
+              allProbabilities = [
+                ...allProbabilities,
+                ...chunk.response.probabilities,
+              ];
             }
             blocks$[newBlock.id].text.set(fullText);
           },
           (error) => {
             console.error("AI Generation error:", error);
             blocks$[newBlock.id].text.set("Error: " + error.message);
-          }
+          },
         );
       }
 
@@ -179,7 +192,9 @@ export function PlateDocumentEditor({
     const currentBlockIds = doc.blocks || [];
     const allBlocks = blocks$.get();
 
-    const newBlock = createBlock("", "assistant", "paragraph", { aiGenerated: true });
+    const newBlock = createBlock("", "assistant", "paragraph", {
+      aiGenerated: true,
+    });
     blocks$.assign({ [newBlock.id]: newBlock });
     blocks$[newBlock.id].isGenerating.set(true);
 
@@ -189,13 +204,22 @@ export function PlateDocumentEditor({
     updateDocument(doc.id, { blocks: newBlocksList });
 
     try {
-      const beforeBlocks = currentBlockIds.slice(0, beforeIndex + 1).map(id => allBlocks[id]).filter(Boolean);
-      const afterBlocks = currentBlockIds.slice(beforeIndex + 1).map(id => allBlocks[id]).filter(Boolean);
+      const beforeBlocks = currentBlockIds
+        .slice(0, beforeIndex + 1)
+        .map((id) => allBlocks[id])
+        .filter(Boolean);
+      const afterBlocks = currentBlockIds
+        .slice(beforeIndex + 1)
+        .map((id) => allBlocks[id])
+        .filter(Boolean);
 
       const context = [
         ...beforeBlocks,
-        createBlock("Generate a bridging paragraph or sentence that smoothly connects the content above with the content below. Response ONLY with the transition text.", "system"),
-        ...afterBlocks
+        createBlock(
+          "Generate a bridging paragraph or sentence that smoothly connects the content above with the content below. Response ONLY with the transition text.",
+          "system",
+        ),
+        ...afterBlocks,
       ];
 
       const stream = callLLMStreaming(context as Block[], modelProps$.get());
@@ -208,7 +232,7 @@ export function PlateDocumentEditor({
             fullText += chunk.response.content;
             blocks$[newBlock.id].text.set(fullText);
           },
-          (error) => console.error("AI Fill error:", error)
+          (error) => console.error("AI Fill error:", error),
         );
       }
     } finally {
@@ -220,13 +244,14 @@ export function PlateDocumentEditor({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-zinc-950 overflow-y-auto">
-      <div className="mx-auto w-full p-8 pb-32 transition-all duration-300 ease-in-out" style={{ maxWidth: `${documentWidth}px` }}>
+      <div
+        className="mx-auto w-full p-8 pb-32 transition-all duration-300 ease-in-out"
+        style={{ maxWidth: `${documentWidth}px` }}
+      >
         <input
           type="text"
-          value={docValue.title || ""}
-          onChange={(e) =>
-            updateDocument(docValue.id, { title: e.target.value })
-          }
+          value={docTitle || ""}
+          onChange={(e) => updateDocument(docId, { title: e.target.value })}
           className="w-full text-4xl font-bold bg-transparent border-none outline-none mb-12 text-zinc-100 placeholder-zinc-800"
           placeholder="Untitled Document"
         />
@@ -244,7 +269,7 @@ export function PlateDocumentEditor({
               <div key={blockId} className="relative group/block-wrapper">
                 <BlockCard
                   blockId={blockId}
-                  docId={docValue.id}
+                  docId={docId}
                   onDelete={deleteBlock}
                 />
 
@@ -255,7 +280,9 @@ export function PlateDocumentEditor({
                       variant="ghost"
                       size="sm"
                       className="h-6 px-2 text-[10px] bg-zinc-900 border border-zinc-800 text-blue-400 hover:text-blue-300 hover:bg-zinc-800 gap-1 rounded-full shadow-lg"
-                      onClick={() => aiFillBetween(blockId, blockIds[index + 1])}
+                      onClick={() =>
+                        aiFillBetween(blockId, blockIds[index + 1])
+                      }
                       disabled={isAiGenerating}
                     >
                       <Sparkles size={10} />

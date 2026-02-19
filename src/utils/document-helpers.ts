@@ -51,7 +51,7 @@ export const getDocumentExcerpts = (
   excerptLength = 200,
 ): string[] => {
   const content = document.content || "";
-  
+
   if (!query)
     return [
       content.substring(0, excerptLength) +
@@ -71,8 +71,7 @@ export const getDocumentExcerpts = (
       index + query.length + excerptLength / 2,
     );
     excerpts.push(
-      content.substring(start, end) +
-        (end < content.length ? "..." : ""),
+      content.substring(start, end) + (end < content.length ? "..." : ""),
     );
     index = lowerContent.indexOf(lowerQuery, index + 1);
   }

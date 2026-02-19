@@ -12,9 +12,9 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
-import { Editor } from "./editor/Editor";
 import { blocks$ } from "../lib/state/block";
 import type { BlockId } from "../lib/state/types";
+import { Editor } from "./editor/Editor";
 
 type CodeProps = React.DetailedHTMLProps<
   React.HTMLAttributes<HTMLElement>,

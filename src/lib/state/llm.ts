@@ -7,8 +7,8 @@ import { client } from "../../llamacpp-client/client.gen";
 import { type AppError, type AppResult, createLLMError } from "../errors";
 
 import { getDocumentById } from "./documents";
-import { uiPreferences$ } from "./ui";
 import type { Block, DocumentId, LLMRequest, ModelProperties } from "./types";
+import { uiPreferences$ } from "./ui";
 
 // Helper function to generate unique request IDs
 const generateRequestId = (): string => `req-${crypto.randomUUID()}`;
@@ -106,10 +106,14 @@ export async function callLLM(
   modelProperties: ModelProperties,
 ): Promise<AppResult<{ response: LLMResponse; request: LLMRequest }>> {
   // Collect all document IDs from all messages
-  const directDocumentIds = messages.flatMap((msg) => msg.linkedDocuments || []);
+  const directDocumentIds = messages.flatMap(
+    (msg) => msg.linkedDocuments || [],
+  );
 
   // Get related documents from the graph
-  const relatedDocumentIds = directDocumentIds.flatMap(id => getRelatedDocuments(id));
+  const relatedDocumentIds = directDocumentIds.flatMap((id) =>
+    getRelatedDocuments(id),
+  );
 
   const allDocumentIds = [...directDocumentIds, ...relatedDocumentIds];
   const uniqueDocumentIds = [...new Set(allDocumentIds)];
@@ -158,7 +162,9 @@ export async function callLLM(
         presence_penalty: modelProperties.presence_penalty,
         frequency_penalty: modelProperties.frequency_penalty,
         stream: false, // Non-streaming call
-        ...(uiPrefs.enableTokenProbabilities ? { n_probs: modelProperties.n_probs || 10 } : {}),
+        ...(uiPrefs.enableTokenProbabilities
+          ? { n_probs: modelProperties.n_probs || 10 }
+          : {}),
       } as any,
     }),
     (error) =>
@@ -171,7 +177,9 @@ export async function callLLM(
         "Sorry, I couldn't generate a response.";
 
       // Extract probabilities if available
-      const probabilities = (response.data as any).completion_probabilities || (response.data as any).choices?.[0]?.logprobs;
+      const probabilities =
+        (response.data as any).completion_probabilities ||
+        (response.data as any).choices?.[0]?.logprobs;
 
       return ok({
         response: {
@@ -237,10 +245,14 @@ export async function* callLLMStreaming(
   unknown
 > {
   // Collect all document IDs from all messages
-  const directDocumentIds = messages.flatMap((msg) => msg.linkedDocuments || []);
+  const directDocumentIds = messages.flatMap(
+    (msg) => msg.linkedDocuments || [],
+  );
 
   // Get related documents from the graph
-  const relatedDocumentIds = directDocumentIds.flatMap(id => getRelatedDocuments(id));
+  const relatedDocumentIds = directDocumentIds.flatMap((id) =>
+    getRelatedDocuments(id),
+  );
 
   const allDocumentIds = [...directDocumentIds, ...relatedDocumentIds];
   const uniqueDocumentIds = [...new Set(allDocumentIds)];
@@ -290,7 +302,9 @@ export async function* callLLMStreaming(
         presence_penalty: modelProperties.presence_penalty,
         frequency_penalty: modelProperties.frequency_penalty,
         stream: true, // Enable streaming
-        ...(uiPrefs.enableTokenProbabilities ? { n_probs: modelProperties.n_probs || 10 } : {}),
+        ...(uiPrefs.enableTokenProbabilities
+          ? { n_probs: modelProperties.n_probs || 10 }
+          : {}),
       } as any,
       headers: {
         "Content-Type": "application/json",
@@ -345,7 +359,14 @@ export async function* callLLMStreaming(
       response: {
         content,
         done: false,
-        probabilities: probabilities ? [probabilities] : undefined, // Simplistic for now, we'll need to aggregate
+        // If probability data exists, it might be an array or an object with 'content'
+        probabilities: Array.isArray(probabilities)
+          ? probabilities
+          : probabilities?.content
+            ? probabilities.content
+            : probabilities
+              ? [probabilities]
+              : undefined,
       },
       request,
     });

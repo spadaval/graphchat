@@ -1,11 +1,7 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
-import {
-  blocks$,
-  createBlock,
-  setBlockLinkedDocuments,
-} from "./block";
+import { blocks$, createBlock, setBlockLinkedDocuments } from "./block";
 import { callLLM, callLLMStreaming, modelProps$ } from "./llm";
 import type { Block, BlockId, ChatId, MessageId } from "./types";
 
@@ -24,15 +20,12 @@ ${firstMessage}
 `;
 
   try {
-    const result = await callLLM(
-      [createBlock(prompt, "user")],
-      {
-        ...modelProps$.get(),
-        temperature: 0.3, // Lower temperature for more consistent titles
-        n_predict: 50, // Short response
-        stream: false,
-      },
-    );
+    const result = await callLLM([createBlock(prompt, "user")], {
+      ...modelProps$.get(),
+      temperature: 0.3, // Lower temperature for more consistent titles
+      n_predict: 50, // Short response
+      stream: false,
+    });
 
     if (result.isOk()) {
       // Clean up the response - remove quotes, extra whitespace, and limit length
@@ -70,7 +63,6 @@ interface ChatStore {
 }
 
 // Create a global observable for the chat store
-
 
 const newThread = (title?: string, initialMessage?: string): ChatThread => {
   const thread: ChatThread = {
@@ -116,7 +108,7 @@ export const createNewThread = (initialMessage?: string) => {
   console.log("initialMessage", initialMessage);
   const title = initialMessage
     ? initialMessage.trim().substring(0, 30) +
-    (initialMessage.trim().length > 30 ? "..." : "")
+      (initialMessage.trim().length > 30 ? "..." : "")
     : "New Chat";
 
   const thread = newThread(title, initialMessage);
@@ -336,7 +328,10 @@ export const sendMessage = async (text?: string) => {
         // Accumulate content
         accumulatedContent += chunk.response.content;
         if (chunk.response.probabilities) {
-          allProbabilities = [...allProbabilities, ...chunk.response.probabilities];
+          allProbabilities = [
+            ...allProbabilities,
+            ...chunk.response.probabilities,
+          ];
         }
         // Batch updates to reduce render frequency
         if (Date.now() - lastUpdate > 50) {
@@ -450,7 +445,10 @@ export const regenerateMessage = async (blockId: BlockId) => {
         // Accumulate content
         accumulatedContent += chunk.response.content;
         if (chunk.response.probabilities) {
-          allProbabilities = [...allProbabilities, ...chunk.response.probabilities];
+          allProbabilities = [
+            ...allProbabilities,
+            ...chunk.response.probabilities,
+          ];
         }
         // Batch updates to reduce render frequency
         if (Date.now() - lastUpdate > 50) {

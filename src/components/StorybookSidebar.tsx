@@ -1,34 +1,23 @@
 import { use$ } from "@legendapp/state/react";
 import {
-  Plus,
-  FileText,
-  Map as MapIcon,
-  User,
-  Sparkles,
-  Ghost,
-  Building,
   Book,
-  Scroll,
+  Building,
+  ChevronDown,
+  ChevronRight,
+  FileText,
   Folder as FolderIcon,
   FolderOpen,
-  ChevronRight,
-  ChevronDown,
+  FolderPlus,
+  Ghost,
+  Map as MapIcon,
   MoreVertical,
-  FolderPlus
+  Plus,
+  Scroll,
+  Sparkles,
+  User,
 } from "lucide-react";
-import { useState, useRef } from "react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
+import { useRef, useState } from "react";
+import { Button } from "~/components/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -42,21 +31,32 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import { Input } from "~/components/ui/input";
-import { Button } from "~/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
+import type { Document, Folder } from "~/lib/state/documents";
 import {
   createDocument,
-  deleteDocument,
-  updateDocument,
-  documentStore$,
-  DocumentIcon,
   createFolder,
-  updateFolder,
+  DocumentIcon,
+  deleteDocument,
   deleteFolder,
+  documentStore$,
   moveDocument,
-  moveFolder
+  moveFolder,
+  updateDocument,
+  updateFolder,
 } from "~/lib/state/documents";
-import type { Document, Folder } from "~/lib/state/documents";
 import type { DocumentId, FolderId } from "~/lib/state/types";
 
 interface StorybookSidebarProps {
@@ -64,7 +64,10 @@ interface StorybookSidebarProps {
   onSelectDocument: (id: DocumentId) => void;
 }
 
-const iconMap: Record<DocumentIcon, React.ComponentType<{ className?: string }>> = {
+const iconMap: Record<
+  DocumentIcon,
+  React.ComponentType<{ className?: string }>
+> = {
   [DocumentIcon.FileText]: FileText,
   [DocumentIcon.User]: User,
   [DocumentIcon.Map]: MapIcon,
@@ -83,9 +86,14 @@ export function StorybookSidebar({
   const folders = use$(documentStore$.folders);
   const documentTypes = use$(documentStore$.documentTypes);
 
-  const [changeTypeDocId, setChangeTypeDocId] = useState<DocumentId | null>(null);
+  const [changeTypeDocId, setChangeTypeDocId] = useState<DocumentId | null>(
+    null,
+  );
 
-  const handleCreateDocument = (typeId: string, parentId: FolderId | "root" = "root") => {
+  const handleCreateDocument = (
+    typeId: string,
+    parentId: FolderId | "root" = "root",
+  ) => {
     const typeDef = documentTypes[typeId];
     const title = typeDef ? "Untitled " + typeDef.name : "Untitled";
     const id = createDocument(title, "", typeId, [], parentId);
@@ -104,8 +112,12 @@ export function StorybookSidebar({
   };
 
   // Get root items
-  const rootDocuments = Object.values(documents).filter(doc => !doc.parentId || doc.parentId === "root");
-  const rootFolders = Object.values(folders).filter(f => !f.parentId || f.parentId === "root");
+  const rootDocuments = Object.values(documents).filter(
+    (doc) => !doc.parentId || doc.parentId === "root",
+  );
+  const rootFolders = Object.values(folders).filter(
+    (f) => !f.parentId || f.parentId === "root",
+  );
 
   return (
     <div className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col h-full">
@@ -140,7 +152,10 @@ export function StorybookSidebar({
               New Document
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56 bg-zinc-800 border-zinc-700 text-zinc-100">
+          <DropdownMenuContent
+            align="start"
+            className="w-56 bg-zinc-800 border-zinc-700 text-zinc-100"
+          >
             {Object.values(documentTypes).map((type) => {
               const IconComponent = iconMap[type.icon] || FileText;
               return (
@@ -149,7 +164,9 @@ export function StorybookSidebar({
                   onClick={() => handleCreateDocument(type.id)}
                   className="cursor-pointer hover:bg-zinc-700 focus:bg-zinc-700 focus:text-zinc-100"
                 >
-                  <span className="mr-2"><IconComponent className="size-4" /></span>
+                  <span className="mr-2">
+                    <IconComponent className="size-4" />
+                  </span>
                   {type.name}
                 </DropdownMenuItem>
               );
@@ -171,7 +188,9 @@ export function StorybookSidebar({
           onDrop={(e) => {
             e.preventDefault();
             e.currentTarget.classList.remove("bg-zinc-800/20");
-            const data = e.dataTransfer.getData("application/worldcrafter-item");
+            const data = e.dataTransfer.getData(
+              "application/worldcrafter-item",
+            );
             if (!data) return;
             const { type, id } = JSON.parse(data);
             if (type === "document") moveDocument(id as DocumentId, "root");
@@ -206,7 +225,10 @@ export function StorybookSidebar({
         </div>
       </div>
 
-      <Dialog open={!!changeTypeDocId} onOpenChange={(open) => !open && setChangeTypeDocId(null)}>
+      <Dialog
+        open={!!changeTypeDocId}
+        onOpenChange={(open) => !open && setChangeTypeDocId(null)}
+      >
         <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-100 sm:max-w-xs">
           <DialogHeader>
             <DialogTitle>Change Document Type</DialogTitle>
@@ -250,7 +272,7 @@ function FolderItem({
   setChangeTypeDocId,
   onCreateDocument,
   onCreateFolder,
-  depth = 0
+  depth = 0,
 }: FolderItemProps) {
   const documents = use$(documentStore$.documents);
   const folders = use$(documentStore$.folders);
@@ -259,8 +281,12 @@ function FolderItem({
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const childDocuments = Object.values(documents).filter(doc => doc.parentId === folder.id);
-  const childFolders = Object.values(folders).filter(f => f.parentId === folder.id);
+  const childDocuments = Object.values(documents).filter(
+    (doc) => doc.parentId === folder.id,
+  );
+  const childFolders = Object.values(folders).filter(
+    (f) => f.parentId === folder.id,
+  );
 
   const handleRename = (newName: string) => {
     if (newName.trim()) {
@@ -275,7 +301,10 @@ function FolderItem({
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData("application/worldcrafter-item", JSON.stringify({ type: "folder", id: folder.id }));
+    e.dataTransfer.setData(
+      "application/worldcrafter-item",
+      JSON.stringify({ type: "folder", id: folder.id }),
+    );
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -306,8 +335,11 @@ function FolderItem({
             }}
             onDragLeave={() => setIsDragOver(false)}
             onDrop={handleDrop}
-            className={`flex items-center gap-1 p-2 rounded-md text-sm transition-colors cursor-pointer group ${isDragOver ? "bg-zinc-800/50 outline-2 outline-dashed outline-zinc-700" : "hover:bg-zinc-800/30"
-              }`}
+            className={`flex items-center gap-1 p-2 rounded-md text-sm transition-colors cursor-pointer group ${
+              isDragOver
+                ? "bg-zinc-800/50 outline-2 outline-dashed outline-zinc-700"
+                : "hover:bg-zinc-800/30"
+            }`}
             onClick={handleToggle}
           >
             <div className="flex items-center gap-1 flex-1 min-w-0">
@@ -358,7 +390,11 @@ function FolderItem({
                 <ChevronRight className="size-3 ml-2 opacity-50" />
               </ContextMenuItem>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="start" className="w-48 bg-zinc-800 border-zinc-700 text-zinc-100">
+            <DropdownMenuContent
+              side="right"
+              align="start"
+              className="w-48 bg-zinc-800 border-zinc-700 text-zinc-100"
+            >
               {Object.values(documentTypes).map((type) => {
                 const IconComponent = iconMap[type.icon] || FileText;
                 return (
@@ -370,7 +406,9 @@ function FolderItem({
                     }}
                     className="cursor-pointer hover:bg-zinc-700 focus:bg-zinc-700 focus:text-zinc-100"
                   >
-                    <span className="mr-2"><IconComponent className="size-4" /></span>
+                    <span className="mr-2">
+                      <IconComponent className="size-4" />
+                    </span>
                     {type.name}
                   </DropdownMenuItem>
                 );
@@ -378,7 +416,10 @@ function FolderItem({
             </DropdownMenuContent>
           </DropdownMenu>
           <ContextMenuSeparator className="bg-zinc-800" />
-          <ContextMenuItem onClick={() => setIsRenaming(true)} className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer">
+          <ContextMenuItem
+            onClick={() => setIsRenaming(true)}
+            className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+          >
             Rename
           </ContextMenuItem>
           <ContextMenuItem
@@ -414,7 +455,9 @@ function FolderItem({
             />
           ))}
           {childFolders.length === 0 && childDocuments.length === 0 && (
-            <div className="text-zinc-600 text-[10px] pl-6 py-1 italic">Empty</div>
+            <div className="text-zinc-600 text-[10px] pl-6 py-1 italic">
+              Empty
+            </div>
           )}
         </div>
       )}
@@ -429,10 +472,15 @@ interface DocumentItemProps {
   onChangeTypeRequest: () => void;
 }
 
-function DocumentItem({ document, isActive, onClick, onChangeTypeRequest }: DocumentItemProps) {
+function DocumentItem({
+  document,
+  isActive,
+  onClick,
+  onChangeTypeRequest,
+}: DocumentItemProps) {
   const documentTypes = use$(documentStore$.documentTypes);
   const typeDef = documentTypes[document.type] || documentTypes["general"];
-  const IconComponent = typeDef ? (iconMap[typeDef.icon] || FileText) : FileText;
+  const IconComponent = typeDef ? iconMap[typeDef.icon] || FileText : FileText;
 
   const [isRenaming, setIsRenaming] = useState(false);
 
@@ -444,7 +492,10 @@ function DocumentItem({ document, isActive, onClick, onChangeTypeRequest }: Docu
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData("application/worldcrafter-item", JSON.stringify({ type: "document", id: document.id }));
+    e.dataTransfer.setData(
+      "application/worldcrafter-item",
+      JSON.stringify({ type: "document", id: document.id }),
+    );
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -476,28 +527,42 @@ function DocumentItem({ document, isActive, onClick, onChangeTypeRequest }: Docu
                 draggable
                 onDragStart={handleDragStart}
                 onClick={onClick}
-                className={`w-full flex items-center gap-2 p-2 rounded-md text-sm transition-colors ${isActive
-                  ? "bg-zinc-800 text-zinc-100 font-medium"
-                  : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
-                  }`}
+                className={`w-full flex items-center gap-2 p-2 rounded-md text-sm transition-colors ${
+                  isActive
+                    ? "bg-zinc-800 text-zinc-100 font-medium"
+                    : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                }`}
               >
                 <div className="w-4 shrink-0" />
-                <span className="shrink-0 opacity-70"><IconComponent className="size-4" /></span>
+                <span className="shrink-0 opacity-70">
+                  <IconComponent className="size-4" />
+                </span>
                 <span className="truncate">{document.title || "Untitled"}</span>
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right" className="bg-zinc-900 border-zinc-800 text-zinc-300">
+            <TooltipContent
+              side="right"
+              className="bg-zinc-900 border-zinc-800 text-zinc-300"
+            >
               <p>{document.title || "Untitled"}</p>
-              <p className="text-xs text-zinc-500 capitalize">{typeDef ? typeDef.name : (document.type || "general")}</p>
+              <p className="text-xs text-zinc-500 capitalize">
+                {typeDef ? typeDef.name : document.type || "general"}
+              </p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </ContextMenuTrigger>
       <ContextMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
-        <ContextMenuItem onClick={() => setIsRenaming(true)} className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer">
+        <ContextMenuItem
+          onClick={() => setIsRenaming(true)}
+          className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+        >
           Rename
         </ContextMenuItem>
-        <ContextMenuItem onClick={onChangeTypeRequest} className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer">
+        <ContextMenuItem
+          onClick={onChangeTypeRequest}
+          className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+        >
           Change Type...
         </ContextMenuItem>
         <ContextMenuSeparator className="bg-zinc-800" />
