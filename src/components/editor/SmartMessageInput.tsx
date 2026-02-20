@@ -1,11 +1,11 @@
 import { use$ } from "@legendapp/state/react";
+import { DocumentChipsList } from "~/components/DocumentChips";
 import {
   chatStore$,
   documentLinking$,
   removeDocumentFromCurrentMessage,
 } from "~/lib/state";
-import { DocumentChipsList } from "./DocumentChips";
-import { Editor } from "./editor/Editor";
+import { Editor } from "./Editor";
 
 interface SmartMessageInputProps {
   onSend: (content?: string) => void;

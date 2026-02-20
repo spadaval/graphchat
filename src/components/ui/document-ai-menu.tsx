@@ -26,7 +26,7 @@ import {
   usePluginOption,
 } from "platejs/react";
 import * as React from "react";
-
+import { useChat } from "~/components/editor/use-chat";
 import { Button } from "~/components/ui/button";
 import {
   Command,
@@ -39,7 +39,6 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from "~/components/ui/popover";
-import { useChat } from "~/components/use-chat";
 import { cn } from "~/lib/utils";
 
 import { AIChatEditor } from "./ai-chat-editor";

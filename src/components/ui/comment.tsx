@@ -26,11 +26,11 @@ import {
   usePluginOption,
 } from "platejs/react";
 import * as React from "react";
-import { BasicMarksKit } from "~/components/basic-marks-kit";
+import { BasicMarksKit } from "~/components/editor/basic-marks-kit";
 import {
   discussionPlugin,
   type TDiscussion,
-} from "~/components/discussion-kit";
+} from "~/components/editor/discussion-kit";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import {

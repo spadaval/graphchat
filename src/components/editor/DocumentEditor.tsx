@@ -1,10 +1,10 @@
 import { useObservable } from "@legendapp/state/react";
 import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
-import { blocks$, createBlock } from "../lib/state/block";
-import { documentStore$, updateDocument } from "../lib/state/documents";
-import type { BlockId, DocumentId } from "../lib/state/types";
-import { cn } from "../lib/utils";
+import { blocks$, createBlock } from "~/lib/state/block";
+import { documentStore$, updateDocument } from "~/lib/state/documents";
+import type { BlockId, DocumentId } from "~/lib/state/types";
+import { cn } from "~/lib/utils";
 
 interface DocumentEditorProps {
   documentId: DocumentId;

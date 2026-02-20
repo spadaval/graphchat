@@ -9,7 +9,7 @@ import * as React from "react";
 import {
   type SuggestionConfig,
   suggestionPlugin,
-} from "~/components/suggestion-kit";
+} from "~/components/editor/suggestion-kit";
 import { cn } from "~/lib/utils";
 
 const suggestionVariants = cva(

@@ -22,12 +22,12 @@ import {
 import type { PlateElementProps, RenderNodeWrapper } from "platejs/react";
 import { useEditorPlugin, useEditorRef, usePluginOption } from "platejs/react";
 import * as React from "react";
-import { commentPlugin } from "~/components/comment-kit";
+import { commentPlugin } from "~/components/editor/comment-kit";
 import {
   discussionPlugin,
   type TDiscussion,
-} from "~/components/discussion-kit";
-import { suggestionPlugin } from "~/components/suggestion-kit";
+} from "~/components/editor/discussion-kit";
+import { suggestionPlugin } from "~/components/editor/suggestion-kit";
 import { Button } from "~/components/ui/button";
 import {
   Popover,

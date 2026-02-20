@@ -1,8 +1,8 @@
 import { use$ } from "@legendapp/state/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect } from "react";
+import { StorybookEditor } from "~/components/editor/StorybookEditor";
 import { MainLayout, ModelServerSidebar } from "~/components/LayoutComponents";
-import { StorybookEditor } from "~/components/StorybookEditor";
 import { StorybookSidebar } from "~/components/StorybookSidebar";
 import {
   closeDocument,

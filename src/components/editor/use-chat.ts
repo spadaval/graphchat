@@ -10,11 +10,11 @@ import { KEYS, NodeApi, nanoid, TextApi, type TNode } from "platejs";
 import { useEditorRef, usePluginOption } from "platejs/react";
 import * as React from "react";
 
-import { aiChatPlugin } from "~/components/ai-kit";
+import { aiChatPlugin } from "~/components/editor/ai-kit";
 import {
   discussionPlugin,
   type TDiscussion,
-} from "~/components/discussion-kit";
+} from "~/components/editor/discussion-kit";
 import { callLLMStreaming, modelProps$ } from "~/lib/state/llm";
 import type { Block, BlockId, MessageId, MessageType } from "~/lib/state/types";
 import { uiPreferences$ } from "~/lib/state/ui";
