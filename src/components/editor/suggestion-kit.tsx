@@ -11,7 +11,7 @@ import { toTPlatePlugin } from "platejs/react";
 import {
   SuggestionLeaf,
   SuggestionLineBreak,
-} from "~/components/ui/suggestion-node";
+} from "~/components/editor/suggestion-node";
 
 import { discussionPlugin } from "./discussion-kit";
 

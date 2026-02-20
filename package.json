@@ -23,6 +23,7 @@
     "@emoji-mart/data": "1.2.1",
     "@faker-js/faker": "^10.3.0",
     "@huggingface/tokenizers": "^0.1.1",
+    "@huggingface/transformers": "^3.8.1",
     "@legendapp/state": "^3.0.0-beta.45",
     "@platejs/ai": "^52.1.0",
     "@platejs/autoformat": "^52.0.11",

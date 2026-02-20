@@ -22,6 +22,7 @@ import type {
   TTextAlignProps,
 } from "platejs";
 import type { PlateEditor } from "platejs/react";
+import type { NerEntityType } from "~/lib/ner";
 
 export interface MyBlockElement extends TElement, TListProps {
   id?: string;
@@ -144,6 +145,8 @@ export interface MyToggleElement extends MyTextBlockElement {
 
 export interface RichText extends TBasicMarks, TCommentText, TFontMarks, TText {
   kbd?: boolean;
+  ner?: boolean;
+  nerType?: NerEntityType;
 }
 
 export type MyValue = (

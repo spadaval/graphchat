@@ -42,7 +42,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { cn } from "~/lib/utils";
 
-import { Editor, EditorContainer } from "./editor";
+import { Editor, EditorContainer } from "./plate-editor";
 
 export type TComment = {
   id: string;

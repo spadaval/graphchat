@@ -29,9 +29,8 @@ import {
   XIcon,
 } from "lucide-react";
 import * as React from "react";
-
+import { ToolbarButton } from "~/components/editor/toolbar";
 import { Button } from "~/components/ui/button";
-import { ToolbarButton } from "~/components/ui/toolbar";
 import {
   Tooltip,
   TooltipContent,

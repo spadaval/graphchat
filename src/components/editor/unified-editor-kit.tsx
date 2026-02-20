@@ -1,16 +1,18 @@
 "use client";
 
 import { BaseParagraphPlugin } from "platejs";
+import { ParagraphElement } from "~/components/editor/paragraph-node";
 import { AIKit } from "./ai-kit";
 import { BasicMarksKit } from "./basic-marks-kit";
 import { CursorOverlayKit } from "./cursor-overlay-kit";
 import { MarkdownKit } from "./markdown-kit";
 import { MentionKit } from "./mention-kit";
+import { NerKit } from "./ner-kit";
 
 // Unified editor kit that includes all plugins needed for both chat and document editors
 const UnifiedPlugins = [
   // Core plugins
-  BaseParagraphPlugin,
+  BaseParagraphPlugin.withComponent(ParagraphElement),
 
   // Basic text formatting
   ...BasicMarksKit,
@@ -23,6 +25,9 @@ const UnifiedPlugins = [
 
   // Mention support for document referencing
   ...MentionKit,
+
+  // Browser-side NER marks
+  ...NerKit,
 ];
 
 // Extended kit with AI features for document editor

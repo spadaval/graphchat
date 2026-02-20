@@ -1,8 +1,7 @@
 import { BaseListPlugin } from "@platejs/list";
 import { KEYS } from "platejs";
-
+import { BlockListStatic } from "~/components/editor/block-list-static";
 import { BaseIndentKit } from "~/components/editor/indent-base-kit";
-import { BlockListStatic } from "~/components/ui/block-list-static";
 
 export const BaseListKit = [
   ...BaseIndentKit,

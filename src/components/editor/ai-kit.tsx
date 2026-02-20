@@ -12,8 +12,8 @@ import {
 import { getPluginType, KEYS, PathApi } from "platejs";
 import { usePluginOption } from "platejs/react";
 
-import { AILoadingBar, AIMenu } from "~/components/ui/ai-menu";
-import { AIAnchorElement, AILeaf } from "~/components/ui/ai-node";
+import { AILoadingBar, AIMenu } from "~/components/editor/ai-menu";
+import { AIAnchorElement, AILeaf } from "~/components/editor/ai-node";
 
 import { CursorOverlayKit } from "./cursor-overlay-kit";
 import { MarkdownKit } from "./markdown-kit";
