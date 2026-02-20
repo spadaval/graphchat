@@ -19,6 +19,7 @@ interface StorybookEditorProps {
   activeDocumentId: DocumentId | undefined;
   onSelectDocument: (id: DocumentId) => void;
   onCloseDocument: (id: DocumentId) => void;
+  topbarRight?: React.ReactNode;
 }
 
 const iconMap: Record<
@@ -40,6 +41,7 @@ export function StorybookEditor({
   activeDocumentId,
   onSelectDocument,
   onCloseDocument,
+  topbarRight,
 }: StorybookEditorProps) {
   if (openDocumentIds.length === 0) {
     return (
@@ -52,19 +54,22 @@ export function StorybookEditor({
   return (
     <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-zinc-950">
       {/* Tabs */}
-      <div className="flex items-center bg-zinc-900 border-b border-zinc-800 shrink-0 overflow-x-auto">
-        {openDocumentIds.map((id) => (
-          <Tab
-            key={id}
-            id={id}
-            isActive={id === activeDocumentId}
-            onClick={() => onSelectDocument(id)}
-            onClose={(e) => {
-              e.stopPropagation();
-              onCloseDocument(id);
-            }}
-          />
-        ))}
+      <div className="flex items-center bg-zinc-900 border-b border-zinc-800 shrink-0 min-w-0">
+        <div className="flex items-center min-w-0 flex-1 overflow-x-auto">
+          {openDocumentIds.map((id) => (
+            <Tab
+              key={id}
+              id={id}
+              isActive={id === activeDocumentId}
+              onClick={() => onSelectDocument(id)}
+              onClose={(e) => {
+                e.stopPropagation();
+                onCloseDocument(id);
+              }}
+            />
+          ))}
+        </div>
+        {topbarRight ? <div className="shrink-0">{topbarRight}</div> : null}
       </div>
 
       {/* Editor Area */}

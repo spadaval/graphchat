@@ -44,7 +44,7 @@ import {
   usePluginOption,
 } from "platejs/react";
 import * as React from "react";
-import { commentPlugin } from "~/components/editor/comment-kit";
+import { commentPlugin } from "~/components/editor/plugins/comment-kit";
 import { Button } from "~/components/ui/button";
 import {
   Command,

@@ -1,6 +1,8 @@
+import { PanelRightClose } from "lucide-react";
 import { EmptyState, MessagesList } from "~/components/ChatAreaComponents";
 import { TabContent, TabNavigation } from "~/components/ModelServerComponents";
 import { SidebarContent, SidebarHeader } from "~/components/Sidebar";
+import { Button } from "~/components/ui/button";
 import { useThread } from "~/lib/state/hooks";
 import type { ActiveTab, ChatId } from "~/lib/state/types";
 
@@ -65,14 +67,27 @@ export function ChatArea({ currentThreadId, sendMessage }: ChatAreaProps) {
 interface ModelServerSidebarProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
+  onToggle: () => void;
 }
 
 export function ModelServerSidebar({
   activeTab,
   setActiveTab,
+  onToggle,
 }: ModelServerSidebarProps) {
   return (
-    <div className="w-80 bg-zinc-900 border-l border-zinc-800 flex flex-col h-full">
+    <div className="relative w-80 bg-zinc-900 border-l border-zinc-800 flex flex-col h-full">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        onClick={onToggle}
+        className="absolute right-1 top-1 z-10 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+        aria-label="Close model server sidebar"
+        title="Close sidebar"
+      >
+        <PanelRightClose className="size-4" />
+      </Button>
       <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
       <TabContent activeTab={activeTab} />
     </div>

@@ -5,8 +5,9 @@ import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { postV1ChatCompletions } from "../../llamacpp-client";
 import { client } from "../../llamacpp-client/client.gen";
 import { type AppError, type AppResult, createLLMError } from "../errors";
-
+import { blocks$ } from "./block";
 import { getDocumentById } from "./documents";
+import { getRelatedDocuments } from "./graph";
 import type {
   Block,
   DocumentId,
@@ -17,6 +18,38 @@ import type {
   TokenProbability,
 } from "./types";
 import { uiPreferences$ } from "./ui";
+
+const SERVER_MODEL_ID = "llama";
+const BROWSER_MODEL_ID = "onnx-community/Qwen3-0.6B-ONNX";
+
+type AIProvider = "browser" | "server";
+
+type TextGenerationOptions = {
+  do_sample: boolean;
+  max_new_tokens: number;
+  repetition_penalty: number;
+  return_full_text: boolean;
+  temperature: number;
+  top_k: number;
+  top_p: number;
+};
+
+type TextGenerator = (
+  input: string,
+  options: TextGenerationOptions,
+) => Promise<unknown>;
+
+type GeneratedTextMessage = {
+  content?: string;
+  role?: string;
+};
+
+type GenerationOutputEntry = {
+  generated_text?: string | GeneratedTextMessage[];
+};
+
+let browserGenerationPipelinePromise: Promise<TextGenerator> | null = null;
+let browserGenerationPipelineReady = false;
 
 // Helper function to generate unique request IDs
 const generateRequestId = (): string => `req-${crypto.randomUUID()}`;
@@ -29,10 +62,185 @@ const createLLMRequest = (
   id: generateRequestId(),
   timestamp: new Date(),
   model,
-  parameters: { ...parameters }, // Clone to avoid mutations
-  success: false, // Will be updated when request completes
-  sourceMessages: [], // Will be filled with the actual messages sent
+  parameters: { ...parameters },
+  success: false,
+  sourceMessages: [],
 });
+
+function getAIProvider(value: unknown): AIProvider {
+  return value === "server" ? "server" : "browser";
+}
+
+function getModelId(provider: AIProvider): string {
+  return provider === "browser" ? BROWSER_MODEL_ID : SERVER_MODEL_ID;
+}
+
+function getWebGpuInfo() {
+  if (typeof navigator === "undefined") {
+    return { available: false, reason: "navigator-unavailable" };
+  }
+
+  const gpu = (navigator as Navigator & { gpu?: unknown }).gpu;
+  if (!gpu) {
+    return { available: false, reason: "navigator.gpu-missing" };
+  }
+
+  return { available: true, reason: "ok" };
+}
+
+async function getBrowserGenerationPipeline(): Promise<TextGenerator> {
+  if (!browserGenerationPipelinePromise) {
+    const webGpuInfo = getWebGpuInfo();
+    console.info("[LLM] Initializing browser pipeline", {
+      model: BROWSER_MODEL_ID,
+      webGpuAvailable: webGpuInfo.available,
+      webGpuReason: webGpuInfo.reason,
+    });
+
+    browserGenerationPipelinePromise = (async () => {
+      const loadStart = performance.now();
+      const { pipeline } = await import("@huggingface/transformers");
+      const generator = await pipeline("text-generation", BROWSER_MODEL_ID, {
+        ...(webGpuInfo.available ? { device: "webgpu" } : {}),
+        dtype: "q4f16",
+      });
+      const loadMs = Math.round(performance.now() - loadStart);
+      browserGenerationPipelineReady = true;
+
+      console.info("[LLM] Browser pipeline ready", {
+        loadMs,
+        model: BROWSER_MODEL_ID,
+      });
+
+      return generator as TextGenerator;
+    })();
+  } else if (browserGenerationPipelineReady) {
+    console.debug("[LLM] Reusing cached browser pipeline");
+  }
+
+  return browserGenerationPipelinePromise;
+}
+
+function buildPromptFromMessages(
+  messages: { content: string; role: MessageType }[],
+): string {
+  const conversation = messages
+    .map((message) => {
+      if (message.role === "system") {
+        return `System: ${message.content}`;
+      }
+      if (message.role === "user") {
+        return `User: ${message.content}`;
+      }
+      return `Assistant: ${message.content}`;
+    })
+    .join("\n\n");
+
+  return `${conversation}\n\nAssistant:`;
+}
+
+function extractGeneratedText(result: unknown): string {
+  if (!Array.isArray(result) || result.length === 0) {
+    return "";
+  }
+
+  const first = result[0] as GenerationOutputEntry;
+  const generated = first.generated_text;
+
+  if (typeof generated === "string") {
+    return generated;
+  }
+
+  if (Array.isArray(generated)) {
+    const assistantMessage = [...generated]
+      .reverse()
+      .find((message) => message.role === "assistant");
+
+    if (assistantMessage?.content) {
+      return assistantMessage.content;
+    }
+
+    const lastWithContent = [...generated]
+      .reverse()
+      .find((message) => typeof message.content === "string");
+
+    return lastWithContent?.content ?? "";
+  }
+
+  return "";
+}
+
+function splitIntoChunks(text: string, size = 60): string[] {
+  if (!text) return [];
+
+  const chunks: string[] = [];
+  for (let i = 0; i < text.length; i += size) {
+    chunks.push(text.slice(i, i + size));
+  }
+
+  return chunks;
+}
+
+async function generateBrowserResponse(
+  messages: { content: string; role: MessageType }[],
+  modelProperties: ModelProperties,
+): Promise<string> {
+  const generator = await getBrowserGenerationPipeline();
+  const prompt = buildPromptFromMessages(messages);
+
+  const result = await generator(prompt, {
+    max_new_tokens: modelProperties.n_predict,
+    temperature: modelProperties.temperature,
+    top_p: modelProperties.top_p,
+    top_k: modelProperties.top_k,
+    repetition_penalty: modelProperties.repeat_penalty,
+    do_sample: modelProperties.temperature > 0,
+    return_full_text: false,
+  });
+
+  return extractGeneratedText(result).trim();
+}
+
+function buildMessagesForLLM(
+  messages: (Block | LLMMessage)[],
+): { content: string; role: MessageType }[] {
+  const directDocumentIds = messages.flatMap((msg) =>
+    "linkedDocuments" in msg
+      ? msg.linkedDocuments || []
+      : (msg as LLMMessage).linkedDocuments || [],
+  );
+
+  const relatedDocumentIds = directDocumentIds.flatMap((id) =>
+    getRelatedDocuments(id),
+  );
+
+  const allDocumentIds = [...directDocumentIds, ...relatedDocumentIds];
+  const uniqueDocumentIds = [...new Set(allDocumentIds)];
+  const documentContext = formatDocumentsForContext(uniqueDocumentIds);
+
+  const messagesForAPI = messages.map((msg) => ({
+    role: msg.role as MessageType,
+    content: "text" in msg ? msg.text : (msg as LLMMessage).content,
+  }));
+
+  if (documentContext && messagesForAPI.length > 0) {
+    const firstUserMessageIndex = messagesForAPI.findIndex(
+      (msg) => msg.role === "user",
+    );
+
+    if (firstUserMessageIndex !== -1) {
+      messagesForAPI[firstUserMessageIndex].content =
+        documentContext + messagesForAPI[firstUserMessageIndex].content;
+    } else {
+      messagesForAPI.unshift({
+        role: "system",
+        content: documentContext.trim(),
+      });
+    }
+  }
+
+  return messagesForAPI;
+}
 
 export interface LLMResponse {
   content: string;
@@ -45,8 +253,6 @@ export interface StreamingLLMResponse {
   error?: string;
   probabilities?: TokenProbability[];
 }
-
-import { blocks$ } from "./block";
 
 /**
  * Formats document content for inclusion in LLM context
@@ -66,10 +272,12 @@ export function formatDocumentsForContext(documentIds: DocumentId[]): string {
 
   const formattedDocs = documents
     .map((doc) => {
-      const blocks = blocks$.get();
-      const content = doc.blocks
-        .map((blockId) => blocks[blockId]?.text || "")
-        .join("\n\n");
+      const content =
+        doc.editorVersion === 2
+          ? doc.content || ""
+          : doc.blocks
+              .map((blockId) => blocks$.get()[blockId]?.text || "")
+              .join("\n\n");
       return `### ${doc.title}\n${content}`;
     })
     .join("\n\n");
@@ -104,74 +312,64 @@ syncObservable(modelProps$, {
   },
 });
 
-import { getRelatedDocuments } from "./graph";
-
 /**
- * Calls the LLM server with the provided messages and returns the response with attribution
+ * Calls the LLM with the provided messages and returns the response with attribution
  */
 export async function callLLM(
   messages: (Block | LLMMessage)[],
   modelProperties: ModelProperties,
 ): Promise<AppResult<{ response: LLMResponse; request: LLMRequest }>> {
-  // Collect all document IDs from all messages
-  const directDocumentIds = messages.flatMap((msg) =>
-    "linkedDocuments" in msg
-      ? msg.linkedDocuments || []
-      : (msg as LLMMessage).linkedDocuments || [],
-  );
+  const messagesForAPI = buildMessagesForLLM(messages);
+  const uiPrefs = uiPreferences$.get();
+  const provider = getAIProvider(uiPrefs.aiProvider);
+  const modelId = getModelId(provider);
 
-  // Get related documents from the graph
-  const relatedDocumentIds = directDocumentIds.flatMap((id) =>
-    getRelatedDocuments(id),
-  );
+  const request = createLLMRequest(modelId, modelProperties);
+  request.sourceMessages = messagesForAPI;
+  const startTime = Date.now();
 
-  const allDocumentIds = [...directDocumentIds, ...relatedDocumentIds];
-  const uniqueDocumentIds = [...new Set(allDocumentIds)];
+  if (provider === "browser") {
+    try {
+      const assistantContent = await generateBrowserResponse(
+        messagesForAPI,
+        modelProperties,
+      );
 
-  // Format document content for context
-  const documentContext = formatDocumentsForContext(uniqueDocumentIds);
+      request.duration = Date.now() - startTime;
+      request.success = true;
 
-  // Prepare messages for API call
-  const messagesForAPI = messages.map((msg) => ({
-    role: msg.role as MessageType,
-    content: "text" in msg ? msg.text : (msg as LLMMessage).content,
-  }));
-
-  // If we have document context, prepend it to the first user message
-  if (documentContext && messagesForAPI.length > 0) {
-    const firstUserMessageIndex = messagesForAPI.findIndex(
-      (msg) => msg.role === "user",
-    );
-    if (firstUserMessageIndex !== -1) {
-      messagesForAPI[firstUserMessageIndex].content =
-        documentContext + messagesForAPI[firstUserMessageIndex].content;
-    } else {
-      // If no user message, add document context as a system message
-      messagesForAPI.unshift({
-        role: "system",
-        content: documentContext.trim(),
+      return ok({
+        response: {
+          content: assistantContent || "Sorry, I couldn't generate a response.",
+        },
+        request,
       });
+    } catch (error) {
+      request.duration = Date.now() - startTime;
+      request.success = false;
+      request.error = error instanceof Error ? error.message : "Unknown error";
+
+      return err(
+        createLLMError(
+          "Failed to run browser LLM",
+          BROWSER_MODEL_ID,
+          error instanceof Error ? error : undefined,
+        ),
+      );
     }
   }
 
-  // Create request metadata
-  const request = createLLMRequest("llama", modelProperties);
-  request.sourceMessages = messagesForAPI;
-  const startTime = Date.now();
-  const uiPrefs = uiPreferences$.get();
-
-  // Call the LLM server using ResultAsync
   const resultAsync = ResultAsync.fromPromise(
     postV1ChatCompletions({
       body: {
-        model: "llama",
+        model: SERVER_MODEL_ID,
         messages: messagesForAPI,
         temperature: modelProperties.temperature,
         top_p: modelProperties.top_p,
         max_tokens: modelProperties.n_predict,
         presence_penalty: modelProperties.presence_penalty,
         frequency_penalty: modelProperties.frequency_penalty,
-        stream: false, // Non-streaming call
+        stream: false,
         ...(uiPrefs.enableTokenProbabilities
           ? ({ n_probs: modelProperties.n_probs || 10 } as Record<
               string,
@@ -181,22 +379,22 @@ export async function callLLM(
       },
     }),
     (error) =>
-      createLLMError("Failed to call LLM API", "llama", error as Error),
+      createLLMError("Failed to call LLM API", SERVER_MODEL_ID, error as Error),
   )
     .andThen((response) => {
-      // Extract the assistant's response
       const assistantContent =
         response.data?.choices?.[0]?.message?.content ||
         "Sorry, I couldn't generate a response.";
 
-      // Extract probabilities if available
       const data = response.data as Record<string, unknown>;
-      // choices is an unknown external type from the LLM response
       const choices = data.choices as unknown[];
       const typedChoices = choices as { logprobs?: TokenProbability[] }[];
       const probabilities =
         (data.completion_probabilities as TokenProbability[]) ||
         (typedChoices?.[0]?.logprobs as TokenProbability[]);
+
+      request.duration = Date.now() - startTime;
+      request.success = true;
 
       return ok({
         response: {
@@ -207,15 +405,13 @@ export async function callLLM(
       });
     })
     .mapErr((error) => {
-      // Update request metadata with error info
-      const duration = Date.now() - startTime;
-      request.duration = duration;
+      request.duration = Date.now() - startTime;
       request.success = false;
       request.error = error.message;
 
       return createLLMError(
         "Failed to get response from LLM server",
-        "llama",
+        SERVER_MODEL_ID,
         error.cause,
       );
     });
@@ -241,17 +437,15 @@ export function parseStreamingResponse(
       return ok({ content, done: false });
     }
 
-    // No content in this chunk
     return err(null);
   } catch (parseError) {
-    // Log the parsing error for debugging
     console.warn("Failed to parse streaming data:", data, parseError);
     return err(null);
   }
 }
 
 /**
- * Calls the LLM server with streaming enabled using the generated client
+ * Calls the LLM with streaming enabled.
  */
 export async function* callLLMStreaming(
   messages: (Block | LLMMessage)[],
@@ -261,66 +455,65 @@ export async function* callLLMStreaming(
   void,
   unknown
 > {
-  // Collect all document IDs from all messages
-  const directDocumentIds = messages.flatMap((msg) =>
-    "linkedDocuments" in msg
-      ? msg.linkedDocuments || []
-      : (msg as LLMMessage).linkedDocuments || [],
-  );
+  const messagesForAPI = buildMessagesForLLM(messages);
+  const uiPrefs = uiPreferences$.get();
+  const provider = getAIProvider(uiPrefs.aiProvider);
+  const modelId = getModelId(provider);
 
-  // Get related documents from the graph
-  const relatedDocumentIds = directDocumentIds.flatMap((id) =>
-    getRelatedDocuments(id),
-  );
+  const request = createLLMRequest(modelId, modelProperties);
+  request.sourceMessages = messagesForAPI;
+  const startTime = Date.now();
 
-  const allDocumentIds = [...directDocumentIds, ...relatedDocumentIds];
-  const uniqueDocumentIds = [...new Set(allDocumentIds)];
+  if (provider === "browser") {
+    try {
+      const content = await generateBrowserResponse(
+        messagesForAPI,
+        modelProperties,
+      );
+      const chunks = splitIntoChunks(content);
 
-  // Format document content for context
-  const documentContext = formatDocumentsForContext(uniqueDocumentIds);
+      for (const chunk of chunks) {
+        yield ok({
+          response: {
+            content: chunk,
+            done: false,
+          },
+          request,
+        });
+      }
 
-  // Prepare messages for API call
-  const messagesForAPI = messages.map((msg) => ({
-    role: msg.role as MessageType,
-    content: "text" in msg ? msg.text : (msg as LLMMessage).content,
-  }));
+      request.duration = Date.now() - startTime;
+      request.success = true;
+      yield ok({ response: { content: "", done: true }, request });
+      return;
+    } catch (error) {
+      request.duration = Date.now() - startTime;
+      request.success = false;
+      request.error = error instanceof Error ? error.message : "Unknown error";
 
-  // If we have document context, prepend it to the first user message
-  if (documentContext && messagesForAPI.length > 0) {
-    const firstUserMessageIndex = messagesForAPI.findIndex(
-      (msg) => msg.role === "user",
-    );
-    if (firstUserMessageIndex !== -1) {
-      messagesForAPI[firstUserMessageIndex].content =
-        documentContext + messagesForAPI[firstUserMessageIndex].content;
-    } else {
-      // If no user message, add document context as a system message
-      messagesForAPI.unshift({
-        role: "system",
-        content: documentContext.trim(),
-      });
+      yield err(
+        createLLMError(
+          "Failed to initialize browser LLM",
+          BROWSER_MODEL_ID,
+          error instanceof Error ? error : undefined,
+        ),
+      );
+      return;
     }
   }
 
-  // Create request metadata
-  const request = createLLMRequest("llama", modelProperties);
-  request.sourceMessages = messagesForAPI;
-  const startTime = Date.now();
-  const uiPrefs = uiPreferences$.get();
-
-  // Use ResultAsync to handle the SSE client creation
   const sseResultAsync = ResultAsync.fromPromise(
     client.sse.post({
       url: "/v1/chat/completions",
       body: {
-        model: "llama",
+        model: SERVER_MODEL_ID,
         messages: messagesForAPI,
         temperature: modelProperties.temperature,
         top_p: modelProperties.top_p,
         max_tokens: modelProperties.n_predict,
         presence_penalty: modelProperties.presence_penalty,
         frequency_penalty: modelProperties.frequency_penalty,
-        stream: true, // Enable streaming
+        stream: true,
         ...(uiPrefs.enableTokenProbabilities
           ? ({ n_probs: modelProperties.n_probs || 10 } as Record<
               string,
@@ -335,7 +528,7 @@ export async function* callLLMStreaming(
     (error) =>
       createLLMError(
         "Failed to initialize streaming connection",
-        "llama",
+        SERVER_MODEL_ID,
         error as Error,
       ),
   );
@@ -343,16 +536,14 @@ export async function* callLLMStreaming(
   const sseResult = await sseResultAsync;
 
   if (sseResult.isErr()) {
-    // Update request metadata with error info
-    const duration = Date.now() - startTime;
-    request.duration = duration;
+    request.duration = Date.now() - startTime;
     request.success = false;
     request.error = sseResult.error.message;
 
     yield err(
       createLLMError(
         "Failed to initialize streaming connection",
-        "llama",
+        SERVER_MODEL_ID,
         sseResult.error,
       ),
     );
@@ -361,14 +552,10 @@ export async function* callLLMStreaming(
 
   const sseClient = sseResult.value;
 
-  // Handle the SSE events
   for await (const event of sseClient.stream) {
     if (event === "[DONE]") {
-      // Update request metadata with success info
-      const duration = Date.now() - startTime;
-      request.duration = duration;
+      request.duration = Date.now() - startTime;
       request.success = true;
-      // Note: tokensUsed and tokensGenerated would need to be extracted from final event if available
 
       yield ok({ response: { content: "", done: true }, request });
       break;
@@ -377,7 +564,6 @@ export async function* callLLMStreaming(
     const typedEvent = event as {
       choices: {
         delta: { content?: string };
-        // logprobs is an unknown external type from the streaming event
         logprobs?: unknown;
       }[];
     };
@@ -391,7 +577,6 @@ export async function* callLLMStreaming(
       response: {
         content,
         done: false,
-        // If probability data exists, it might be an array or an object with 'content'
         probabilities: Array.isArray(logprobs)
           ? logprobs
           : (logprobs as { content?: TokenProbability[] })?.content

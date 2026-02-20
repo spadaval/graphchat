@@ -1,52 +1,191 @@
 "use client";
 
-import {
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
 import type { Observable } from "@legendapp/state";
 import { use$ } from "@legendapp/state/react";
-import { Loader2, Plus, Send, Sparkles, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { Button } from "~/components/ui/button";
-import type {
-  Block,
-  BlockId,
-  Document,
-  LLMRequest,
-  TokenProbability,
+import { Loader2, Send, Sparkles, WandSparkles, X } from "lucide-react";
+import { NodeApi, type Path, TextApi, type TText } from "platejs";
+import { Plate, PlateContent, usePlateEditor } from "platejs/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { buildTokenInfosFromProbabilities } from "~/lib/ai-segments";
+import { detectNamedEntities } from "~/lib/ner";
+import {
+  createAISegment,
+  updateDocument,
+  updateDocumentContent,
 } from "~/lib/state";
-import { blocks$, createBlock, updateDocument } from "~/lib/state";
-import { syncDocumentContent } from "~/lib/state/documents";
+import type { Document } from "~/lib/state/documents";
 import { callLLMStreaming, modelProps$ } from "~/lib/state/llm";
+import type {
+  AISegmentBranch,
+  AISegmentMeta,
+  BranchId,
+  LLMMessage,
+  SegmentId,
+  TokenProbability,
+} from "~/lib/state/types";
 import { uiPreferences$ } from "~/lib/state/ui";
-import { BlockCard } from "./BlockCard";
+import type { MyEditor, MyValue } from "./plate-types";
+import { UnifiedEditorKitWithAI } from "./plugins/unified-editor-kit";
 
 interface PlateDocumentEditorProps {
   document$: Observable<Document>;
-  onCancel?: () => void;
+}
+
+const getSegmentEntry = (editor: MyEditor, segmentId: SegmentId) => {
+  return editor.api
+    .blocks({
+      match: (node) =>
+        !TextApi.isText(node) &&
+        Boolean((node as { aiSegmentId?: string }).aiSegmentId === segmentId),
+      mode: "lowest",
+    })
+    .at(0);
+};
+
+const replaceSegmentNodeText = (
+  editor: MyEditor,
+  segmentId: SegmentId,
+  text: string,
+  nodeId?: string,
+) => {
+  const entry = getSegmentEntry(editor, segmentId);
+  if (!entry) return;
+  const [, path] = entry;
+
+  editor.tf.removeNodes({ at: path });
+  editor.tf.insertNodes(
+    {
+      aiNodeKind: "ai",
+      aiSegmentId: segmentId,
+      children: [{ text }],
+      id: nodeId || `node-${crypto.randomUUID()}`,
+      type: "p",
+    },
+    { at: path, select: false },
+  );
+};
+
+const insertSegmentNodeAtEnd = (
+  editor: MyEditor,
+  segmentId: SegmentId,
+  text: string,
+  nodeId: string,
+) => {
+  const path = [editor.children.length];
+  editor.tf.insertNodes(
+    {
+      aiNodeKind: "ai",
+      aiSegmentId: segmentId,
+      children: [{ text }],
+      id: nodeId,
+      type: "p",
+    },
+    { at: path, select: false },
+  );
+};
+
+const buildInitialBranch = (
+  fullText: string,
+  sourceMessages: LLMMessage[],
+  tokenProbabilities: TokenProbability[],
+) => {
+  const branchId: BranchId = `br-${crypto.randomUUID()}`;
+  const nowIso = new Date().toISOString();
+
+  return {
+    branchId,
+    branch: {
+      id: branchId,
+      createdAt: nowIso,
+      fullText,
+      sourceMessages,
+      tokens: buildTokenInfosFromProbabilities(tokenProbabilities),
+    } satisfies AISegmentBranch,
+    nowIso,
+  };
+};
+
+function offsetsToRange(
+  editor: MyEditor,
+  paragraphPath: Path,
+  start: number,
+  end: number,
+) {
+  const textNodes = [
+    ...editor.api.nodes<TText>({ at: paragraphPath, match: TextApi.isText }),
+  ];
+  if (!textNodes.length) return null;
+
+  const totalLength = textNodes.reduce(
+    (sum, [node]) => sum + node.text.length,
+    0,
+  );
+  const normalizedStart = Math.min(Math.max(start, 0), totalLength);
+  const normalizedEnd = Math.min(Math.max(end, normalizedStart), totalLength);
+
+  let currentOffset = 0;
+  let anchor: { offset: number; path: Path } | null = null;
+  let focus: { offset: number; path: Path } | null = null;
+
+  for (const [node, path] of textNodes) {
+    const textLength = node.text.length;
+    const nodeStart = currentOffset;
+    const nodeEnd = nodeStart + textLength;
+
+    if (!anchor && normalizedStart >= nodeStart && normalizedStart <= nodeEnd) {
+      anchor = { offset: normalizedStart - nodeStart, path };
+    }
+
+    if (!focus && normalizedEnd >= nodeStart && normalizedEnd <= nodeEnd) {
+      focus = { offset: normalizedEnd - nodeStart, path };
+      break;
+    }
+
+    currentOffset = nodeEnd;
+  }
+
+  if (!anchor) {
+    const [_firstNode, firstPath] = textNodes[0];
+    anchor = { offset: 0, path: firstPath };
+  }
+
+  if (!focus) {
+    const [lastNode, lastPath] = textNodes[textNodes.length - 1];
+    focus = { offset: lastNode.text.length, path: lastPath };
+  }
+
+  return { anchor, focus };
 }
 
 export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
-  const docTitle = use$(document$.title);
-  const blockIds = use$(document$.blocks) || [];
-  const docId = document$.id.peek();
+  const document = use$(document$);
   const { aiEnabled, documentWidth = 800 } = use$(uiPreferences$);
-  const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [showAiInput, setShowAiInput] = useState(false);
   const [aiInstructions, setAiInstructions] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isRunningNer, setIsRunningNer] = useState(false);
   const aiInputRef = useRef<HTMLInputElement>(null);
+  const suppressOnChangeRef = useRef(false);
+
+  const docId = document$.id.peek();
+  const content = document.content || "";
+  const aiSegments = document.aiSegments || {};
+  const sortedSegments = useMemo(() => Object.values(aiSegments), [aiSegments]);
+
+  const editor = usePlateEditor({
+    id: `document-editor-${docId}`,
+    plugins: [...UnifiedEditorKitWithAI],
+    value: content
+      ? (editor) => {
+          try {
+            return (editor as MyEditor).api.markdown.deserialize(content);
+          } catch (error) {
+            console.error("Error deserializing document content:", error);
+            return [{ type: "p", children: [{ text: content }] }] as MyValue;
+          }
+        }
+      : undefined,
+  }) as MyEditor;
 
   useEffect(() => {
     if (showAiInput && aiInputRef.current) {
@@ -54,322 +193,422 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
     }
   }, [showAiInput]);
 
-  // Migration: If document has content but no blocks, create a block from content
   useEffect(() => {
-    const doc = document$.get();
-    if ((!doc.blocks || doc.blocks.length === 0) && doc.content) {
-      const newBlock = createBlock(doc.content, "user", "paragraph");
-      blocks$.assign({ [newBlock.id]: newBlock });
-      updateDocument(doc.id, { blocks: [newBlock.id] });
-    }
-  }, [document$]); // Watch the observable itself for changes in reference
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      const oldIndex = blockIds.indexOf(active.id as BlockId);
-      const newIndex = blockIds.indexOf(over.id as BlockId);
-
-      const newBlocks = arrayMove(blockIds, oldIndex, newIndex);
-      updateDocument(docId, { blocks: newBlocks });
-    }
-  };
-
-  const addBlock = (afterBlockId?: BlockId) => {
-    const newBlock = createBlock("", "user", "paragraph", undefined, "edit");
-    blocks$.assign({ [newBlock.id]: newBlock });
-
-    const currentBlocks = [...blockIds];
-    const index = afterBlockId
-      ? currentBlocks.indexOf(afterBlockId) + 1
-      : currentBlocks.length;
-
-    currentBlocks.splice(index, 0, newBlock.id);
-    updateDocument(docId, { blocks: currentBlocks });
-  };
-
-  const deleteBlock = (blockId: BlockId) => {
-    const newBlocks = blockIds.filter((id) => id !== blockId);
-    updateDocument(docId, { blocks: newBlocks });
-  };
-
-  const generateNextBlock = async (instructions?: string) => {
-    if (isAiGenerating) return;
-    setIsAiGenerating(true);
-    setShowAiInput(false);
-    setAiInstructions("");
-
-    const doc = document$.get();
-    const currentBlockIds = doc.blocks || [];
-    const allBlocks = blocks$.get();
-
-    // Create the new block first
-    const newBlock = createBlock("", "assistant", "paragraph", {
-      aiGenerated: true,
-    });
-
-    blocks$.assign({ [newBlock.id]: newBlock });
-    blocks$[newBlock.id].isGenerating.set(true);
-
-    const newBlocks = [...currentBlockIds, newBlock.id];
-    updateDocument(doc.id, { blocks: newBlocks });
+    const serialized = editor.api.markdown.serialize();
+    if (serialized === content) return;
 
     try {
-      // Format context from previous blocks
-      const contextBlocks = currentBlockIds
-        .map((id) => allBlocks[id])
-        .filter(Boolean);
+      suppressOnChangeRef.current = true;
+      editor.tf.setValue(editor.api.markdown.deserialize(content));
+    } catch (error) {
+      console.error("Error updating editor content:", error);
+    } finally {
+      suppressOnChangeRef.current = false;
+    }
+  }, [content, editor]);
 
-      // If instructions are provided, add them as a user prompt
-      if (instructions?.trim()) {
-        contextBlocks.push(createBlock(instructions.trim(), "user"));
-      } else if (contextBlocks.length === 0) {
-        // If no blocks and no instructions, add a dummy user prompt to start
-        contextBlocks.push(
-          createBlock("Please start writing a story.", "user"),
+  useEffect(() => {
+    if (!sortedSegments.length) return;
+
+    const nextSegments: Record<SegmentId, AISegmentMeta> = { ...aiSegments };
+    let changed = false;
+    const freeBlocks = editor.api.blocks({ mode: "lowest" });
+
+    sortedSegments.forEach((segment) => {
+      const hasMappedNode = !!getSegmentEntry(editor, segment.id);
+      if (hasMappedNode) return;
+
+      const activeBranch = segment.branches[segment.activeBranchId];
+      if (!activeBranch) return;
+
+      const block = freeBlocks.find((entry) => {
+        const [node] = entry;
+        const typedNode = node as { aiSegmentId?: string };
+        return (
+          !typedNode.aiSegmentId &&
+          NodeApi.string(node).trim() === activeBranch.fullText.trim()
         );
-      }
+      });
 
-      const stream = callLLMStreaming(
-        contextBlocks as Block[],
-        modelProps$.get(),
+      if (!block) return;
+      const [node, path] = block;
+      const nodeId =
+        ((node as { id?: string }).id as string | undefined) ||
+        `node-${crypto.randomUUID()}`;
+
+      suppressOnChangeRef.current = true;
+      editor.tf.setNodes(
+        {
+          aiNodeKind: "ai",
+          aiSegmentId: segment.id,
+          id: nodeId,
+        },
+        { at: path },
+      );
+      suppressOnChangeRef.current = false;
+
+      nextSegments[segment.id] = {
+        ...segment,
+        nodeId,
+        updatedAt: new Date().toISOString(),
+      };
+      changed = true;
+    });
+
+    if (changed) {
+      updateDocumentContent(
+        docId,
+        editor.api.markdown.serialize(),
+        nextSegments,
+      );
+    }
+  }, [aiSegments, docId, editor, sortedSegments]);
+
+  const persistEditorState = () => {
+    const serialized = editor.api.markdown.serialize();
+    const nextSegments: Record<SegmentId, AISegmentMeta> = { ...aiSegments };
+    let changed = false;
+
+    Object.values(nextSegments).forEach((segment) => {
+      const entry = getSegmentEntry(editor, segment.id);
+      if (!entry) return;
+
+      const [node] = entry;
+      const nodeId =
+        ((node as { id?: string }).id as string | undefined) || segment.nodeId;
+      const activeBranch = segment.branches[segment.activeBranchId];
+      const nodeText = NodeApi.string(node);
+      const detached = activeBranch
+        ? nodeText !== activeBranch.fullText
+        : false;
+
+      if (nodeId !== segment.nodeId || detached !== segment.isDetached) {
+        nextSegments[segment.id] = {
+          ...segment,
+          isDetached: detached,
+          nodeId,
+          updatedAt: new Date().toISOString(),
+        };
+        changed = true;
+      }
+    });
+
+    const blocks = editor.api.blocks({ mode: "lowest" });
+    blocks.forEach(([node, path]) => {
+      const typedNode = node as { aiSegmentId?: string; id?: string };
+      if (typedNode.aiSegmentId) return;
+
+      const aiLeaves = [
+        ...editor.api.nodes({
+          at: path,
+          match: (leaf) =>
+            TextApi.isText(leaf) && Boolean((leaf as { ai?: boolean }).ai),
+        }),
+      ];
+      if (!aiLeaves.length) return;
+
+      const text = NodeApi.string(node);
+      if (!text.trim()) return;
+
+      const segmentId: SegmentId = `seg-${crypto.randomUUID()}`;
+      const nodeId = typedNode.id || `node-${crypto.randomUUID()}`;
+      const branchId: BranchId = `br-${crypto.randomUUID()}`;
+      const nowIso = new Date().toISOString();
+
+      editor.tf.setNodes(
+        {
+          aiNodeKind: "ai",
+          aiSegmentId: segmentId,
+          id: nodeId,
+        },
+        { at: path },
       );
 
+      nextSegments[segmentId] = {
+        id: segmentId,
+        nodeId,
+        activeBranchId: branchId,
+        branches: {
+          [branchId]: {
+            id: branchId,
+            createdAt: nowIso,
+            fullText: text,
+            sourceMessages: [],
+            tokens: [],
+          },
+        },
+        isDetached: false,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+      changed = true;
+    });
+
+    updateDocumentContent(
+      docId,
+      serialized,
+      changed ? nextSegments : aiSegments,
+    );
+  };
+
+  const handleContentChange = () => {
+    if (suppressOnChangeRef.current) return;
+    persistEditorState();
+  };
+
+  const createSegmentMeta = (
+    segmentId: SegmentId,
+    fullText: string,
+    sourceMessages: LLMMessage[],
+    tokenProbabilities: TokenProbability[],
+    nodeId: string,
+  ) => {
+    const { branch, branchId, nowIso } = buildInitialBranch(
+      fullText,
+      sourceMessages,
+      tokenProbabilities,
+    );
+
+    const segment: AISegmentMeta = {
+      id: segmentId,
+      nodeId,
+      activeBranchId: branchId,
+      branches: { [branchId]: branch },
+      isDetached: false,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+    return segment;
+  };
+
+  const generateNextSegment = async () => {
+    if (isGenerating) return;
+    setIsGenerating(true);
+    setShowAiInput(false);
+
+    const serialized = editor.api.markdown.serialize();
+    const messages: LLMMessage[] = [];
+    if (serialized.trim()) {
+      messages.push({ role: "user", content: serialized });
+    }
+    if (aiInstructions.trim()) {
+      messages.push({ role: "user", content: aiInstructions.trim() });
+    }
+    if (!messages.length) {
+      messages.push({ role: "user", content: "Please start writing a story." });
+    }
+
+    const segmentId: SegmentId = `seg-${crypto.randomUUID()}`;
+    const nodeId = `node-${crypto.randomUUID()}`;
+
+    suppressOnChangeRef.current = true;
+    insertSegmentNodeAtEnd(editor, segmentId, "", nodeId);
+    suppressOnChangeRef.current = false;
+
+    try {
       let fullText = "";
-      let allProbabilities: TokenProbability[] = [];
-      let finalRequest: LLMRequest | null = null;
+      let sourceMessages: LLMMessage[] = messages;
+      const allProbabilities: TokenProbability[] = [];
+      const stream = callLLMStreaming(messages, modelProps$.get());
 
       for await (const chunkResult of stream) {
         chunkResult.match(
           (chunk) => {
             if (chunk.response.done) {
-              finalRequest = chunk.request;
+              sourceMessages = chunk.request.sourceMessages || messages;
               return;
             }
             fullText += chunk.response.content;
             if (chunk.response.probabilities) {
-              allProbabilities = [
-                ...allProbabilities,
-                ...chunk.response.probabilities,
-              ];
+              allProbabilities.push(...chunk.response.probabilities);
             }
-            blocks$[newBlock.id].text.set(fullText);
+            suppressOnChangeRef.current = true;
+            replaceSegmentNodeText(editor, segmentId, fullText, nodeId);
+            suppressOnChangeRef.current = false;
           },
           (error) => {
-            console.error("AI Generation error:", error);
-            blocks$[newBlock.id].text.set(`Error: ${error.message}`);
+            console.error("AI generation error:", error);
           },
         );
       }
 
-      if (finalRequest) {
-        blocks$[newBlock.id].metadata.set({
-          ...blocks$[newBlock.id].metadata.get(),
-          sourceMessages: (finalRequest as LLMRequest).sourceMessages,
-          tokenProbabilities: allProbabilities,
-          aiGenerated: true,
-        });
-      }
-    } catch (error) {
-      console.error("Critical AI error:", error);
+      const segment = createSegmentMeta(
+        segmentId,
+        fullText,
+        sourceMessages,
+        allProbabilities,
+        nodeId,
+      );
+
+      createAISegment(docId, segment);
+      persistEditorState();
     } finally {
-      blocks$[newBlock.id].isGenerating.set(false);
-      setIsAiGenerating(false);
-      syncDocumentContent(doc.id);
+      setAiInstructions("");
+      setIsGenerating(false);
     }
   };
 
-  const aiFillBetween = async (beforeId: BlockId, _afterId: BlockId) => {
-    if (isAiGenerating) return;
-    setIsAiGenerating(true);
-
-    const doc = document$.get();
-    const currentBlockIds = doc.blocks || [];
-    const allBlocks = blocks$.get();
-
-    const newBlock = createBlock("", "assistant", "paragraph", {
-      aiGenerated: true,
-    });
-    blocks$.assign({ [newBlock.id]: newBlock });
-    blocks$[newBlock.id].isGenerating.set(true);
-
-    const beforeIndex = currentBlockIds.indexOf(beforeId);
-    const newBlocksList = [...currentBlockIds];
-    newBlocksList.splice(beforeIndex + 1, 0, newBlock.id);
-    updateDocument(doc.id, { blocks: newBlocksList });
+  const runDocumentNer = async () => {
+    if (isRunningNer || isGenerating) return;
+    setIsRunningNer(true);
+    setShowAiInput(false);
+    suppressOnChangeRef.current = true;
 
     try {
-      const beforeBlocks = currentBlockIds
-        .slice(0, beforeIndex + 1)
-        .map((id) => allBlocks[id])
-        .filter(Boolean);
-      const afterBlocks = currentBlockIds
-        .slice(beforeIndex + 1)
-        .map((id) => allBlocks[id])
-        .filter(Boolean);
-
-      const context = [
-        ...beforeBlocks,
-        createBlock(
-          "Generate a bridging paragraph or sentence that smoothly connects the content above with the content below. Response ONLY with the transition text.",
-          "system",
-        ),
-        ...afterBlocks,
+      const paragraphEntries = [
+        ...editor.api.blocks({
+          match: (node) =>
+            !TextApi.isText(node) && (node as { type?: string }).type === "p",
+          mode: "lowest",
+        }),
       ];
 
-      const stream = callLLMStreaming(context as Block[], modelProps$.get());
+      for (const [node, paragraphPath] of paragraphEntries) {
+        const paragraphText = NodeApi.string(node);
 
-      let fullText = "";
-      for await (const chunkResult of stream) {
-        chunkResult.match(
-          (chunk) => {
-            if (chunk.response.done) return;
-            fullText += chunk.response.content;
-            blocks$[newBlock.id].text.set(fullText);
-          },
-          (error) => console.error("AI Fill error:", error),
-        );
+        editor.tf.unsetNodes(["ner", "nerType"], {
+          at: paragraphPath,
+          match: TextApi.isText,
+          split: true,
+        });
+
+        if (!paragraphText.trim()) {
+          continue;
+        }
+
+        const entities = await detectNamedEntities(paragraphText);
+        for (const entity of entities) {
+          const range = offsetsToRange(
+            editor,
+            paragraphPath,
+            entity.start,
+            entity.end,
+          );
+          if (!range) continue;
+
+          editor.tf.setNodes(
+            {
+              ner: true,
+              nerType: entity.type,
+            },
+            {
+              at: range,
+              match: TextApi.isText,
+              split: true,
+            },
+          );
+        }
       }
+    } catch (error) {
+      console.error("[NER] Document pass failed", { error });
     } finally {
-      blocks$[newBlock.id].isGenerating.set(false);
-      setIsAiGenerating(false);
-      syncDocumentContent(doc.id);
+      suppressOnChangeRef.current = false;
+      persistEditorState();
+      setIsRunningNer(false);
     }
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-zinc-950 overflow-y-auto">
-      <div
-        className="mx-auto w-full p-8 pb-32 transition-all duration-300 ease-in-out"
-        style={{ maxWidth: `${documentWidth}px` }}
-      >
-        <input
-          type="text"
-          value={docTitle || ""}
-          onChange={(e) => updateDocument(docId, { title: e.target.value })}
-          className="w-full text-4xl font-bold bg-transparent border-none outline-none mb-12 text-zinc-100 placeholder-zinc-800"
-          placeholder="Untitled Document"
-        />
-
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
+    <div className="flex-1 flex flex-col min-h-0 bg-zinc-950">
+      <div className="flex-1 overflow-y-auto">
+        <div
+          className="mx-auto w-full p-8 pb-32 transition-all duration-300 ease-in-out"
+          style={{ maxWidth: `${documentWidth}px` }}
         >
-          <SortableContext
-            items={blockIds}
-            strategy={verticalListSortingStrategy}
-          >
-            {blockIds.map((blockId, index) => (
-              <div key={blockId} className="relative group/block-wrapper">
-                <BlockCard
-                  blockId={blockId}
-                  docId={docId}
-                  onDelete={deleteBlock}
-                />
+          <input
+            type="text"
+            value={document.title || ""}
+            onChange={(e) => updateDocument(docId, { title: e.target.value })}
+            className="w-full text-4xl font-bold bg-transparent border-none outline-none mb-8 text-zinc-100 placeholder-zinc-800"
+            placeholder="Untitled Document"
+          />
 
-                {/* AI Fill Button between blocks */}
-                {aiEnabled && index < blockIds.length - 1 && (
-                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-20 opacity-0 group-hover/block-wrapper:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-[10px] bg-zinc-900 border border-zinc-800 text-blue-400 hover:text-blue-300 hover:bg-zinc-800 gap-1 rounded-full shadow-lg"
-                      onClick={() =>
-                        aiFillBetween(blockId, blockIds[index + 1])
-                      }
-                      disabled={isAiGenerating}
-                    >
-                      <Sparkles size={10} />
-                      AI Fill
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </SortableContext>
-        </DndContext>
-
-        <div className="flex justify-center mt-8 gap-4">
-          <Button
-            variant="ghost"
-            className="text-zinc-500 hover:text-zinc-300 gap-2"
-            onClick={() => addBlock()}
-          >
-            <Plus size={16} />
-            Add Block
-          </Button>
-
-          {aiEnabled && (
-            <div className="flex flex-col items-center gap-2">
-              {showAiInput ? (
-                <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-lg p-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                  <input
-                    ref={aiInputRef}
-                    type="text"
-                    value={aiInstructions}
-                    onChange={(e) => setAiInstructions(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        generateNextBlock(aiInstructions);
-                      } else if (e.key === "Escape") {
-                        setShowAiInput(false);
-                      }
-                    }}
-                    placeholder="What should I generate?"
-                    className="bg-transparent border-none outline-none text-zinc-100 px-3 py-1 w-64 text-sm"
-                  />
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-zinc-500 hover:text-zinc-300"
-                      onClick={() => setShowAiInput(false)}
-                    >
-                      <X size={14} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-950/40"
-                      onClick={() => generateNextBlock(aiInstructions)}
-                      disabled={isAiGenerating}
-                    >
-                      {isAiGenerating ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Send size={14} />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  className="border-blue-900/30 bg-blue-950/20 text-blue-400 hover:bg-blue-900/40 hover:text-blue-300 gap-2 border-dashed"
-                  onClick={() => setShowAiInput(true)}
-                  disabled={isAiGenerating}
-                >
-                  {isAiGenerating ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <Sparkles size={16} />
-                  )}
-                  {isAiGenerating ? "Generating..." : "Generate Next"}
-                </Button>
-              )}
-            </div>
-          )}
+          <Plate editor={editor} onChange={handleContentChange}>
+            <PlateContent
+              className="min-h-[420px] text-zinc-200 outline-none px-1"
+              placeholder="Start writing..."
+            />
+          </Plate>
         </div>
       </div>
+
+      {aiEnabled && (
+        <div className="shrink-0 border-t border-zinc-800/80 bg-zinc-950/90 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/70">
+          <div
+            className="mx-auto w-full px-8 py-3"
+            style={{ maxWidth: `${documentWidth}px` }}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAiInput((v) => !v)}
+                disabled={isGenerating || isRunningNer}
+                className="px-3 py-1.5 text-xs rounded border border-blue-900/40 text-blue-300 hover:bg-blue-900/20 disabled:opacity-50"
+              >
+                <span className="inline-flex items-center gap-1">
+                  <Sparkles size={12} /> Generate Next
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void runDocumentNer()}
+                disabled={isGenerating || isRunningNer}
+                className="px-3 py-1.5 text-xs rounded border border-zinc-700 text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+                title="Re-run named entity recognition for the whole document"
+              >
+                <span className="inline-flex items-center gap-1">
+                  {isRunningNer ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <WandSparkles size={12} />
+                  )}
+                  NER
+                </span>
+              </button>
+            </div>
+
+            {showAiInput && (
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  ref={aiInputRef}
+                  type="text"
+                  value={aiInstructions}
+                  onChange={(e) => setAiInstructions(e.target.value)}
+                  placeholder="What should I generate?"
+                  className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-100 outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      void generateNextSegment();
+                    }
+                    if (e.key === "Escape") {
+                      setShowAiInput(false);
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAiInput(false)}
+                  className="p-2 rounded text-zinc-500 hover:text-zinc-200"
+                >
+                  <X size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void generateNextSegment()}
+                  disabled={isGenerating || isRunningNer}
+                  className="p-2 rounded text-blue-300 hover:text-blue-200 disabled:opacity-50"
+                >
+                  {isGenerating ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Send size={14} />
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

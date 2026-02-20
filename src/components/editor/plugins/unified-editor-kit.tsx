@@ -4,10 +4,12 @@ import { BaseParagraphPlugin } from "platejs";
 import { ParagraphElement } from "~/components/editor/paragraph-node";
 import { AIKit } from "./ai-kit";
 import { BasicMarksKit } from "./basic-marks-kit";
-import { CursorOverlayKit } from "./cursor-overlay-kit";
+import { DndKit } from "./dnd-kit";
+// import { CursorOverlayKit } from "./cursor-overlay-kit";
 import { MarkdownKit } from "./markdown-kit";
 import { MentionKit } from "./mention-kit";
 import { NerKit } from "./ner-kit";
+import { SlashKit } from "./slash-kit";
 
 // Unified editor kit that includes all plugins needed for both chat and document editors
 const UnifiedPlugins = [
@@ -18,7 +20,7 @@ const UnifiedPlugins = [
   ...BasicMarksKit,
 
   // Cursor overlay for collaborative features
-  ...CursorOverlayKit,
+  // ...CursorOverlayKit,
 
   // Markdown support
   ...MarkdownKit,
@@ -28,6 +30,11 @@ const UnifiedPlugins = [
 
   // Browser-side NER marks
   ...NerKit,
+
+  // Drag and drop support
+  ...DndKit,
+
+  ...SlashKit,
 ];
 
 // Extended kit with AI features for document editor

@@ -3,7 +3,7 @@
 import { AIChatPlugin } from "@platejs/ai/react";
 import { useEditorPlugin } from "platejs/react";
 import * as React from "react";
-import { useEditor } from "~/components/editor/editor-kit";
+import { useEditor } from "~/components/editor/plugins/editor-kit";
 import { ToolbarButton } from "~/components/editor/toolbar";
 
 interface DocumentAIToolbarButtonProps

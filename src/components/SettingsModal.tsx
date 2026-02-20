@@ -8,6 +8,7 @@ import {
 } from "~/components/ui/dialog";
 import {
   setAIEnabled,
+  setAIProvider,
   setDocumentWidth,
   setEnableTokenProbabilities,
   setInlineCompletionEnabled,
@@ -22,6 +23,7 @@ interface SettingsModalProps {
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const {
     aiEnabled,
+    aiProvider,
     inlineCompletion,
     enableTokenProbabilities,
     documentWidth = 800,
@@ -60,6 +62,27 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   onChange={(e) => setAIEnabled(e.target.checked)}
                   className="w-4 h-4 rounded border-zinc-700 bg-zinc-850 text-blue-500 focus:ring-blue-500"
                 />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-zinc-100">
+                    AI Runtime
+                  </span>
+                  <span className="text-xs text-zinc-500">
+                    Browser runs `onnx-community/Qwen2.5-0.5B-Instruct`
+                  </span>
+                </div>
+                <select
+                  value={aiProvider}
+                  onChange={(e) =>
+                    setAIProvider(e.target.value as "browser" | "server")
+                  }
+                  className="h-8 rounded border border-zinc-700 bg-zinc-850 px-2 text-xs text-zinc-100"
+                >
+                  <option value="browser">Browser (Default)</option>
+                  <option value="server">Server (llama.cpp)</option>
+                </select>
               </div>
 
               <div className="flex items-center justify-between">

@@ -32,6 +32,8 @@ export interface MyTextBlockElement
   extends TElement,
     TLineHeightProps,
     TTextAlignProps {
+  aiNodeKind?: "ai" | "user";
+  aiSegmentId?: string;
   children: (
     | MyLinkElement
     | MyMentionElement

@@ -39,7 +39,7 @@ import type {
 import { getTokenCount, getTokens } from "~/lib/tokenizer";
 import { cn } from "~/lib/utils";
 import type { MyEditor, MyValue } from "./plate-types";
-import { UnifiedEditorKitWithAI } from "./unified-editor-kit";
+import { UnifiedEditorKitWithAI } from "./plugins/unified-editor-kit";
 
 interface BlockCardProps {
   blockId: BlockId;
