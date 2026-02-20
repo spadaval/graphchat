@@ -50,11 +50,13 @@ const defaultFilter: FilterFn = (
   search,
 ) => {
   const uniqueTerms = new Set(
-    [value, ...keywords, group, label].filter(Boolean),
+    [value, ...keywords, group, label].filter((term): term is string =>
+      Boolean(term),
+    ),
   );
 
   return Array.from(uniqueTerms).some((keyword) =>
-    filterWords(keyword!, search),
+    filterWords(keyword, search),
   );
 };
 
@@ -86,17 +88,18 @@ const InlineCombobox = ({
   const [valueState, setValueState] = React.useState("");
   const hasValueProp = valueProp !== undefined;
   const value = hasValueProp ? valueProp : valueState;
+  const elementWithUserId = element as TElement & { userId?: string };
 
   // Check if current user is the creator of this element (for Yjs collaboration)
   const isCreator = React.useMemo(() => {
-    const elementUserId = (element as any).userId;
+    const elementUserId = elementWithUserId.userId;
     const currentUserId = editor.meta.userId;
 
     // If no userId (backwards compatibility or non-Yjs), allow
     if (!elementUserId) return true;
 
     return elementUserId === currentUserId;
-  }, [editor.meta.userId, element]);
+  }, [editor.meta.userId, elementWithUserId.userId]);
 
   const setValue = React.useCallback(
     (newValue: string) => {
@@ -164,15 +167,7 @@ const InlineCombobox = ({
       showTrigger,
       trigger,
     }),
-    [
-      trigger,
-      showTrigger,
-      filter,
-      inputRef,
-      inputProps,
-      removeInput,
-      setHasEmpty,
-    ],
+    [trigger, showTrigger, filter, inputProps, removeInput],
   );
 
   const store = useComboboxStore({
@@ -187,6 +182,8 @@ const InlineCombobox = ({
    * item.
    */
   React.useEffect(() => {
+    if (items.length === 0) return;
+
     if (!store.getState().activeId) {
       store.setActiveId(store.first());
     }
@@ -209,6 +206,18 @@ const InlineCombobox = ({
   );
 };
 
+function useRequiredComboboxContext() {
+  const store = useComboboxContext();
+
+  if (!store) {
+    throw new Error(
+      "InlineCombobox components must be used within a ComboboxProvider.",
+    );
+  }
+
+  return store;
+}
+
 const InlineComboboxInput = ({
   className,
   ref: propRef,
@@ -223,7 +232,7 @@ const InlineComboboxInput = ({
     trigger,
   } = React.useContext(InlineComboboxContext);
 
-  const store = useComboboxContext()!;
+  const store = useRequiredComboboxContext();
   const value = store.useState("value");
 
   const ref = useComposedRef(propRef, contextRef);
@@ -339,14 +348,12 @@ const InlineComboboxItem = ({
 
   const { filter, removeInput } = React.useContext(InlineComboboxContext);
 
-  const store = useComboboxContext()!;
+  const store = useRequiredComboboxContext();
 
-  // Optimization: Do not subscribe to value if filter is false
-  const search = filter && store.useState("value");
+  const search = store.useState("value");
 
   const visible = React.useMemo(
-    () =>
-      !filter || filter({ group, keywords, label, value }, search as string),
+    () => !filter || filter({ group, keywords, label, value }, search),
     [filter, group, keywords, label, value, search],
   );
 
@@ -369,7 +376,7 @@ const InlineComboboxEmpty = ({
   className,
 }: React.HTMLAttributes<HTMLDivElement>) => {
   const { setHasEmpty } = React.useContext(InlineComboboxContext);
-  const store = useComboboxContext()!;
+  const store = useRequiredComboboxContext();
   const items = store.useState("items");
 
   React.useEffect(() => {

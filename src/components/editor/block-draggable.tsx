@@ -91,12 +91,12 @@ function Draggable(props: PlateElementProps) {
 
   const [previewTop, setPreviewTop] = React.useState(0);
 
-  const resetPreview = () => {
+  const resetPreview = React.useCallback(() => {
     if (previewRef.current) {
       previewRef.current.replaceChildren();
       previewRef.current?.classList.add("hidden");
     }
-  };
+  }, [previewRef]);
 
   // clear up virtual multiple preview when drag end
   React.useEffect(() => {
@@ -104,16 +104,21 @@ function Draggable(props: PlateElementProps) {
       resetPreview();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDragging]);
+  }, [isDragging, resetPreview]);
 
   React.useEffect(() => {
     if (isAboutToDrag) {
       previewRef.current?.classList.remove("opacity-0");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAboutToDrag]);
+  }, [isAboutToDrag, previewRef]);
 
   const [dragButtonTop, setDragButtonTop] = React.useState(0);
+
+  React.useEffect(() => {
+    if (isDragging) return;
+
+    setDragButtonTop(calcDragButtonTop(editor, element));
+  }, [editor, element, isDragging]);
 
   return (
     <div
@@ -124,10 +129,6 @@ function Draggable(props: PlateElementProps) {
           ? "group/container"
           : "group",
       )}
-      onMouseEnter={() => {
-        if (isDragging) return;
-        setDragButtonTop(calcDragButtonTop(editor, element));
-      }}
     >
       {!isInTable && (
         <Gutter>
@@ -145,20 +146,14 @@ function Draggable(props: PlateElementProps) {
                 isInColumn && "mr-1.5",
               )}
             >
-              <Button
-                ref={handleRef}
-                variant="ghost"
-                className="-left-0 absolute h-6 w-full p-0"
-                style={{ top: `${dragButtonTop + 3}px` }}
-                data-plate-prevent-deselect
-              >
-                <DragHandle
-                  isDragging={isDragging}
-                  previewRef={previewRef}
-                  resetPreview={resetPreview}
-                  setPreviewTop={setPreviewTop}
-                />
-              </Button>
+              <DragHandle
+                dragButtonTop={dragButtonTop}
+                handleRef={handleRef}
+                isDragging={isDragging}
+                previewRef={previewRef}
+                resetPreview={resetPreview}
+                setPreviewTop={setPreviewTop}
+              />
             </div>
           </div>
         </Gutter>
@@ -171,9 +166,9 @@ function Draggable(props: PlateElementProps) {
         contentEditable={false}
       />
 
-      <div
+      <fieldset
         ref={nodeRef}
-        className="slate-blockWrapper flow-root"
+        className="slate-blockWrapper m-0 min-w-0 border-0 p-0 flow-root"
         onContextMenu={(event) =>
           editor
             .getApi(BlockSelectionPlugin)
@@ -182,7 +177,7 @@ function Draggable(props: PlateElementProps) {
       >
         <MemoizedChildren>{children}</MemoizedChildren>
         <DropLine />
-      </div>
+      </fieldset>
     </div>
   );
 }
@@ -221,11 +216,15 @@ function Gutter({
 }
 
 const DragHandle = React.memo(function DragHandle({
+  dragButtonTop,
+  handleRef,
   isDragging,
   previewRef,
   resetPreview,
   setPreviewTop,
 }: {
+  dragButtonTop: number;
+  handleRef: React.Ref<HTMLButtonElement>;
   isDragging: boolean;
   previewRef: React.RefObject<HTMLDivElement | null>;
   resetPreview: () => void;
@@ -237,8 +236,12 @@ const DragHandle = React.memo(function DragHandle({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div
-          className="flex size-full items-center justify-center"
+        <Button
+          ref={handleRef}
+          type="button"
+          variant="ghost"
+          className="-left-0 absolute h-6 w-full p-0"
+          style={{ top: `${dragButtonTop + 3}px` }}
           onClick={(e) => {
             e.preventDefault();
             editor.getApi(BlockSelectionPlugin).blockSelection.focus();
@@ -259,7 +262,10 @@ const DragHandle = React.memo(function DragHandle({
 
             // If current block is not in selection, use it as the starting point
             if (!selectionNodes.some(([node]) => node.id === element.id)) {
-              selectionNodes = [[element, editor.api.findPath(element)!]];
+              const elementPath = editor.api.findPath(element);
+              if (elementPath) {
+                selectionNodes = [[element, elementPath]];
+              }
             }
 
             // Process selection nodes to include list children
@@ -297,7 +303,10 @@ const DragHandle = React.memo(function DragHandle({
 
             // If current block is not in selection, use it as the starting point
             if (!selectedBlocks.some(([node]) => node.id === element.id)) {
-              selectedBlocks = [[element, editor.api.findPath(element)!]];
+              const elementPath = editor.api.findPath(element);
+              if (elementPath) {
+                selectedBlocks = [[element, elementPath]];
+              }
             }
 
             // Process selection to include list children
@@ -322,10 +331,11 @@ const DragHandle = React.memo(function DragHandle({
             resetPreview();
           }}
           data-plate-prevent-deselect
-          role="button"
         >
-          <GripVertical className="text-muted-foreground" />
-        </div>
+          <span className="flex size-full items-center justify-center">
+            <GripVertical className="text-muted-foreground" />
+          </span>
+        </Button>
       </TooltipTrigger>
       <TooltipContent>Drag to move</TooltipContent>
     </Tooltip>
@@ -382,7 +392,9 @@ const createDragPreviewElements = (
   };
 
   const resolveElement = (node: TElement, index: number) => {
-    const domNode = editor.api.toDOMNode(node)!;
+    const domNode = editor.api.toDOMNode(node);
+    if (!domNode) return;
+
     const newDomNode = domNode.cloneNode(true) as HTMLElement;
 
     // Apply visual compensation for horizontal scroll
@@ -429,10 +441,15 @@ const createDragPreviewElements = (
 
     if (lastDomNode) {
       const lastDomNodeRect = editor.api
-        .toDOMNode(lastDomNode)!
-        .parentElement!.getBoundingClientRect();
+        .toDOMNode(lastDomNode)
+        ?.parentElement?.getBoundingClientRect();
 
-      const domNodeRect = domNode.parentElement!.getBoundingClientRect();
+      const domNodeRect = domNode.parentElement?.getBoundingClientRect();
+      if (!lastDomNodeRect || !domNodeRect) {
+        removeDataAttributes(newDomNode);
+        elements.push(wrapper);
+        return;
+      }
 
       const distance = domNodeRect.top - lastDomNodeRect.bottom;
 
@@ -465,11 +482,13 @@ const calculatePreviewTop = (
     element: TElement;
   },
 ): number => {
-  const child = editor.api.toDOMNode(element)!;
-  const editable = editor.api.toDOMNode(editor)!;
+  const child = editor.api.toDOMNode(element);
+  const editable = editor.api.toDOMNode(editor);
   const firstSelectedChild = blocks[0];
+  if (!child || !editable || !firstSelectedChild) return 0;
 
-  const firstDomNode = editor.api.toDOMNode(firstSelectedChild)!;
+  const firstDomNode = editor.api.toDOMNode(firstSelectedChild);
+  if (!firstDomNode) return 0;
   // Get editor's top padding
   const editorPaddingTop = Number(
     window.getComputedStyle(editable).paddingTop.replace("px", ""),
@@ -504,7 +523,8 @@ const calculatePreviewTop = (
 };
 
 const calcDragButtonTop = (editor: PlateEditor, element: TElement): number => {
-  const child = editor.api.toDOMNode(element)!;
+  const child = editor.api.toDOMNode(element);
+  if (!child) return 0;
 
   const currentMarginTopString = window.getComputedStyle(child).marginTop;
   const currentMarginTop = Number(currentMarginTopString.replace("px", ""));
