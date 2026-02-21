@@ -40,6 +40,7 @@ import { getTokenCount, getTokens } from "~/lib/tokenizer";
 import { cn } from "~/lib/utils";
 import type { MyEditor, MyValue } from "./plate-types";
 import { UnifiedEditorKitWithAI } from "./plugins/unified-editor-kit";
+import { preventBackspaceNavigation } from "./prevent-backspace-navigation";
 
 interface BlockCardProps {
   blockId: BlockId;
@@ -527,6 +528,7 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
                   <PlateContent
                     className="p-4 min-h-[60px] text-zinc-200 outline-none"
                     placeholder="Write something..."
+                    onKeyDownCapture={preventBackspaceNavigation}
                   />
                 </Plate>
               )}

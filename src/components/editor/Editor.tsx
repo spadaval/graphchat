@@ -5,6 +5,7 @@ import { use$ } from "@legendapp/state/react";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
 import { useEffect } from "react";
 import { UnifiedEditorKitWithAI } from "~/components/editor/plugins/unified-editor-kit";
+import { preventBackspaceNavigation } from "~/components/editor/prevent-backspace-navigation";
 import { QuickInlineEdit } from "~/components/editor/quick-inline-edit";
 import { Button } from "~/components/ui/button";
 import { type Document, type DocumentId, updateDocument } from "~/lib/state";
@@ -151,6 +152,7 @@ export function Editor({
               }`}
               placeholder={config.placeholder}
               readOnly={isReadonly}
+              onKeyDownCapture={preventBackspaceNavigation}
             />
           </div>
         </div>

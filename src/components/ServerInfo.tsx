@@ -1,48 +1,96 @@
 import { use$ } from "@legendapp/state/react";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Link2, RefreshCw, XCircle } from "lucide-react";
-import { useCallback, useEffect } from "react";
-import {
-  serverStore$,
-  setError,
-  setLoading,
-  setServerInfo,
-  setServerUrl,
-} from "~/lib/state/server";
-import { fetchServerInfo } from "../lib/server";
-import { SlotsComponent } from "./Slots";
+import { useEffect } from "react";
+import { serverStore$, setServerUrl } from "~/lib/state/server";
+import { setServerModelId, uiPreferences$ } from "~/lib/state/ui";
+import { getV1Models } from "../llamacpp-client";
 import { Button } from "./ui/button";
 
-export function ServerInfoComponent() {
-  const { serverInfo, loading, error, serverUrl } = use$(serverStore$);
+type ServerModel = {
+  id: string;
+  created?: number;
+  object?: string;
+  owned_by?: string;
+};
 
-  const loadServerInfo = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await fetchServerInfo();
-      setServerInfo(data);
-      setError(null);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch server info",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function formatModelMeta(model: ServerModel): string {
+  const parts: string[] = [];
+  if (model.owned_by) {
+    parts.push(model.owned_by);
+  }
+  if (model.created) {
+    parts.push(new Date(model.created * 1000).toLocaleDateString());
+  }
+  return parts.join(" • ");
+}
+
+export function ServerInfoComponent() {
+  const { serverUrl } = use$(serverStore$);
+  const { serverModelId } = use$(uiPreferences$);
+  const hasValidServerUrl = isValidHttpUrl(serverUrl.trim());
+
+  const {
+    data: models,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["v1-models", serverUrl],
+    enabled: hasValidServerUrl,
+    queryFn: async () => {
+      const response = await getV1Models();
+      if (response.error) {
+        const message =
+          response.error instanceof Error
+            ? response.error.message
+            : "Failed to fetch models from /v1/models";
+        throw new Error(message);
+      }
+
+      const data = response.data?.data ?? [];
+      return data
+        .filter((model): model is ServerModel => Boolean(model?.id))
+        .map((model) => ({
+          id: model.id as string,
+          created: model.created,
+          object: model.object,
+          owned_by: model.owned_by,
+        }));
+    },
+    refetchInterval: 30000,
+  });
+
+  const selectedModelId = serverModelId ?? "";
 
   useEffect(() => {
-    loadServerInfo();
-    const interval = setInterval(loadServerInfo, 10000); // 10s refresh instead of 5s
-    return () => clearInterval(interval);
-  }, [loadServerInfo]);
+    if (
+      hasValidServerUrl &&
+      models &&
+      models.length > 0 &&
+      !models.some((model) => model.id === selectedModelId)
+    ) {
+      setServerModelId(models[0].id);
+    }
+  }, [hasValidServerUrl, models, selectedModelId]);
 
   const handleTestConnection = () => {
-    loadServerInfo();
+    refetch();
   };
 
   return (
     <div className="space-y-6 p-4 overflow-y-auto h-full bg-zinc-900/30">
-      {/* Server Configuration */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
           <Link2 size={16} className="text-blue-400" />
@@ -68,10 +116,10 @@ export function ServerInfoComponent() {
             <Button
               size="sm"
               onClick={handleTestConnection}
-              disabled={loading}
+              disabled={!hasValidServerUrl || isFetching}
               className="h-8 px-3"
             >
-              {loading ? (
+              {isFetching ? (
                 <RefreshCw size={14} className="animate-spin" />
               ) : (
                 "Test"
@@ -80,161 +128,95 @@ export function ServerInfoComponent() {
           </div>
         </div>
 
-        {/* Connection Status */}
         <div className="flex items-center gap-2 p-2 rounded-md bg-zinc-800/30 border border-zinc-700/50">
-          {error ? (
+          {!hasValidServerUrl || isError ? (
             <XCircle size={14} className="text-red-500" />
-          ) : serverInfo ? (
+          ) : models && models.length > 0 ? (
             <CheckCircle2 size={14} className="text-green-500" />
           ) : (
             <RefreshCw size={14} className="text-zinc-500" />
           )}
           <span
-            className={`text-[11px] font-medium ${error ? "text-red-400" : "text-zinc-400"}`}
+            className={`text-[11px] font-medium ${!hasValidServerUrl || isError ? "text-red-400" : "text-zinc-400"}`}
           >
-            {error
-              ? "Connection Failed"
-              : serverInfo
-                ? "Connected"
-                : "Not Connected"}
+            {!hasValidServerUrl
+              ? "Invalid URL"
+              : isError
+                ? "Connection Failed"
+                : models && models.length > 0
+                  ? "Connected"
+                  : "Not Connected"}
           </span>
         </div>
 
-        {error && (
+        {!hasValidServerUrl ? (
           <div className="text-[10px] text-red-500/80 bg-red-950/20 p-2 rounded border border-red-900/30">
-            {error}
+            Enter a valid http(s) URL.
           </div>
-        )}
+        ) : null}
+
+        {isError ? (
+          <div className="text-[10px] text-red-500/80 bg-red-950/20 p-2 rounded border border-red-900/30">
+            {error instanceof Error
+              ? error.message
+              : "Failed to connect to server"}
+          </div>
+        ) : null}
       </div>
 
       <div className="h-px bg-zinc-800" />
 
-      {serverInfo ? (
-        <div className="space-y-6">
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-zinc-100">Model Picker</h3>
+
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-xs text-zinc-500">
+            <RefreshCw size={14} className="animate-spin" />
+            Loading models from /v1/models...
+          </div>
+        ) : null}
+
+        {!isLoading && hasValidServerUrl && models && models.length === 0 ? (
+          <div className="text-xs text-zinc-500">
+            No models returned by /v1/models.
+          </div>
+        ) : null}
+
+        {!hasValidServerUrl ? (
+          <div className="text-xs text-zinc-500">
+            Configure a valid server URL to load available models.
+          </div>
+        ) : null}
+
+        {models && models.length > 0 ? (
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-zinc-100">
-              Model Details
-            </h3>
-            <div className="bg-zinc-800/20 p-3 rounded-lg border border-zinc-700/30 space-y-3">
-              <div>
-                <div className="text-xs font-medium text-zinc-200">
-                  {serverInfo.model_name}
-                </div>
-                <div className="text-[10px] text-zinc-500 font-mono mt-1 break-all">
-                  {serverInfo.model_path}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-1">
-                <div>
-                  <div className="text-[10px] uppercase text-zinc-500 font-bold mb-1">
-                    Architecture
+            {models.map((model) => {
+              const isSelected = selectedModelId === model.id;
+              return (
+                <button
+                  key={model.id}
+                  type="button"
+                  onClick={() => setServerModelId(model.id)}
+                  className={`w-full text-left rounded-md border px-3 py-2 transition-colors ${
+                    isSelected
+                      ? "border-blue-500 bg-blue-500/10"
+                      : "border-zinc-700 bg-zinc-800/30 hover:bg-zinc-800/50"
+                  }`}
+                >
+                  <div className="text-xs font-medium text-zinc-100 break-all">
+                    {model.id}
                   </div>
-                  <div className="text-xs text-zinc-300">
-                    {serverInfo.model_type}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase text-zinc-500 font-bold mb-1">
-                    Context
-                  </div>
-                  <div className="text-xs text-zinc-300">
-                    {serverInfo.context_size
-                      ? serverInfo.context_size.toLocaleString()
-                      : "N/A"}
-                  </div>
-                </div>
-              </div>
-            </div>
+                  {formatModelMeta(model) ? (
+                    <div className="mt-1 text-[10px] text-zinc-500">
+                      {formatModelMeta(model)}
+                    </div>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
-
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-zinc-300">Model Info</h3>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="text-zinc-500">Type</div>
-              <div className="text-right text-zinc-300">
-                {serverInfo.model_type}
-              </div>
-
-              <div className="text-zinc-500">Size</div>
-              <div className="text-right text-zinc-300">
-                {serverInfo.model_size} (
-                {serverInfo.model_params
-                  ? serverInfo.model_params.toLocaleString()
-                  : "N/A"}{" "}
-                params)
-              </div>
-
-              <div className="text-zinc-500">Context</div>
-              <div className="text-right text-zinc-300">
-                {serverInfo.context_size
-                  ? serverInfo.context_size.toLocaleString()
-                  : "N/A"}{" "}
-                tokens
-              </div>
-
-              <div className="text-zinc-500">GPU Layers</div>
-              <div className="text-right text-zinc-300">
-                {serverInfo.gpu_layers}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-zinc-300">System</h3>
-            <div className="space-y-1 text-xs">
-              <div className="flex justify-between">
-                <span className="text-zinc-500">CPU Usage</span>
-                <span className="text-zinc-300">
-                  {serverInfo.cpu_usage
-                    ? serverInfo.cpu_usage.toFixed(1)
-                    : "N/A"}
-                  %
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">RAM Usage</span>
-                <span className="text-zinc-300">
-                  {serverInfo.ram_usage
-                    ? serverInfo.ram_usage.toFixed(1)
-                    : "N/A"}
-                  %
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">VRAM Usage</span>
-                <span className="text-zinc-300">
-                  {serverInfo.vram_usage
-                    ? serverInfo.vram_usage.toFixed(1)
-                    : "N/A"}
-                  %
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <SlotsComponent />
-
-          <div className="pt-2 text-xs text-zinc-600 text-center">
-            Last updated:{" "}
-            {serverInfo.timestamp
-              ? new Date(serverInfo.timestamp).toLocaleTimeString()
-              : "N/A"}
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 flex flex-col items-center justify-center space-y-4 p-8 text-center text-zinc-500">
-          <RefreshCw size={32} className="text-zinc-700 animate-pulse" />
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-zinc-400">
-              No server connected
-            </p>
-            <p className="text-xs text-zinc-600">
-              Enter a valid URL and click Test to begin
-            </p>
-          </div>
-        </div>
-      )}
+        ) : null}
+      </div>
     </div>
   );
 }

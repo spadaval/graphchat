@@ -19,7 +19,7 @@ import type {
 } from "./types";
 import { uiPreferences$ } from "./ui";
 
-const SERVER_MODEL_ID = "llama";
+const DEFAULT_SERVER_MODEL_ID = "llama";
 const BROWSER_MODEL_ID = "onnx-community/Qwen3-0.6B-ONNX";
 
 type AIProvider = "browser" | "server";
@@ -72,7 +72,11 @@ function getAIProvider(value: unknown): AIProvider {
 }
 
 function getModelId(provider: AIProvider): string {
-  return provider === "browser" ? BROWSER_MODEL_ID : SERVER_MODEL_ID;
+  if (provider === "browser") {
+    return BROWSER_MODEL_ID;
+  }
+  const serverModelId = uiPreferences$.serverModelId.get();
+  return serverModelId || DEFAULT_SERVER_MODEL_ID;
 }
 
 function getWebGpuInfo() {
@@ -185,9 +189,22 @@ async function generateBrowserResponse(
   messages: { content: string; role: MessageType }[],
   modelProperties: ModelProperties,
 ): Promise<string> {
+  const generationRunId = `browser-gen-${crypto.randomUUID()}`;
+  const runStart = performance.now();
+  const pipelineStart = performance.now();
   const generator = await getBrowserGenerationPipeline();
+  const pipelineMs = Math.round(performance.now() - pipelineStart);
   const prompt = buildPromptFromMessages(messages);
+  const approxPromptTokens = Math.round(prompt.length / 4);
+  console.info("[LLM Browser] Generation starting", {
+    approxPromptTokens,
+    messageCount: messages.length,
+    pipelineMs,
+    promptLength: prompt.length,
+    runId: generationRunId,
+  });
 
+  const inferenceStart = performance.now();
   const result = await generator(prompt, {
     max_new_tokens: modelProperties.n_predict,
     temperature: modelProperties.temperature,
@@ -197,8 +214,25 @@ async function generateBrowserResponse(
     do_sample: modelProperties.temperature > 0,
     return_full_text: false,
   });
+  const inferenceMs = Math.round(performance.now() - inferenceStart);
+  const totalMs = Math.round(performance.now() - runStart);
 
-  return extractGeneratedText(result).trim();
+  const generated = extractGeneratedText(result).trim();
+  const approxGeneratedTokens = Math.round(generated.length / 4);
+  const tokensPerSecond =
+    inferenceMs > 0
+      ? +(approxGeneratedTokens / (inferenceMs / 1000)).toFixed(3)
+      : 0;
+  console.info("[LLM Browser] Generation completed", {
+    approxGeneratedTokens,
+    generatedLength: generated.length,
+    inferenceMs,
+    runId: generationRunId,
+    tokensPerSecond,
+    totalMs,
+  });
+
+  return generated;
 }
 
 function buildMessagesForLLM(
@@ -362,7 +396,7 @@ export async function callLLM(
   const resultAsync = ResultAsync.fromPromise(
     postV1ChatCompletions({
       body: {
-        model: SERVER_MODEL_ID,
+        model: modelId,
         messages: messagesForAPI,
         temperature: modelProperties.temperature,
         top_p: modelProperties.top_p,
@@ -379,7 +413,7 @@ export async function callLLM(
       },
     }),
     (error) =>
-      createLLMError("Failed to call LLM API", SERVER_MODEL_ID, error as Error),
+      createLLMError("Failed to call LLM API", modelId, error as Error),
   )
     .andThen((response) => {
       const assistantContent =
@@ -411,7 +445,7 @@ export async function callLLM(
 
       return createLLMError(
         "Failed to get response from LLM server",
-        SERVER_MODEL_ID,
+        modelId,
         error.cause,
       );
     });
@@ -463,6 +497,19 @@ export async function* callLLMStreaming(
   const request = createLLMRequest(modelId, modelProperties);
   request.sourceMessages = messagesForAPI;
   const startTime = Date.now();
+  const perfStart = performance.now();
+  let firstChunkAt: number | null = null;
+  let lastChunkAt: number | null = null;
+  let nonEmptyChunkCount = 0;
+  let emptyChunkCount = 0;
+  let totalContentChars = 0;
+  console.info("[LLM Streaming] Request started", {
+    messageCount: messagesForAPI.length,
+    modelId,
+    provider,
+    requestId: request.id,
+    stream: modelProperties.stream,
+  });
 
   if (provider === "browser") {
     try {
@@ -471,8 +518,36 @@ export async function* callLLMStreaming(
         modelProperties,
       );
       const chunks = splitIntoChunks(content);
+      console.info("[LLM Streaming] Browser response ready", {
+        chunkCount: chunks.length,
+        contentLength: content.length,
+        requestId: request.id,
+      });
 
       for (const chunk of chunks) {
+        const now = performance.now();
+        if (firstChunkAt === null) {
+          firstChunkAt = now;
+          console.info("[LLM Streaming] First chunk emitted", {
+            requestId: request.id,
+            timeToFirstChunkMs: Math.round(now - perfStart),
+          });
+        }
+        const gapMs = lastChunkAt === null ? 0 : Math.round(now - lastChunkAt);
+        lastChunkAt = now;
+        if (chunk.length > 0) {
+          nonEmptyChunkCount += 1;
+          totalContentChars += chunk.length;
+        } else {
+          emptyChunkCount += 1;
+        }
+        console.debug("[LLM Streaming] Browser chunk", {
+          chunkGapMs: gapMs,
+          chunkLength: chunk.length,
+          emptyChunkCount,
+          nonEmptyChunkCount,
+          requestId: request.id,
+        });
         yield ok({
           response: {
             content: chunk,
@@ -484,12 +559,33 @@ export async function* callLLMStreaming(
 
       request.duration = Date.now() - startTime;
       request.success = true;
+      const totalStreamMs = Math.round(performance.now() - perfStart);
+      const throughputCharsPerSecond =
+        totalStreamMs > 0
+          ? +((totalContentChars / totalStreamMs) * 1000).toFixed(3)
+          : 0;
+      console.info("[LLM Streaming] Browser stream completed", {
+        durationMs: request.duration,
+        emptyChunkCount,
+        nonEmptyChunkCount,
+        throughputCharsPerSecond,
+        timeToFirstChunkMs:
+          firstChunkAt === null ? null : Math.round(firstChunkAt - perfStart),
+        totalContentChars,
+        totalStreamMs,
+        requestId: request.id,
+      });
       yield ok({ response: { content: "", done: true }, request });
       return;
     } catch (error) {
       request.duration = Date.now() - startTime;
       request.success = false;
       request.error = error instanceof Error ? error.message : "Unknown error";
+      console.error("[LLM Streaming] Browser stream failed", {
+        durationMs: request.duration,
+        error,
+        requestId: request.id,
+      });
 
       yield err(
         createLLMError(
@@ -506,7 +602,7 @@ export async function* callLLMStreaming(
     client.sse.post({
       url: "/v1/chat/completions",
       body: {
-        model: SERVER_MODEL_ID,
+        model: modelId,
         messages: messagesForAPI,
         temperature: modelProperties.temperature,
         top_p: modelProperties.top_p,
@@ -528,7 +624,7 @@ export async function* callLLMStreaming(
     (error) =>
       createLLMError(
         "Failed to initialize streaming connection",
-        SERVER_MODEL_ID,
+        modelId,
         error as Error,
       ),
   );
@@ -539,11 +635,16 @@ export async function* callLLMStreaming(
     request.duration = Date.now() - startTime;
     request.success = false;
     request.error = sseResult.error.message;
+    console.error("[LLM Streaming] SSE init failed", {
+      durationMs: request.duration,
+      error: sseResult.error,
+      requestId: request.id,
+    });
 
     yield err(
       createLLMError(
         "Failed to initialize streaming connection",
-        SERVER_MODEL_ID,
+        modelId,
         sseResult.error,
       ),
     );
@@ -551,11 +652,41 @@ export async function* callLLMStreaming(
   }
 
   const sseClient = sseResult.value;
+  console.info("[LLM Streaming] SSE stream connected", {
+    requestId: request.id,
+  });
 
   for await (const event of sseClient.stream) {
+    const now = performance.now();
+    if (firstChunkAt === null) {
+      firstChunkAt = now;
+      console.info("[LLM Streaming] First SSE event received", {
+        requestId: request.id,
+        timeToFirstEventMs: Math.round(now - perfStart),
+      });
+    }
+    const gapMs = lastChunkAt === null ? 0 : Math.round(now - lastChunkAt);
+    lastChunkAt = now;
+
     if (event === "[DONE]") {
       request.duration = Date.now() - startTime;
       request.success = true;
+      const totalStreamMs = Math.round(performance.now() - perfStart);
+      const throughputCharsPerSecond =
+        totalStreamMs > 0
+          ? +((totalContentChars / totalStreamMs) * 1000).toFixed(3)
+          : 0;
+      console.info("[LLM Streaming] SSE stream completed", {
+        durationMs: request.duration,
+        emptyChunkCount,
+        nonEmptyChunkCount,
+        throughputCharsPerSecond,
+        timeToFirstEventMs:
+          firstChunkAt === null ? null : Math.round(firstChunkAt - perfStart),
+        totalContentChars,
+        totalStreamMs,
+        requestId: request.id,
+      });
 
       yield ok({ response: { content: "", done: true }, request });
       break;
@@ -572,18 +703,40 @@ export async function* callLLMStreaming(
       | undefined
       | TokenProbability[]
       | { content?: TokenProbability[] };
+    const normalizedProbabilities = Array.isArray(logprobs)
+      ? logprobs
+      : (logprobs as { content?: TokenProbability[] })?.content
+        ? (logprobs as { content: TokenProbability[] }).content
+        : logprobs
+          ? [logprobs as TokenProbability]
+          : undefined;
+    if (content.length > 0) {
+      nonEmptyChunkCount += 1;
+      totalContentChars += content.length;
+    } else {
+      emptyChunkCount += 1;
+    }
+    if (gapMs > 2_000) {
+      console.warn("[LLM Streaming] Large gap between SSE events", {
+        gapMs,
+        requestId: request.id,
+      });
+    }
+    console.debug("[LLM Streaming] SSE chunk", {
+      chunkGapMs: gapMs,
+      contentLength: content.length,
+      emptyChunkCount,
+      hasContent: content.length > 0,
+      nonEmptyChunkCount,
+      probabilitiesCount: normalizedProbabilities?.length || 0,
+      requestId: request.id,
+    });
 
     yield ok({
       response: {
         content,
         done: false,
-        probabilities: Array.isArray(logprobs)
-          ? logprobs
-          : (logprobs as { content?: TokenProbability[] })?.content
-            ? (logprobs as { content: TokenProbability[] }).content
-            : logprobs
-              ? [logprobs as TokenProbability]
-              : undefined,
+        probabilities: normalizedProbabilities,
       },
       request,
     });

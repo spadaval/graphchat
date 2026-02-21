@@ -17,6 +17,7 @@ const uiPreferences: UIPreferences = {
   documentWidth: 800,
   tokenizerModelId: "default", // Assuming a default value for the new required property
   enableTokenProbabilities: true,
+  serverModelId: "",
 };
 
 export const uiPreferences$ = observable<UIPreferences>(uiPreferences);
@@ -49,6 +50,10 @@ export const setInlineCompletionEnabled = (enabled: boolean) => {
 
 export const setEnableTokenProbabilities = (enabled: boolean) => {
   uiPreferences$.enableTokenProbabilities.set(enabled);
+};
+
+export const setServerModelId = (modelId: string) => {
+  uiPreferences$.serverModelId.set(modelId);
 };
 
 export const setActiveSamplerPreset = (presetId: string | undefined) => {

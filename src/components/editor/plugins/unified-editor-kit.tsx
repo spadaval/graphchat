@@ -4,6 +4,7 @@ import { BaseParagraphPlugin } from "platejs";
 import { ParagraphElement } from "~/components/editor/paragraph-node";
 import { AIKit } from "./ai-kit";
 import { BasicMarksKit } from "./basic-marks-kit";
+import { BlockMenuKit } from "./block-menu-kit";
 import { DndKit } from "./dnd-kit";
 // import { CursorOverlayKit } from "./cursor-overlay-kit";
 import { MarkdownKit } from "./markdown-kit";
@@ -34,7 +35,11 @@ const UnifiedPlugins = [
   // Drag and drop support
   ...DndKit,
 
+  // Slash commands for quick actions
   ...SlashKit,
+
+  // Context menu for block-level actions
+  ...BlockMenuKit,
 ];
 
 // Extended kit with AI features for document editor

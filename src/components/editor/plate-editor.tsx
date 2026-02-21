@@ -7,6 +7,7 @@ import { PlateContainer, PlateContent, PlateView } from "platejs/react";
 import type * as React from "react";
 
 import { cn } from "~/lib/utils";
+import { preventBackspaceNavigation } from "./prevent-backspace-navigation";
 
 const editorContainerVariants = cva(
   "relative w-full cursor-text select-text overflow-y-auto caret-primary selection:bg-brand/25 focus-visible:outline-none [&_.slate-selection-area]:z-50 [&_.slate-selection-area]:border [&_.slate-selection-area]:border-brand/25 [&_.slate-selection-area]:bg-brand/15",
@@ -92,6 +93,7 @@ export const Editor = ({
   className,
   disabled,
   focused,
+  onKeyDownCapture,
   variant,
   ref,
   ...props
@@ -108,6 +110,10 @@ export const Editor = ({
     )}
     disabled={disabled}
     disableDefaultStyles
+    onKeyDownCapture={(event) => {
+      preventBackspaceNavigation(event);
+      onKeyDownCapture?.(event);
+    }}
     {...props}
   />
 );

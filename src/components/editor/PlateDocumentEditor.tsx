@@ -26,6 +26,7 @@ import type {
 import { uiPreferences$ } from "~/lib/state/ui";
 import type { MyEditor, MyValue } from "./plate-types";
 import { UnifiedEditorKitWithAI } from "./plugins/unified-editor-kit";
+import { preventBackspaceNavigation } from "./prevent-backspace-navigation";
 
 interface PlateDocumentEditorProps {
   document$: Observable<Document>;
@@ -186,6 +187,11 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
         }
       : undefined,
   }) as MyEditor;
+  const editorRef = useRef(editor);
+
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   useEffect(() => {
     if (showAiInput && aiInputRef.current) {
@@ -383,10 +389,16 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
 
   const generateNextSegment = async () => {
     if (isGenerating) return;
+    const runId = `gen-next-${crypto.randomUUID()}`;
+    const runStart = performance.now();
+    console.info("[GenerateNext] Run started", {
+      docId,
+      hasInstructions: aiInstructions.trim().length > 0,
+      runId,
+    });
     setIsGenerating(true);
-    setShowAiInput(false);
 
-    const serialized = editor.api.markdown.serialize();
+    const serialized = editorRef.current.api.markdown.serialize();
     const messages: LLMMessage[] = [];
     if (serialized.trim()) {
       messages.push({ role: "user", content: serialized });
@@ -398,39 +410,140 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
       messages.push({ role: "user", content: "Please start writing a story." });
     }
 
+    console.info("[GenerateNext] Messages prepared", {
+      docLength: serialized.length,
+      messageCount: messages.length,
+      runId,
+    });
+
     const segmentId: SegmentId = `seg-${crypto.randomUUID()}`;
     const nodeId = `node-${crypto.randomUUID()}`;
+    console.info("[GenerateNext] Segment ids allocated", {
+      nodeId,
+      runId,
+      segmentId,
+    });
 
     suppressOnChangeRef.current = true;
-    insertSegmentNodeAtEnd(editor, segmentId, "", nodeId);
+    insertSegmentNodeAtEnd(editorRef.current, segmentId, "", nodeId);
     suppressOnChangeRef.current = false;
+    console.info("[GenerateNext] Placeholder node inserted", {
+      nodeId,
+      runId,
+      segmentId,
+    });
 
     try {
       let fullText = "";
       let sourceMessages: LLMMessage[] = messages;
       const allProbabilities: TokenProbability[] = [];
       const stream = callLLMStreaming(messages, modelProps$.get());
+      const FLUSH_INTERVAL_MS = 50;
+      let chunkCount = 0;
+      let firstChunkAt: number | null = null;
+      let lastChunkAt: number | null = null;
+      let lastFlushAt = 0;
+      let appliedLength = 0;
+      let totalApplyMs = 0;
+      let slowApplyCount = 0;
+
+      const flushStreamedTextToEditor = () => {
+        if (fullText.length === appliedLength) return;
+        const applyStart = performance.now();
+        suppressOnChangeRef.current = true;
+        const targetEditor = editorRef.current;
+        if (!getSegmentEntry(targetEditor, segmentId)) {
+          insertSegmentNodeAtEnd(targetEditor, segmentId, "", nodeId);
+        }
+        replaceSegmentNodeText(targetEditor, segmentId, fullText, nodeId);
+        suppressOnChangeRef.current = false;
+        const applyMs = performance.now() - applyStart;
+        appliedLength = fullText.length;
+        lastFlushAt = applyStart;
+        totalApplyMs += applyMs;
+        if (applyMs > 16) {
+          slowApplyCount += 1;
+        }
+        console.debug("[GenerateNext] Editor apply time", {
+          applyMs: +applyMs.toFixed(3),
+          appliedLength,
+          chunkCount,
+          runId,
+          slowApplyCount,
+          totalApplyMs: +totalApplyMs.toFixed(3),
+        });
+      };
 
       for await (const chunkResult of stream) {
         chunkResult.match(
           (chunk) => {
             if (chunk.response.done) {
+              flushStreamedTextToEditor();
               sourceMessages = chunk.request.sourceMessages || messages;
+              console.info("[GenerateNext] Stream completed", {
+                chunkCount,
+                durationMs: Math.round(performance.now() - runStart),
+                finalLength: fullText.length,
+                firstChunkLatencyMs:
+                  firstChunkAt === null
+                    ? null
+                    : Math.round(firstChunkAt - runStart),
+                slowApplyCount,
+                totalApplyMs: Math.round(totalApplyMs),
+                totalInterChunkGapMs:
+                  firstChunkAt === null || lastChunkAt === null
+                    ? 0
+                    : Math.round(lastChunkAt - firstChunkAt),
+                requestId: chunk.request.id,
+                runId,
+              });
               return;
             }
+            const chunkNow = performance.now();
+            if (firstChunkAt === null) {
+              firstChunkAt = chunkNow;
+              console.info("[GenerateNext] First chunk received", {
+                runId,
+                timeToFirstChunkMs: Math.round(chunkNow - runStart),
+              });
+            }
+            const interChunkGapMs =
+              lastChunkAt === null ? 0 : Math.round(chunkNow - lastChunkAt);
+            lastChunkAt = chunkNow;
+            chunkCount += 1;
             fullText += chunk.response.content;
             if (chunk.response.probabilities) {
               allProbabilities.push(...chunk.response.probabilities);
             }
-            suppressOnChangeRef.current = true;
-            replaceSegmentNodeText(editor, segmentId, fullText, nodeId);
-            suppressOnChangeRef.current = false;
+            console.debug("[GenerateNext] Stream chunk", {
+              accumulatedLength: fullText.length,
+              chunkCount,
+              chunkLength: chunk.response.content.length,
+              interChunkGapMs,
+              probabilitiesInChunk: chunk.response.probabilities?.length || 0,
+              runId,
+            });
+
+            const now = performance.now();
+            const shouldFlush =
+              chunk.response.content.length > 0 &&
+              (lastFlushAt === 0 || now - lastFlushAt >= FLUSH_INTERVAL_MS);
+
+            if (shouldFlush) {
+              flushStreamedTextToEditor();
+            }
           },
           (error) => {
-            console.error("AI generation error:", error);
+            console.error("[GenerateNext] Stream yielded error", {
+              error,
+              runId,
+              segmentId,
+            });
           },
         );
       }
+
+      flushStreamedTextToEditor();
 
       const segment = createSegmentMeta(
         segmentId,
@@ -440,11 +553,34 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
         nodeId,
       );
 
+      console.info("[GenerateNext] Persisting generated segment", {
+        fullTextLength: fullText.length,
+        probabilityCount: allProbabilities.length,
+        runId,
+        segmentId,
+        sourceMessageCount: sourceMessages.length,
+      });
       createAISegment(docId, segment);
       persistEditorState();
+      console.info("[GenerateNext] Run persisted successfully", {
+        durationMs: Math.round(performance.now() - runStart),
+        runId,
+        segmentId,
+      });
+    } catch (error) {
+      console.error("[GenerateNext] Run failed", {
+        durationMs: Math.round(performance.now() - runStart),
+        error,
+        runId,
+        segmentId,
+      });
     } finally {
       setAiInstructions("");
       setIsGenerating(false);
+      console.info("[GenerateNext] Run finalized", {
+        durationMs: Math.round(performance.now() - runStart),
+        runId,
+      });
     }
   };
 
@@ -527,6 +663,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
             <PlateContent
               className="min-h-[420px] text-zinc-200 outline-none px-1"
               placeholder="Start writing..."
+              onKeyDownCapture={preventBackspaceNavigation}
             />
           </Plate>
         </div>
@@ -549,6 +686,12 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
                   <Sparkles size={12} /> Generate Next
                 </span>
               </button>
+              {isGenerating && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-blue-900/40 text-blue-300">
+                  <Loader2 size={12} className="animate-spin" />
+                  Generating...
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => void runDocumentNer()}

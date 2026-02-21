@@ -56,6 +56,7 @@ export interface UIPreferences {
   tokenizerModelId: string;
   huggingfaceToken?: string;
   enableTokenProbabilities: boolean;
+  serverModelId?: string;
 }
 
 // Document linking state
