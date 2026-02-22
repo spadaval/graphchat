@@ -4,6 +4,7 @@ import { syncObservable } from "@legendapp/state/sync";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { postV1ChatCompletions } from "../../llamacpp-client";
 import { client } from "../../llamacpp-client/client.gen";
+import { debugInfo, debugLog } from "../debug";
 import { type AppError, type AppResult, createLLMError } from "../errors";
 import { blocks$ } from "./block";
 import { getDocumentById } from "./documents";
@@ -22,7 +23,12 @@ import { uiPreferences$ } from "./ui";
 const DEFAULT_SERVER_MODEL_ID = "llama";
 const BROWSER_MODEL_ID = "onnx-community/Qwen3-0.6B-ONNX";
 
-type AIProvider = "browser" | "server";
+type LLMTaskType = "chat" | "inline" | "simple";
+
+export type BackendRoutingOptions = {
+  forceBackend?: "browser" | "server";
+  task?: LLMTaskType;
+};
 
 type TextGenerationOptions = {
   do_sample: boolean;
@@ -67,16 +73,31 @@ const createLLMRequest = (
   sourceMessages: [],
 });
 
-function getAIProvider(value: unknown): AIProvider {
-  return value === "server" ? "server" : "browser";
-}
-
-function getModelId(provider: AIProvider): string {
-  if (provider === "browser") {
+function getModelId(backend: "browser" | "server"): string {
+  if (backend === "browser") {
     return BROWSER_MODEL_ID;
   }
   const serverModelId = uiPreferences$.serverModelId.get();
   return serverModelId || DEFAULT_SERVER_MODEL_ID;
+}
+
+function resolveBackend({
+  apiBackendEnabled,
+  forceBackend,
+  task,
+}: {
+  apiBackendEnabled: boolean;
+} & BackendRoutingOptions): "browser" | "server" {
+  if (forceBackend) {
+    return forceBackend;
+  }
+  if (!apiBackendEnabled) {
+    return "browser";
+  }
+  if (task === "inline" || task === "simple") {
+    return "browser";
+  }
+  return "server";
 }
 
 function getWebGpuInfo() {
@@ -95,7 +116,7 @@ function getWebGpuInfo() {
 async function getBrowserGenerationPipeline(): Promise<TextGenerator> {
   if (!browserGenerationPipelinePromise) {
     const webGpuInfo = getWebGpuInfo();
-    console.info("[LLM] Initializing browser pipeline", {
+    debugInfo("[LLM] Initializing browser pipeline", {
       model: BROWSER_MODEL_ID,
       webGpuAvailable: webGpuInfo.available,
       webGpuReason: webGpuInfo.reason,
@@ -111,7 +132,7 @@ async function getBrowserGenerationPipeline(): Promise<TextGenerator> {
       const loadMs = Math.round(performance.now() - loadStart);
       browserGenerationPipelineReady = true;
 
-      console.info("[LLM] Browser pipeline ready", {
+      debugInfo("[LLM] Browser pipeline ready", {
         loadMs,
         model: BROWSER_MODEL_ID,
       });
@@ -119,7 +140,7 @@ async function getBrowserGenerationPipeline(): Promise<TextGenerator> {
       return generator as TextGenerator;
     })();
   } else if (browserGenerationPipelineReady) {
-    console.debug("[LLM] Reusing cached browser pipeline");
+    debugLog("[LLM] Reusing cached browser pipeline");
   }
 
   return browserGenerationPipelinePromise;
@@ -196,7 +217,7 @@ async function generateBrowserResponse(
   const pipelineMs = Math.round(performance.now() - pipelineStart);
   const prompt = buildPromptFromMessages(messages);
   const approxPromptTokens = Math.round(prompt.length / 4);
-  console.info("[LLM Browser] Generation starting", {
+  debugInfo("[LLM Browser] Generation starting", {
     approxPromptTokens,
     messageCount: messages.length,
     pipelineMs,
@@ -223,7 +244,7 @@ async function generateBrowserResponse(
     inferenceMs > 0
       ? +(approxGeneratedTokens / (inferenceMs / 1000)).toFixed(3)
       : 0;
-  console.info("[LLM Browser] Generation completed", {
+  debugInfo("[LLM Browser] Generation completed", {
     approxGeneratedTokens,
     generatedLength: generated.length,
     inferenceMs,
@@ -338,6 +359,63 @@ export const modelProps$ = observable<ModelProperties>({
   return_tokens: false,
 });
 
+export const SAMPLER_PRESETS = [
+  {
+    description: "Balanced generation for most tasks.",
+    id: "balanced",
+    name: "Balanced",
+    values: {
+      frequency_penalty: 0,
+      mirostat: 0 as const,
+      n_predict: 1600,
+      presence_penalty: 0,
+      repeat_penalty: 1.08,
+      temperature: 0.7,
+      top_k: 40,
+      top_p: 0.9,
+    },
+  },
+  {
+    description: "More deterministic output for editing and extraction.",
+    id: "focused",
+    name: "Focused",
+    values: {
+      frequency_penalty: 0,
+      mirostat: 0 as const,
+      n_predict: 1200,
+      presence_penalty: 0,
+      repeat_penalty: 1.15,
+      temperature: 0.25,
+      top_k: 30,
+      top_p: 0.8,
+    },
+  },
+  {
+    description: "Higher creativity and variation for brainstorming.",
+    id: "creative",
+    name: "Creative",
+    values: {
+      frequency_penalty: 0.15,
+      mirostat: 0 as const,
+      n_predict: 2200,
+      presence_penalty: 0.2,
+      repeat_penalty: 1.05,
+      temperature: 1.05,
+      top_k: 60,
+      top_p: 0.95,
+    },
+  },
+] as const;
+
+export type SamplerPresetId = (typeof SAMPLER_PRESETS)[number]["id"];
+
+export function applySamplerPreset(presetId: SamplerPresetId): boolean {
+  const preset = SAMPLER_PRESETS.find((candidate) => candidate.id === presetId);
+  if (!preset) return false;
+  modelProps$.assign(preset.values);
+  return true;
+}
+
 // Persist model properties state
 syncObservable(modelProps$, {
   persist: {
@@ -352,17 +430,21 @@ syncObservable(modelProps$, {
 export async function callLLM(
   messages: (Block | LLMMessage)[],
   modelProperties: ModelProperties,
+  routing: BackendRoutingOptions = {},
 ): Promise<AppResult<{ response: LLMResponse; request: LLMRequest }>> {
   const messagesForAPI = buildMessagesForLLM(messages);
   const uiPrefs = uiPreferences$.get();
-  const provider = getAIProvider(uiPrefs.aiProvider);
-  const modelId = getModelId(provider);
+  const backend = resolveBackend({
+    ...routing,
+    apiBackendEnabled: uiPrefs.apiBackendEnabled,
+  });
+  const modelId = getModelId(backend);
 
   const request = createLLMRequest(modelId, modelProperties);
   request.sourceMessages = messagesForAPI;
   const startTime = Date.now();
 
-  if (provider === "browser") {
+  if (backend === "browser") {
     try {
       const assistantContent = await generateBrowserResponse(
         messagesForAPI,
@@ -484,6 +566,7 @@ export function parseStreamingResponse(
 export async function* callLLMStreaming(
   messages: (Block | LLMMessage)[],
   modelProperties: ModelProperties,
+  routing: BackendRoutingOptions = {},
 ): AsyncGenerator<
   Result<{ response: StreamingLLMResponse; request: LLMRequest }, AppError>,
   void,
@@ -491,8 +574,11 @@ export async function* callLLMStreaming(
 > {
   const messagesForAPI = buildMessagesForLLM(messages);
   const uiPrefs = uiPreferences$.get();
-  const provider = getAIProvider(uiPrefs.aiProvider);
-  const modelId = getModelId(provider);
+  const backend = resolveBackend({
+    ...routing,
+    apiBackendEnabled: uiPrefs.apiBackendEnabled,
+  });
+  const modelId = getModelId(backend);
 
   const request = createLLMRequest(modelId, modelProperties);
   request.sourceMessages = messagesForAPI;
@@ -503,22 +589,22 @@ export async function* callLLMStreaming(
   let nonEmptyChunkCount = 0;
   let emptyChunkCount = 0;
   let totalContentChars = 0;
-  console.info("[LLM Streaming] Request started", {
+  debugInfo("[LLM Streaming] Request started", {
     messageCount: messagesForAPI.length,
     modelId,
-    provider,
+    provider: backend,
     requestId: request.id,
     stream: modelProperties.stream,
   });
 
-  if (provider === "browser") {
+  if (backend === "browser") {
     try {
       const content = await generateBrowserResponse(
         messagesForAPI,
         modelProperties,
       );
       const chunks = splitIntoChunks(content);
-      console.info("[LLM Streaming] Browser response ready", {
+      debugInfo("[LLM Streaming] Browser response ready", {
         chunkCount: chunks.length,
         contentLength: content.length,
         requestId: request.id,
@@ -528,7 +614,7 @@ export async function* callLLMStreaming(
         const now = performance.now();
         if (firstChunkAt === null) {
           firstChunkAt = now;
-          console.info("[LLM Streaming] First chunk emitted", {
+          debugInfo("[LLM Streaming] First chunk emitted", {
             requestId: request.id,
             timeToFirstChunkMs: Math.round(now - perfStart),
           });
@@ -541,7 +627,7 @@ export async function* callLLMStreaming(
         } else {
           emptyChunkCount += 1;
         }
-        console.debug("[LLM Streaming] Browser chunk", {
+        debugLog("[LLM Streaming] Browser chunk", {
           chunkGapMs: gapMs,
           chunkLength: chunk.length,
           emptyChunkCount,
@@ -564,7 +650,7 @@ export async function* callLLMStreaming(
         totalStreamMs > 0
           ? +((totalContentChars / totalStreamMs) * 1000).toFixed(3)
           : 0;
-      console.info("[LLM Streaming] Browser stream completed", {
+      debugInfo("[LLM Streaming] Browser stream completed", {
         durationMs: request.duration,
         emptyChunkCount,
         nonEmptyChunkCount,
@@ -652,7 +738,7 @@ export async function* callLLMStreaming(
   }
 
   const sseClient = sseResult.value;
-  console.info("[LLM Streaming] SSE stream connected", {
+  debugInfo("[LLM Streaming] SSE stream connected", {
     requestId: request.id,
   });
 
@@ -660,7 +746,7 @@ export async function* callLLMStreaming(
     const now = performance.now();
     if (firstChunkAt === null) {
       firstChunkAt = now;
-      console.info("[LLM Streaming] First SSE event received", {
+      debugInfo("[LLM Streaming] First SSE event received", {
         requestId: request.id,
         timeToFirstEventMs: Math.round(now - perfStart),
       });
@@ -676,7 +762,7 @@ export async function* callLLMStreaming(
         totalStreamMs > 0
           ? +((totalContentChars / totalStreamMs) * 1000).toFixed(3)
           : 0;
-      console.info("[LLM Streaming] SSE stream completed", {
+      debugInfo("[LLM Streaming] SSE stream completed", {
         durationMs: request.duration,
         emptyChunkCount,
         nonEmptyChunkCount,
@@ -722,7 +808,7 @@ export async function* callLLMStreaming(
         requestId: request.id,
       });
     }
-    console.debug("[LLM Streaming] SSE chunk", {
+    debugLog("[LLM Streaming] SSE chunk", {
       chunkGapMs: gapMs,
       contentLength: content.length,
       emptyChunkCount,

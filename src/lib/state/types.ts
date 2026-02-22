@@ -40,14 +40,11 @@ export interface ServerInfo {
   timestamp: number;
 }
 
-// UI preferences
-export type ActiveTab = "server" | "settings";
-export type AIProvider = "browser" | "server";
+export type LLMBackend = "browser" | "server";
 
 export interface UIPreferences {
-  activeTab: ActiveTab;
-  aiEnabled: boolean;
-  aiProvider: AIProvider;
+  apiBackendEnabled: boolean;
+  debugMode: boolean;
   inlineCompletion: boolean;
   activeSamplerPreset?: string;
   documentWidth?: number;

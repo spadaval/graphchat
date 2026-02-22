@@ -1,5 +1,7 @@
 "use client";
 
+import { debugInfo, debugLog } from "~/lib/debug";
+
 const NER_MODEL_ID = "onnx-community/distilbert-NER-ONNX";
 
 type TokenClassificationOptions = {
@@ -125,7 +127,7 @@ function findTokenOffsets(
 async function getNerPipeline(): Promise<TokenClassifier> {
   if (!nerPipelinePromise) {
     const webGpuInfo = getWebGpuInfo();
-    console.info("[NER] Initializing pipeline", {
+    debugInfo("[NER] Initializing pipeline", {
       model: NER_MODEL_ID,
       webGpuAvailable: webGpuInfo.available,
       webGpuReason: webGpuInfo.reason,
@@ -140,7 +142,7 @@ async function getNerPipeline(): Promise<TokenClassifier> {
       const loadMs = Math.round(performance.now() - loadStart);
       nerPipelineReady = true;
 
-      console.info("[NER] Pipeline ready", {
+      debugInfo("[NER] Pipeline ready", {
         loadMs,
         model: NER_MODEL_ID,
       });
@@ -148,7 +150,7 @@ async function getNerPipeline(): Promise<TokenClassifier> {
       return classifier as TokenClassifier;
     })();
   } else if (nerPipelineReady) {
-    console.debug("[NER] Reusing cached pipeline");
+    debugLog("[NER] Reusing cached pipeline");
   }
 
   return nerPipelinePromise;
@@ -156,12 +158,12 @@ async function getNerPipeline(): Promise<TokenClassifier> {
 
 export async function detectNamedEntities(text: string): Promise<NerEntity[]> {
   if (!text.trim()) {
-    console.debug("[NER] Skipping inference for empty paragraph");
+    debugLog("[NER] Skipping inference for empty paragraph");
     return [];
   }
 
   const preview = text.slice(0, 120);
-  console.info("[NER] Inference started", {
+  debugInfo("[NER] Inference started", {
     length: text.length,
     preview,
   });
@@ -255,7 +257,7 @@ export async function detectNamedEntities(text: string): Promise<NerEntity[]> {
     merged.push(entity);
   }
 
-  console.info("[NER] Inference completed", {
+  debugInfo("[NER] Inference completed", {
     derivedOffsetCount,
     inferenceMs,
     mappedCount: merged.length,
@@ -271,14 +273,14 @@ export async function detectNamedEntities(text: string): Promise<NerEntity[]> {
         start: entity.start,
       };
     });
-    console.debug("[NER] Raw entity sample", sample);
+    debugLog("[NER] Raw entity sample", sample);
   }
 
-  console.debug("[NER] Raw label counts", labelCounts);
+  debugLog("[NER] Raw label counts", labelCounts);
 
   if (merged.length > 0) {
-    console.debug("[NER] Normalized entities", merged);
-    console.info(
+    debugLog("[NER] Normalized entities", merged);
+    debugInfo(
       "[NER] Normalized entity spans",
       merged.map((entity, index) => ({
         end: entity.end,

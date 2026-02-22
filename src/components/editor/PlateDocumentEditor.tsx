@@ -6,6 +6,7 @@ import { Loader2, Send, Sparkles, WandSparkles, X } from "lucide-react";
 import { NodeApi, type Path, type PathRef, TextApi, type TText } from "platejs";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { debugInfo, debugLog } from "~/lib/debug";
 import { detectNamedEntities } from "~/lib/ner";
 import { updateDocument, updateDocumentContent } from "~/lib/state";
 import type { Document } from "~/lib/state/documents";
@@ -163,7 +164,7 @@ function offsetsToRange(
 
 export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   const document = use$(document$);
-  const { aiEnabled, documentWidth = 800 } = use$(uiPreferences$);
+  const { documentWidth = 800 } = use$(uiPreferences$);
   const [showAiInput, setShowAiInput] = useState(false);
   const [aiInstructions, setAiInstructions] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -263,7 +264,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
 
     const runId = `gen-next-${crypto.randomUUID()}`;
     const runStart = performance.now();
-    console.info("[GenerateNext] Run started", {
+    debugInfo("[GenerateNext] Run started", {
       docId,
       hasInstructions: aiInstructions.trim().length > 0,
       runId,
@@ -336,7 +337,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
           slowApplyCount += 1;
         }
 
-        console.debug("[GenerateNext] Editor apply time", {
+        debugLog("[GenerateNext] Editor apply time", {
           applyMs: +applyMs.toFixed(3),
           appliedLength,
           chunkCount,
@@ -351,7 +352,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
           (chunk) => {
             if (chunk.response.done) {
               flushStreamedTextToEditor();
-              console.info("[GenerateNext] Stream completed", {
+              debugInfo("[GenerateNext] Stream completed", {
                 chunkCount,
                 durationMs: Math.round(performance.now() - runStart),
                 finalLength: fullText.length,
@@ -373,7 +374,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
             const chunkNow = performance.now();
             if (firstChunkAt === null) {
               firstChunkAt = chunkNow;
-              console.info("[GenerateNext] First chunk received", {
+              debugInfo("[GenerateNext] First chunk received", {
                 runId,
                 timeToFirstChunkMs: Math.round(chunkNow - runStart),
               });
@@ -385,7 +386,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
             chunkCount += 1;
             fullText += chunk.response.content;
 
-            console.debug("[GenerateNext] Stream chunk", {
+            debugLog("[GenerateNext] Stream chunk", {
               accumulatedLength: fullText.length,
               chunkCount,
               chunkLength: chunk.response.content.length,
@@ -413,7 +414,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
 
       flushStreamedTextToEditor();
       persistEditorState();
-      console.info("[GenerateNext] Run persisted successfully", {
+      debugInfo("[GenerateNext] Run persisted successfully", {
         durationMs: Math.round(performance.now() - runStart),
         runId,
       });
@@ -428,7 +429,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
       segmentPathRef.unref();
       setAiInstructions("");
       setIsGenerating(false);
-      console.info("[GenerateNext] Run finalized", {
+      debugInfo("[GenerateNext] Run finalized", {
         aiSegmentId,
         durationMs: Math.round(performance.now() - runStart),
         runId,
@@ -521,89 +522,87 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
         </div>
       </div>
 
-      {aiEnabled && (
-        <div className="shrink-0 border-t border-zinc-800/80 bg-zinc-950/90 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/70">
-          <div
-            className="mx-auto w-full px-8 py-3"
-            style={{ maxWidth: `${documentWidth}px` }}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAiInput((v) => !v)}
-                disabled={isGenerating || isRunningNer}
-                className="px-3 py-1.5 text-xs rounded border border-blue-900/40 text-blue-300 hover:bg-blue-900/20 disabled:opacity-50"
-              >
-                <span className="inline-flex items-center gap-1">
-                  <Sparkles size={12} /> Generate Next
-                </span>
-              </button>
-              {isGenerating && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-blue-900/40 text-blue-300">
+      <div className="shrink-0 border-t border-zinc-800/80 bg-zinc-950/90 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/70">
+        <div
+          className="mx-auto w-full px-8 py-3"
+          style={{ maxWidth: `${documentWidth}px` }}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowAiInput((v) => !v)}
+              disabled={isGenerating || isRunningNer}
+              className="px-3 py-1.5 text-xs rounded border border-blue-900/40 text-blue-300 hover:bg-blue-900/20 disabled:opacity-50"
+            >
+              <span className="inline-flex items-center gap-1">
+                <Sparkles size={12} /> Generate Next
+              </span>
+            </button>
+            {isGenerating && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-blue-900/40 text-blue-300">
+                <Loader2 size={12} className="animate-spin" />
+                Generating...
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => void runDocumentNer()}
+              disabled={isGenerating || isRunningNer}
+              className="px-3 py-1.5 text-xs rounded border border-zinc-700 text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+              title="Re-run named entity recognition for the whole document"
+            >
+              <span className="inline-flex items-center gap-1">
+                {isRunningNer ? (
                   <Loader2 size={12} className="animate-spin" />
-                  Generating...
-                </span>
-              )}
+                ) : (
+                  <WandSparkles size={12} />
+                )}
+                NER
+              </span>
+            </button>
+          </div>
+
+          {showAiInput && (
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                ref={aiInputRef}
+                type="text"
+                value={aiInstructions}
+                onChange={(e) => setAiInstructions(e.target.value)}
+                placeholder="What should I generate?"
+                className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-100 outline-none"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    void generateNextSegment();
+                  }
+                  if (e.key === "Escape") {
+                    setShowAiInput(false);
+                  }
+                }}
+              />
               <button
                 type="button"
-                onClick={() => void runDocumentNer()}
-                disabled={isGenerating || isRunningNer}
-                className="px-3 py-1.5 text-xs rounded border border-zinc-700 text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
-                title="Re-run named entity recognition for the whole document"
+                onClick={() => setShowAiInput(false)}
+                className="p-2 rounded text-zinc-500 hover:text-zinc-200"
               >
-                <span className="inline-flex items-center gap-1">
-                  {isRunningNer ? (
-                    <Loader2 size={12} className="animate-spin" />
-                  ) : (
-                    <WandSparkles size={12} />
-                  )}
-                  NER
-                </span>
+                <X size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => void generateNextSegment()}
+                disabled={isGenerating || isRunningNer}
+                className="p-2 rounded text-blue-300 hover:text-blue-200 disabled:opacity-50"
+              >
+                {isGenerating ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Send size={14} />
+                )}
               </button>
             </div>
-
-            {showAiInput && (
-              <div className="mt-2 flex items-center gap-2">
-                <input
-                  ref={aiInputRef}
-                  type="text"
-                  value={aiInstructions}
-                  onChange={(e) => setAiInstructions(e.target.value)}
-                  placeholder="What should I generate?"
-                  className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-100 outline-none"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      void generateNextSegment();
-                    }
-                    if (e.key === "Escape") {
-                      setShowAiInput(false);
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowAiInput(false)}
-                  className="p-2 rounded text-zinc-500 hover:text-zinc-200"
-                >
-                  <X size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void generateNextSegment()}
-                  disabled={isGenerating || isRunningNer}
-                  className="p-2 rounded text-blue-300 hover:text-blue-200 disabled:opacity-50"
-                >
-                  {isGenerating ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Send size={14} />
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -62,10 +62,7 @@ export const useChat = () => {
         ...bodyOptions,
       };
 
-      const { aiEnabled, inlineCompletion } = uiPreferences$.get();
-      if (!aiEnabled) {
-        return new Response("AI is disabled in settings.", { status: 403 });
-      }
+      const { inlineCompletion } = uiPreferences$.get();
 
       if (isCopilot && !inlineCompletion) {
         return new Response("Inline completion is disabled.", {
@@ -130,6 +127,9 @@ export const useChat = () => {
           const responseStream = callLLMStreaming(
             blockMessages,
             modelProps$.get(),
+            {
+              task: isCopilot ? "inline" : "chat",
+            },
           );
 
           if (isCopilot) {

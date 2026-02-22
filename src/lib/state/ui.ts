@@ -2,7 +2,6 @@ import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
 import type {
-  AIProvider,
   BlockId,
   DocumentId,
   DocumentLinkingState,
@@ -10,9 +9,8 @@ import type {
 } from "./types";
 
 const uiPreferences: UIPreferences = {
-  activeTab: "settings",
-  aiEnabled: true,
-  aiProvider: "browser",
+  apiBackendEnabled: true,
+  debugMode: false,
   inlineCompletion: true,
   documentWidth: 800,
   tokenizerModelId: "default", // Assuming a default value for the new required property
@@ -32,16 +30,13 @@ export const documentLinking$ =
   observable<DocumentLinkingState>(documentLinkingState);
 
 // Actions
-export const setActiveTab = (tab: UIPreferences["activeTab"]) => {
-  uiPreferences$.activeTab.set(tab);
+
+export const setAPIBackendEnabled = (enabled: boolean) => {
+  uiPreferences$.apiBackendEnabled.set(enabled);
 };
 
-export const setAIEnabled = (enabled: boolean) => {
-  uiPreferences$.aiEnabled.set(enabled);
-};
-
-export const setAIProvider = (provider: AIProvider) => {
-  uiPreferences$.aiProvider.set(provider);
+export const setDebugMode = (enabled: boolean) => {
+  uiPreferences$.debugMode.set(enabled);
 };
 
 export const setInlineCompletionEnabled = (enabled: boolean) => {

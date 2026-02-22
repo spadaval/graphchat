@@ -1,10 +1,10 @@
 import { PanelRightClose } from "lucide-react";
 import { EmptyState, MessagesList } from "~/components/ChatAreaComponents";
-import { TabContent, TabNavigation } from "~/components/ModelServerComponents";
+import { SettingsPanelContent } from "~/components/ModelServerComponents";
 import { SidebarContent, SidebarHeader } from "~/components/Sidebar";
 import { Button } from "~/components/ui/button";
 import { useThread } from "~/lib/state/hooks";
-import type { ActiveTab, ChatId } from "~/lib/state/types";
+import type { ChatId } from "~/lib/state/types";
 
 // Chat Threads Sidebar Component
 interface ChatThreadsSidebarProps {
@@ -65,16 +65,10 @@ export function ChatArea({ currentThreadId, sendMessage }: ChatAreaProps) {
 
 // Model Server Sidebar Component
 interface ModelServerSidebarProps {
-  activeTab: ActiveTab;
-  setActiveTab: (tab: ActiveTab) => void;
   onToggle: () => void;
 }
 
-export function ModelServerSidebar({
-  activeTab,
-  setActiveTab,
-  onToggle,
-}: ModelServerSidebarProps) {
+export function ModelServerSidebar({ onToggle }: ModelServerSidebarProps) {
   return (
     <div className="relative w-80 bg-zinc-900 border-l border-zinc-800 flex flex-col h-full">
       <Button
@@ -88,8 +82,7 @@ export function ModelServerSidebar({
       >
         <PanelRightClose className="size-4" />
       </Button>
-      <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
-      <TabContent activeTab={activeTab} />
+      <SettingsPanelContent />
     </div>
   );
 }

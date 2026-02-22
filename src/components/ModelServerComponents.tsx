@@ -1,225 +1,134 @@
 import { use$ } from "@legendapp/state/react";
-import {
-  AlertCircle,
-  Binary,
-  Brain,
-  CheckCircle2,
-  Loader2,
-  Settings,
-} from "lucide-react";
+import { Cable, Settings, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { ModelProperties } from "~/components/ModelProperties";
 import { ServerInfoComponent } from "~/components/ServerInfo";
 import { SettingsModal } from "~/components/SettingsModal";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
-import type { ActiveTab } from "~/lib/state/types";
 import {
-  setHuggingfaceToken,
-  setTokenizerModelId,
+  applySamplerPreset,
+  SAMPLER_PRESETS,
+  type SamplerPresetId,
+} from "~/lib/state/llm";
+import {
+  setActiveSamplerPreset,
+  setAPIBackendEnabled,
   uiPreferences$,
 } from "~/lib/state/ui";
-import { testTokenizerMetadata } from "~/lib/tokenizer";
 
-// Tab Navigation Component
-interface TabNavigationProps {
-  activeTab: ActiveTab;
-  setActiveTab: (tab: ActiveTab) => void;
-}
-
-export function TabNavigation({ activeTab, setActiveTab }: TabNavigationProps) {
+function QuickToggleRow({
+  checked,
+  description,
+  onChange,
+  title,
+}: {
+  checked: boolean;
+  description: string;
+  onChange: (value: boolean) => void;
+  title: string;
+}) {
   return (
-    <div className="border-b border-zinc-800 flex">
-      <button
-        type="button"
-        className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
-          activeTab === "settings"
-            ? "text-zinc-300 border-b-2 border-zinc-500"
-            : "text-zinc-500 hover:text-zinc-300"
-        }`}
-        onClick={() => setActiveTab("settings")}
-      >
-        Settings
-      </button>
-      <button
-        type="button"
-        className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
-          activeTab === "server"
-            ? "text-zinc-300 border-b-2 border-zinc-500"
-            : "text-zinc-500 hover:text-zinc-300"
-        }`}
-        onClick={() => setActiveTab("server")}
-      >
-        Server
-      </button>
+    <div className="flex items-start justify-between gap-3 rounded-lg border border-zinc-700/80 bg-zinc-800/20 p-3">
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-zinc-100">{title}</p>
+        <p className="text-xs text-zinc-500">{description}</p>
+      </div>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-1 h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-blue-500"
+      />
     </div>
   );
 }
 
-// Settings Panel Component
-function SettingsPanelContent() {
+export function SettingsPanelContent() {
   const [showModal, setShowModal] = useState(false);
-  const [testStatus, setTestStatus] = useState<{
-    loading: boolean;
-    success?: boolean;
-    message?: string;
-  }>({ loading: false });
-  const uiPrefs = use$(uiPreferences$);
+  const { activeSamplerPreset, apiBackendEnabled } = use$(uiPreferences$);
 
-  const handleTestTokenizer = async () => {
-    if (!uiPrefs.tokenizerModelId || testStatus.loading) return;
+  const handlePresetChange = (presetId: string) => {
+    if (!presetId) {
+      setActiveSamplerPreset(undefined);
+      return;
+    }
 
-    setTestStatus({ loading: true });
-    const result = await testTokenizerMetadata(uiPrefs.tokenizerModelId);
-    setTestStatus({
-      loading: false,
-      success: result.success,
-      message: result.message,
-    });
-
-    // Clear message after 3 seconds on success
-    if (result.success) {
-      setTimeout(
-        () =>
-          setTestStatus((prev) => ({
-            ...prev,
-            success: undefined,
-            message: undefined,
-          })),
-        3000,
-      );
+    const normalized = presetId as SamplerPresetId;
+    if (applySamplerPreset(normalized)) {
+      setActiveSamplerPreset(normalized);
     }
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-zinc-900">
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-100 mb-4 flex items-center gap-2">
-              <Brain size={16} className="text-purple-400" />
-              Model Samplers
-            </h3>
-            <div className="bg-zinc-800/30 p-1 rounded-lg">
-              <ModelProperties />
-            </div>
-          </div>
+    <div className="flex min-h-0 flex-1 flex-col bg-zinc-900">
+      <div className="flex-1 space-y-5 overflow-y-auto p-4">
+        <div>
+          <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-zinc-100">
+            <Sparkles size={16} className="text-blue-400" />
+            Quick Controls
+          </h3>
+          <div className="space-y-2">
+            <QuickToggleRow
+              checked={apiBackendEnabled}
+              onChange={setAPIBackendEnabled}
+              title="Enable API Backend"
+              description="When disabled, all requests run through the browser model."
+            />
 
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-100 mb-4 flex items-center gap-2">
-              <Binary size={16} className="text-blue-400" />
-              Tokenizer settings
-            </h3>
-            <div className="bg-zinc-800/30 p-4 rounded-lg space-y-4">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="tokenizer-model"
-                  className="text-xs text-zinc-400"
-                >
-                  HuggingFace Model ID
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="tokenizer-model"
-                    value={uiPrefs.tokenizerModelId}
-                    onChange={(e) => {
-                      setTokenizerModelId(e.target.value);
-                      if (
-                        testStatus.success !== undefined ||
-                        testStatus.message
-                      ) {
-                        setTestStatus({ loading: false });
-                      }
-                    }}
-                    placeholder="e.g. HuggingFaceTB/SmolLM3-3B"
-                    className="bg-zinc-900/50 border-zinc-700 text-sm h-8"
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleTestTokenizer}
-                    disabled={testStatus.loading || !uiPrefs.tokenizerModelId}
-                    className="h-8 px-3 border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800"
-                  >
-                    {testStatus.loading ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : testStatus.success ? (
-                      <CheckCircle2 size={14} className="text-green-500" />
-                    ) : (
-                      "Test"
-                    )}
-                  </Button>
-                </div>
-                {testStatus.message && (
-                  <p
-                    className={`text-[10px] flex items-center gap-1 ${testStatus.success ? "text-green-400" : "text-red-400"}`}
-                  >
-                    {!testStatus.success && <AlertCircle size={10} />}
-                    {testStatus.message}
-                  </p>
-                )}
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="huggingface-token"
-                    className="text-xs text-zinc-400"
-                  >
-                    HuggingFace Token (Optional)
-                  </Label>
-                  <Input
-                    id="huggingface-token"
-                    type="password"
-                    value={uiPrefs.huggingfaceToken || ""}
-                    onChange={(e) => setHuggingfaceToken(e.target.value)}
-                    placeholder="hf_..."
-                    className="bg-zinc-900/50 border-zinc-700 text-sm h-8"
-                  />
-                  <p className="text-[10px] text-zinc-500">
-                    Required for gated models.
-                  </p>
-                </div>
-
-                <p className="text-[10px] text-zinc-500">
-                  Model used for client-side token counting and visualization.
-                </p>
-              </div>
+            <div className="rounded-lg border border-zinc-700/80 bg-zinc-800/20 p-3">
+              <label
+                htmlFor="preset-select"
+                className="mb-1 block text-sm font-medium text-zinc-100"
+              >
+                Sampler Preset
+              </label>
+              <select
+                id="preset-select"
+                value={activeSamplerPreset || ""}
+                onChange={(event) => handlePresetChange(event.target.value)}
+                className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-2 text-xs text-zinc-100"
+              >
+                <option value="">None</option>
+                {SAMPLER_PRESETS.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-zinc-500">
+                Quickly switch generation behavior.
+              </p>
             </div>
           </div>
         </div>
+
+        <div>
+          <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-zinc-100">
+            <Cable size={16} className="text-blue-400" />
+            Server
+          </h3>
+          <div className="overflow-hidden rounded-lg border border-zinc-700/80 bg-zinc-800/20">
+            <ServerInfoComponent mode="sidebar" />
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-zinc-700/80 bg-zinc-800/20 p-3 text-xs text-zinc-500">
+          Advanced sampler, tokenizer, debug, and backend testing tools are in
+          full settings.
+        </div>
       </div>
 
-      <div className="p-4 border-t border-zinc-800">
+      <div className="border-t border-zinc-800 p-4">
         <Button
           variant="outline"
           onClick={() => setShowModal(true)}
-          className="w-full flex items-center justify-center gap-2 bg-zinc-800/50 border-zinc-700 hover:bg-zinc-800 text-zinc-300 transition-colors"
+          className="w-full border-zinc-700 bg-zinc-800/50 text-zinc-300 transition-colors hover:bg-zinc-800"
         >
           <Settings size={16} />
-          More Settings...
+          Open Full Settings
         </Button>
       </div>
 
       <SettingsModal open={showModal} onOpenChange={setShowModal} />
-    </div>
-  );
-}
-
-// Tab Content Component
-interface TabContentProps {
-  activeTab: ActiveTab;
-}
-
-export function TabContent({ activeTab }: TabContentProps) {
-  return (
-    <div className="flex-1 flex flex-col min-h-0">
-      {activeTab === "server" ? (
-        <div className="flex-1 overflow-y-auto">
-          <ServerInfoComponent />
-        </div>
-      ) : (
-        <SettingsPanelContent />
-      )}
     </div>
   );
 }

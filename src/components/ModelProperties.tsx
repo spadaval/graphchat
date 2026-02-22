@@ -6,9 +6,16 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { modelProps$ } from "~/lib/state";
+import type { ModelProperties as LLMModelProperties } from "~/lib/state/types";
+import { setActiveSamplerPreset } from "~/lib/state/ui";
 
 export function ModelProperties() {
   const modelProperties = use$(modelProps$);
+
+  const updateModelProperties = (patch: Partial<LLMModelProperties>) => {
+    setActiveSamplerPreset(undefined);
+    modelProps$.assign(patch);
+  };
 
   const TooltipWrapper = ({
     label,
@@ -57,7 +64,7 @@ export function ModelProperties() {
           step="0.1"
           value={modelProperties.temperature}
           onChange={(e) =>
-            modelProps$.assign({ temperature: parseFloat(e.target.value) })
+            updateModelProperties({ temperature: parseFloat(e.target.value) })
           }
           className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-zinc-300"
         />
@@ -81,7 +88,7 @@ export function ModelProperties() {
           step="1"
           value={modelProperties.top_k}
           onChange={(e) =>
-            modelProps$.assign({ top_k: parseInt(e.target.value, 10) })
+            updateModelProperties({ top_k: parseInt(e.target.value, 10) })
           }
           className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-zinc-300"
         />
@@ -105,7 +112,7 @@ export function ModelProperties() {
           step="0.05"
           value={modelProperties.top_p}
           onChange={(e) =>
-            modelProps$.assign({ top_p: parseFloat(e.target.value) })
+            updateModelProperties({ top_p: parseFloat(e.target.value) })
           }
           className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
         />
@@ -128,7 +135,7 @@ export function ModelProperties() {
           max="4096"
           value={modelProperties.n_predict}
           onChange={(e) =>
-            modelProps$.assign({
+            updateModelProperties({
               n_predict: parseInt(e.target.value, 10) || 128,
             })
           }
@@ -149,7 +156,9 @@ export function ModelProperties() {
           step="0.1"
           value={modelProperties.repeat_penalty}
           onChange={(e) =>
-            modelProps$.assign({ repeat_penalty: parseFloat(e.target.value) })
+            updateModelProperties({
+              repeat_penalty: parseFloat(e.target.value),
+            })
           }
           className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
         />
@@ -175,7 +184,9 @@ export function ModelProperties() {
           step="0.1"
           value={modelProperties.presence_penalty}
           onChange={(e) =>
-            modelProps$.assign({ presence_penalty: parseFloat(e.target.value) })
+            updateModelProperties({
+              presence_penalty: parseFloat(e.target.value),
+            })
           }
           className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
         />
@@ -201,7 +212,7 @@ export function ModelProperties() {
           step="0.1"
           value={modelProperties.frequency_penalty}
           onChange={(e) =>
-            modelProps$.assign({
+            updateModelProperties({
               frequency_penalty: parseFloat(e.target.value),
             })
           }
@@ -225,7 +236,7 @@ export function ModelProperties() {
         <select
           value={modelProperties.mirostat}
           onChange={(e) =>
-            modelProps$.assign({
+            updateModelProperties({
               mirostat: parseInt(e.target.value, 10) as 0 | 1 | 2,
             })
           }
@@ -251,7 +262,9 @@ export function ModelProperties() {
             step="0.1"
             value={modelProperties.mirostat_tau}
             onChange={(e) =>
-              modelProps$.assign({ mirostat_tau: parseFloat(e.target.value) })
+              updateModelProperties({
+                mirostat_tau: parseFloat(e.target.value),
+              })
             }
             className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
           />
@@ -279,7 +292,9 @@ export function ModelProperties() {
             step="0.01"
             value={modelProperties.mirostat_eta}
             onChange={(e) =>
-              modelProps$.assign({ mirostat_eta: parseFloat(e.target.value) })
+              updateModelProperties({
+                mirostat_eta: parseFloat(e.target.value),
+              })
             }
             className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
           />
@@ -299,7 +314,7 @@ export function ModelProperties() {
           type="checkbox"
           id="streaming"
           checked={modelProperties.stream}
-          onChange={(e) => modelProps$.assign({ stream: e.target.checked })}
+          onChange={(e) => updateModelProperties({ stream: e.target.checked })}
           className="w-4 h-4 text-zinc-600 bg-zinc-700 border-zinc-600 rounded focus:ring-zinc-500"
         />
         <label
@@ -317,7 +332,7 @@ export function ModelProperties() {
           id="cache-prompt"
           checked={modelProperties.cache_prompt}
           onChange={(e) =>
-            modelProps$.assign({ cache_prompt: e.target.checked })
+            updateModelProperties({ cache_prompt: e.target.checked })
           }
           className="w-4 h-4 text-zinc-600 bg-zinc-700 border-zinc-600 rounded focus:ring-zinc-500"
         />
@@ -336,7 +351,7 @@ export function ModelProperties() {
           id="return-tokens"
           checked={modelProperties.return_tokens}
           onChange={(e) =>
-            modelProps$.assign({ return_tokens: e.target.checked })
+            updateModelProperties({ return_tokens: e.target.checked })
           }
           className="w-4 h-4 text-zinc-600 bg-zinc-700 border-zinc-600 rounded focus:ring-zinc-500"
         />

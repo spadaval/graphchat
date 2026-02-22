@@ -59,7 +59,6 @@ export { modelProps$ } from "./llm";
 export { serverStore$, setError, setLoading, setServerInfo } from "./server";
 // Types
 export type {
-  ActiveTab,
   Block,
   BlockId,
   ChatId,
@@ -84,7 +83,8 @@ export {
   getMessageDocumentLinks,
   removeDocumentFromCurrentMessage,
   removeDocumentFromMessage,
-  setActiveTab,
+  setAPIBackendEnabled,
+  setDebugMode,
   setMessageDocumentLinks,
   uiPreferences$,
 } from "./ui";

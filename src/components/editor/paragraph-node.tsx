@@ -6,6 +6,7 @@ import type { PlateElementProps } from "platejs/react";
 import { PlateElement, useReadOnly } from "platejs/react";
 import { useState } from "react";
 
+import { debugInfo, debugLog } from "~/lib/debug";
 import { detectNamedEntities } from "~/lib/ner";
 import { cn } from "~/lib/utils";
 
@@ -30,7 +31,7 @@ export function ParagraphElement(props: PlateElementProps) {
       const paragraphKey = JSON.stringify(paragraphPath);
       const runStart = performance.now();
 
-      console.info("[NER] Paragraph pass started", {
+      debugInfo("[NER] Paragraph pass started", {
         paragraphPath,
         textLength: paragraphText.length,
         textPreview: paragraphText.slice(0, 120),
@@ -41,19 +42,19 @@ export function ParagraphElement(props: PlateElementProps) {
         match: TextApi.isText,
         split: true,
       });
-      console.debug("[NER] Cleared existing NER marks", {
+      debugLog("[NER] Cleared existing NER marks", {
         paragraphPath,
       });
 
       const entities = await detectNamedEntities(paragraphText);
       if (entities.length === 0) {
-        console.info("[NER] No entities detected for paragraph", {
+        debugInfo("[NER] No entities detected for paragraph", {
           paragraphPath,
         });
         return;
       }
 
-      console.info("[NER] Applying entities to paragraph", {
+      debugInfo("[NER] Applying entities to paragraph", {
         detectedCount: entities.length,
         paragraphPath,
       });
@@ -72,7 +73,7 @@ export function ParagraphElement(props: PlateElementProps) {
           Math.min(paragraphText.length, entity.end + 20),
         );
 
-        console.info("[NER] Entity span candidate", {
+        debugLog("[NER] Entity span candidate", {
           end: entity.end,
           entityIndex: index,
           paragraphPath,
@@ -113,7 +114,7 @@ export function ParagraphElement(props: PlateElementProps) {
         );
         appliedCount += 1;
 
-        console.info("[NER] Applied entity mark", {
+        debugLog("[NER] Applied entity mark", {
           anchor: range.anchor,
           end: entity.end,
           entityIndex: index,
@@ -126,7 +127,7 @@ export function ParagraphElement(props: PlateElementProps) {
       }
 
       const runMs = Math.round(performance.now() - runStart);
-      console.info("[NER] Paragraph pass finished", {
+      debugInfo("[NER] Paragraph pass finished", {
         appliedCount,
         durationMs: runMs,
         paragraphPath,
@@ -233,7 +234,7 @@ function offsetsToRange(
   }
 
   const range = { anchor, focus };
-  console.info("[NER] Computed Slate range from offsets", {
+  debugLog("[NER] Computed Slate range from offsets", {
     anchor,
     end,
     focus,

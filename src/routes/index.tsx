@@ -12,7 +12,6 @@ import {
   setCurrentDocument,
 } from "~/lib/state/documents";
 import type { DocumentId } from "~/lib/state/types";
-import { setActiveTab, uiPreferences$ } from "~/lib/state/ui";
 
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): { id?: DocumentId } => {
@@ -25,7 +24,6 @@ export const Route = createFileRoute("/")({
 
 function StorybookPage() {
   const { id: searchId } = Route.useSearch();
-  const { activeTab } = use$(uiPreferences$);
   const { openDocumentIds, currentDocumentId: activeDocumentId } =
     use$(documentStore$);
   const [isModelServerOpen, setIsModelServerOpen] = useState(true);
@@ -59,11 +57,7 @@ function StorybookPage() {
       }
       modelServer={
         isModelServerOpen ? (
-          <ModelServerSidebar
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            onToggle={handleToggleModelServer}
-          />
+          <ModelServerSidebar onToggle={handleToggleModelServer} />
         ) : undefined
       }
     >

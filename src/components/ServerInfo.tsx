@@ -34,7 +34,15 @@ function formatModelMeta(model: ServerModel): string {
   return parts.join(" • ");
 }
 
-export function ServerInfoComponent() {
+type ServerInfoMode = "sidebar" | "backends" | "models";
+
+interface ServerInfoComponentProps {
+  mode?: ServerInfoMode;
+}
+
+export function ServerInfoComponent({
+  mode = "backends",
+}: ServerInfoComponentProps) {
   const { serverUrl } = use$(serverStore$);
   const { serverModelId } = use$(uiPreferences$);
   const hasValidServerUrl = isValidHttpUrl(serverUrl.trim());
@@ -85,18 +93,20 @@ export function ServerInfoComponent() {
     }
   }, [hasValidServerUrl, models, selectedModelId]);
 
-  const handleTestConnection = () => {
+  const handleLoadModels = () => {
     refetch();
   };
 
-  return (
-    <div className="space-y-6 p-4 overflow-y-auto h-full bg-zinc-900/30">
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
-          <Link2 size={16} className="text-blue-400" />
-          Server Configuration
-        </h3>
+  const showBaseUrl = mode === "backends";
+  const showStatus = mode === "sidebar" || mode === "backends";
+  const showModelDropdown = mode === "sidebar" || mode === "models";
+  const showReadonlyList = mode === "models";
 
+  return (
+    <div
+      className={`space-y-4 overflow-y-auto ${mode === "sidebar" ? "h-auto bg-transparent p-3" : "h-auto bg-transparent p-0"}`}
+    >
+      {showBaseUrl ? (
         <div className="space-y-2">
           <label
             htmlFor="server-url"
@@ -115,19 +125,21 @@ export function ServerInfoComponent() {
             />
             <Button
               size="sm"
-              onClick={handleTestConnection}
+              onClick={handleLoadModels}
               disabled={!hasValidServerUrl || isFetching}
               className="h-8 px-3"
             >
               {isFetching ? (
                 <RefreshCw size={14} className="animate-spin" />
               ) : (
-                "Test"
+                "Load Models"
               )}
             </Button>
           </div>
         </div>
+      ) : null}
 
+      {showStatus ? (
         <div className="flex items-center gap-2 p-2 rounded-md bg-zinc-800/30 border border-zinc-700/50">
           {!hasValidServerUrl || isError ? (
             <XCircle size={14} className="text-red-500" />
@@ -144,79 +156,110 @@ export function ServerInfoComponent() {
               : isError
                 ? "Connection Failed"
                 : models && models.length > 0
-                  ? "Connected"
-                  : "Not Connected"}
+                  ? "Models Loaded"
+                  : "No Models Loaded"}
           </span>
         </div>
+      ) : null}
 
-        {!hasValidServerUrl ? (
-          <div className="text-[10px] text-red-500/80 bg-red-950/20 p-2 rounded border border-red-900/30">
-            Enter a valid http(s) URL.
+      {!hasValidServerUrl && mode !== "sidebar" ? (
+        <div className="text-[10px] text-red-500/80 bg-red-950/20 p-2 rounded border border-red-900/30">
+          Enter a valid http(s) URL.
+        </div>
+      ) : null}
+
+      {isError ? (
+        <div className="text-[10px] text-red-500/80 bg-red-950/20 p-2 rounded border border-red-900/30">
+          {error instanceof Error
+            ? error.message
+            : "Failed to connect to server"}
+        </div>
+      ) : null}
+
+      {showModelDropdown ? (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+              <Link2 size={16} className="text-blue-400" />
+              Model Picker
+            </h3>
+            {!showBaseUrl ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleLoadModels}
+                disabled={!hasValidServerUrl || isFetching}
+                className="h-7 border-zinc-700 bg-zinc-900 text-[11px] hover:bg-zinc-800"
+              >
+                {isFetching ? "Loading..." : "Load Models"}
+              </Button>
+            ) : null}
           </div>
-        ) : null}
 
-        {isError ? (
-          <div className="text-[10px] text-red-500/80 bg-red-950/20 p-2 rounded border border-red-900/30">
-            {error instanceof Error
-              ? error.message
-              : "Failed to connect to server"}
-          </div>
-        ) : null}
-      </div>
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <RefreshCw size={14} className="animate-spin" />
+              Loading models from /v1/models...
+            </div>
+          ) : null}
 
-      <div className="h-px bg-zinc-800" />
+          {!isLoading && hasValidServerUrl && models && models.length === 0 ? (
+            <div className="text-xs text-zinc-500">
+              No models returned by /v1/models.
+            </div>
+          ) : null}
 
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-zinc-100">Model Picker</h3>
+          {!hasValidServerUrl ? (
+            <div className="text-xs text-zinc-500">
+              {mode === "sidebar"
+                ? "Configure a valid server URL in Full Settings to load models."
+                : "Configure a valid server URL to load available models."}
+            </div>
+          ) : null}
 
-        {isLoading ? (
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <RefreshCw size={14} className="animate-spin" />
-            Loading models from /v1/models...
-          </div>
-        ) : null}
+          <select
+            value={selectedModelId}
+            onChange={(event) => setServerModelId(event.target.value)}
+            disabled={!models || models.length === 0}
+            className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-2 text-xs text-zinc-100 disabled:opacity-50"
+          >
+            <option value="">Select a model</option>
+            {(models || []).map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.id}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
 
-        {!isLoading && hasValidServerUrl && models && models.length === 0 ? (
-          <div className="text-xs text-zinc-500">
-            No models returned by /v1/models.
-          </div>
-        ) : null}
-
-        {!hasValidServerUrl ? (
-          <div className="text-xs text-zinc-500">
-            Configure a valid server URL to load available models.
-          </div>
-        ) : null}
-
-        {models && models.length > 0 ? (
-          <div className="space-y-2">
-            {models.map((model) => {
-              const isSelected = selectedModelId === model.id;
-              return (
-                <button
+      {showReadonlyList ? (
+        <div className="space-y-2 rounded-md border border-zinc-700/70 bg-zinc-900/50 p-3">
+          <p className="text-xs font-medium text-zinc-300">Fetched Models</p>
+          {!models || models.length === 0 ? (
+            <p className="text-xs text-zinc-500">No fetched models.</p>
+          ) : (
+            <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
+              {models.map((model) => (
+                <div
                   key={model.id}
-                  type="button"
-                  onClick={() => setServerModelId(model.id)}
-                  className={`w-full text-left rounded-md border px-3 py-2 transition-colors ${
-                    isSelected
-                      ? "border-blue-500 bg-blue-500/10"
-                      : "border-zinc-700 bg-zinc-800/30 hover:bg-zinc-800/50"
-                  }`}
+                  className="rounded border border-zinc-800 px-2 py-1.5"
                 >
-                  <div className="text-xs font-medium text-zinc-100 break-all">
+                  <div className="text-xs text-zinc-100 break-all">
                     {model.id}
                   </div>
                   {formatModelMeta(model) ? (
-                    <div className="mt-1 text-[10px] text-zinc-500">
+                    <div className="text-[10px] text-zinc-500">
                       {formatModelMeta(model)}
                     </div>
                   ) : null}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-      </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

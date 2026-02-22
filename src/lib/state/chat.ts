@@ -26,12 +26,18 @@ ${firstMessage}
 `;
 
   try {
-    const result = await callLLM([createBlock(prompt, "user")], {
-      ...modelProps$.get(),
-      temperature: 0.3, // Lower temperature for more consistent titles
-      n_predict: 50, // Short response
-      stream: false,
-    });
+    const result = await callLLM(
+      [createBlock(prompt, "user")],
+      {
+        ...modelProps$.get(),
+        temperature: 0.3, // Lower temperature for more consistent titles
+        n_predict: 50, // Short response
+        stream: false,
+      },
+      {
+        task: "simple",
+      },
+    );
 
     if (result.isOk()) {
       // Clean up the response - remove quotes, extra whitespace, and limit length
