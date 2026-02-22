@@ -1,3 +1,11 @@
+Worldcrafter is an AI-native worldbuilding tool.
+
+What this means, in practice, is that it should be possible for an AI agent to perform actions in the app in the same way that the user can. 
+(as a bonus, this also makes the app more testable)
+
+
+
+
 AI-generated blocks are specially demarcated and isolated.
 
 This is for two reasons:

@@ -1,6 +1,6 @@
 # WorldCrafter
 
-WorldCrafter is a tool for creating imaginary worlds, inspired by software engineering tooling. It is designed primarily for writers and worldbuilders who need a structured environment for their creativity.
+WorldCrafter is a AI-native tool for creating imaginary worlds, inspired by software engineering tooling. It is designed primarily for writers and worldbuilders who need a structured environment for their creativity.
 
 ## Key Differentiators
 

@@ -7,10 +7,10 @@
   - Allow adding a new line after an AI segment.
   - Fix cursor navigation around custom blocks.
 - Fix document sync so AI segments are preserved and do not convert to plain text.
-- Improve NER extraction quality:
-  - Increase overall entity accuracy.
-  - Fix inaccurate location entities.
+- Fix NER:
+  - Consider using a better model.
   - Global NER doesn't work, paragraph-level NER does.
+  - If a mark ends within a word, we should automatically extend it to the full word (until whitespace).
 
 ## Improvements
 
@@ -20,7 +20,7 @@
   - Add functionality to manually move the boundaries of an entity.
   - Add a full card for each NER entity, which shows up on click. It should contain either a preview of the corresponding document, or a button to quickly create and link a new document (or to delete the NER highlight and return to regular text).
   - Make it possible to create an NER-linked entity manually through mention syntax (e.g. `@Ardelia`). Show a dropdown for existing documents? 
-  - Consider how NER entities should be stored in markdown. Links, maybe?
+  - NER is not persisted! Consider how NER entities should be stored in markdown. Links, maybe?
 - Redesign settings:
   - [x] Reduce sidebar clutter. Move all but the most important settings to the modal.
   - [x] Redesign the modal to be wider, with a standard two-level structure.
