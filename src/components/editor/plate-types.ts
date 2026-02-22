@@ -32,8 +32,6 @@ export interface MyTextBlockElement
   extends TElement,
     TLineHeightProps,
     TTextAlignProps {
-  aiNodeKind?: "ai" | "user";
-  aiSegmentId?: string;
   children: (
     | MyLinkElement
     | MyMentionElement
@@ -126,6 +124,11 @@ export interface MyParagraphElement extends MyTextBlockElement {
   type: typeof KEYS.p;
 }
 
+export interface MyAISegmentElement extends MyTextBlockElement {
+  aiSegmentId?: string;
+  type: "ai_segment";
+}
+
 export interface MyTableCellElement extends TElement {
   children: MyNestableBlock[];
   type: typeof KEYS.td;
@@ -163,6 +166,7 @@ export type MyValue = (
   | MyHrElement
   | MyImageElement
   | MyMediaEmbedElement
+  | MyAISegmentElement
   | MyParagraphElement
   | MyTableElement
   | MyToggleElement

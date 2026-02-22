@@ -27,17 +27,11 @@ export {
   setCurrentUserMessage,
   switchThread,
 } from "./chat";
-export {
-  regenerateSegment,
-  regenerateSegmentFromToken,
-} from "./document-ai";
 export type { Document } from "./documents";
 // Document exports
 export {
-  createAISegment,
   createDocument,
   deleteDocument,
-  detachAISegment,
   documentStore$,
   getAllDocuments,
   getDocumentById,
@@ -45,7 +39,6 @@ export {
   setCurrentDocument,
   updateDocument,
   updateDocumentContent,
-  upsertAISegment,
 } from "./documents";
 // Hooks exports
 export {
@@ -67,18 +60,14 @@ export { serverStore$, setError, setLoading, setServerInfo } from "./server";
 // Types
 export type {
   ActiveTab,
-  AISegmentBranch,
-  AISegmentMeta,
   Block,
   BlockId,
-  BranchId,
   ChatId,
   DocumentId,
   LLMMessage,
   LLMRequest,
   MessageId,
   ModelProperties,
-  SegmentId,
   ServerInfo,
   TokenAlt,
   TokenInfo,

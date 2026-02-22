@@ -3,6 +3,7 @@
 import { BaseParagraphPlugin } from "platejs";
 import { ParagraphElement } from "~/components/editor/paragraph-node";
 import { AIKit } from "./ai-kit";
+import { AiSegmentKit } from "./ai-segment-kit";
 import { BasicMarksKit } from "./basic-marks-kit";
 import { BlockMenuKit } from "./block-menu-kit";
 import { DndKit } from "./dnd-kit";
@@ -16,6 +17,7 @@ import { SlashKit } from "./slash-kit";
 const UnifiedPlugins = [
   // Core plugins
   BaseParagraphPlugin.withComponent(ParagraphElement),
+  ...AiSegmentKit,
 
   // Basic text formatting
   ...BasicMarksKit,

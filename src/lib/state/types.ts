@@ -7,8 +7,6 @@ export type BlockId = `blk-${string}`;
 export type DocumentId = `doc-${string}`;
 export type FolderId = `folder-${string}`;
 export type WorldId = `world-${string}`;
-export type SegmentId = `seg-${string}`;
-export type BranchId = `br-${string}`;
 
 export interface World {
   id: WorldId;
@@ -139,32 +137,6 @@ export interface TokenInfo {
   start: number;
   end: number;
   topAlternatives?: TokenAlt[];
-}
-
-export interface AISegmentFork {
-  tokenIndex: number;
-  chosenToken: string;
-  parentTextPrefix: string;
-}
-
-export interface AISegmentBranch {
-  id: BranchId;
-  parentBranchId?: BranchId;
-  createdAt: string;
-  sourceMessages: LLMMessage[];
-  fullText: string;
-  tokens: TokenInfo[];
-  fork?: AISegmentFork;
-}
-
-export interface AISegmentMeta {
-  id: SegmentId;
-  nodeId: string;
-  activeBranchId: BranchId;
-  branches: Record<BranchId, AISegmentBranch>;
-  isDetached: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface BlockMetadata {

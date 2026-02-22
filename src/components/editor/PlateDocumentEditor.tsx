@@ -3,28 +3,17 @@
 import type { Observable } from "@legendapp/state";
 import { use$ } from "@legendapp/state/react";
 import { Loader2, Send, Sparkles, WandSparkles, X } from "lucide-react";
-import { NodeApi, type Path, TextApi, type TText } from "platejs";
+import { NodeApi, type Path, type PathRef, TextApi, type TText } from "platejs";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { buildTokenInfosFromProbabilities } from "~/lib/ai-segments";
 import { detectNamedEntities } from "~/lib/ner";
-import {
-  createAISegment,
-  updateDocument,
-  updateDocumentContent,
-} from "~/lib/state";
+import { updateDocument, updateDocumentContent } from "~/lib/state";
 import type { Document } from "~/lib/state/documents";
 import { callLLMStreaming, modelProps$ } from "~/lib/state/llm";
-import type {
-  AISegmentBranch,
-  AISegmentMeta,
-  BranchId,
-  LLMMessage,
-  SegmentId,
-  TokenProbability,
-} from "~/lib/state/types";
+import type { LLMMessage } from "~/lib/state/types";
 import { uiPreferences$ } from "~/lib/state/ui";
 import type { MyEditor, MyValue } from "./plate-types";
+import { AI_SEGMENT_TYPE } from "./plugins/ai-segment-kit";
 import { UnifiedEditorKitWithAI } from "./plugins/unified-editor-kit";
 import { preventBackspaceNavigation } from "./prevent-backspace-navigation";
 
@@ -32,78 +21,92 @@ interface PlateDocumentEditorProps {
   document$: Observable<Document>;
 }
 
-const getSegmentEntry = (editor: MyEditor, segmentId: SegmentId) => {
-  return editor.api
-    .blocks({
-      match: (node) =>
-        !TextApi.isText(node) &&
-        Boolean((node as { aiSegmentId?: string }).aiSegmentId === segmentId),
-      mode: "lowest",
-    })
-    .at(0);
-};
+const PERSIST_DEBOUNCE_MS = 1000;
 
-const replaceSegmentNodeText = (
+interface AISegmentNodeData {
+  aiSegmentId?: string;
+  type?: string;
+}
+
+const getAISegmentPathFromRef = (
   editor: MyEditor,
-  segmentId: SegmentId,
-  text: string,
-  nodeId?: string,
+  segmentPathRef: PathRef,
+  aiSegmentId: string,
 ) => {
-  const entry = getSegmentEntry(editor, segmentId);
-  if (!entry) return;
-  const [, path] = entry;
+  const segmentPath = segmentPathRef.current;
+  if (!segmentPath) {
+    console.error("[GenerateNext] AI segment path ref is no longer valid", {
+      aiSegmentId,
+    });
+    throw new Error(`AI segment path ref lost: ${aiSegmentId}`);
+  }
 
-  editor.tf.removeNodes({ at: path });
-  editor.tf.insertNodes(
-    {
-      aiNodeKind: "ai",
-      aiSegmentId: segmentId,
-      children: [{ text }],
-      id: nodeId || `node-${crypto.randomUUID()}`,
-      type: "p",
-    },
-    { at: path, select: false },
-  );
+  const segmentEntry = editor.api.node(segmentPath);
+  if (!segmentEntry) {
+    console.error("[GenerateNext] AI segment path no longer resolves", {
+      aiSegmentId,
+      segmentPath,
+    });
+    throw new Error(`Missing AI segment at path: ${aiSegmentId}`);
+  }
+
+  const [segmentNode] = segmentEntry;
+  const typedNode = segmentNode as AISegmentNodeData;
+  if (typedNode.type !== AI_SEGMENT_TYPE) {
+    console.error("[GenerateNext] Resolved node is not an AI segment", {
+      aiSegmentId,
+      resolvedType: typedNode.type,
+      segmentPath,
+    });
+    throw new Error(`Node at path is not AI segment: ${aiSegmentId}`);
+  }
+
+  if (typedNode.aiSegmentId !== aiSegmentId) {
+    console.error("[GenerateNext] AI segment identity mismatch", {
+      aiSegmentId,
+      foundAiSegmentId: typedNode.aiSegmentId,
+      segmentPath,
+    });
+    throw new Error(`AI segment identity mismatch: ${aiSegmentId}`);
+  }
+
+  return segmentPath;
 };
 
-const insertSegmentNodeAtEnd = (
+const replaceAISegmentNodeTextAtPath = (
   editor: MyEditor,
-  segmentId: SegmentId,
+  segmentPath: Path,
+  aiSegmentId: string,
   text: string,
-  nodeId: string,
+) => {
+  const textPath = [...segmentPath, 0];
+  const textEntry = editor.api.node(textPath);
+  if (!textEntry || !TextApi.isText(textEntry[0])) {
+    console.error("[GenerateNext] AI segment text leaf not found", {
+      aiSegmentId,
+      textPath,
+    });
+    throw new Error(`Missing AI segment text leaf: ${aiSegmentId}`);
+  }
+
+  editor.tf.removeNodes({ at: textPath });
+  editor.tf.insertNodes({ text }, { at: textPath, select: false });
+};
+
+const insertAISegmentNodeAtEnd = (
+  editor: MyEditor,
+  text: string,
+  aiSegmentId: string,
 ) => {
   const path = [editor.children.length];
   editor.tf.insertNodes(
     {
-      aiNodeKind: "ai",
-      aiSegmentId: segmentId,
+      aiSegmentId,
       children: [{ text }],
-      id: nodeId,
-      type: "p",
+      type: AI_SEGMENT_TYPE,
     },
     { at: path, select: false },
   );
-};
-
-const buildInitialBranch = (
-  fullText: string,
-  sourceMessages: LLMMessage[],
-  tokenProbabilities: TokenProbability[],
-) => {
-  const branchId: BranchId = `br-${crypto.randomUUID()}`;
-  const nowIso = new Date().toISOString();
-
-  return {
-    branchId,
-    branch: {
-      id: branchId,
-      createdAt: nowIso,
-      fullText,
-      sourceMessages,
-      tokens: buildTokenInfosFromProbabilities(tokenProbabilities),
-    } satisfies AISegmentBranch,
-    nowIso,
-  };
 };
 
 function offsetsToRange(
@@ -168,13 +171,10 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   const aiInputRef = useRef<HTMLInputElement>(null);
   const suppressOnChangeRef = useRef(false);
   const persistTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const deepPersistTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastPersistedContentRef = useRef<string>("");
 
   const docId = document$.id.peek();
   const content = document.content || "";
-  const aiSegments = document.aiSegments || {};
-  const sortedSegments = useMemo(() => Object.values(aiSegments), [aiSegments]);
   const editorPlugins = useMemo(() => [...UnifiedEditorKitWithAI], []);
 
   const editor = usePlateEditor({
@@ -226,174 +226,18 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
     }
   }, [content, editor]);
 
-  useEffect(() => {
-    if (!sortedSegments.length) return;
-
-    const nextSegments: Record<SegmentId, AISegmentMeta> = { ...aiSegments };
-    let changed = false;
-    const freeBlocks = editor.api.blocks({ mode: "lowest" });
-
-    sortedSegments.forEach((segment) => {
-      const hasMappedNode = !!getSegmentEntry(editor, segment.id);
-      if (hasMappedNode) return;
-
-      const activeBranch = segment.branches[segment.activeBranchId];
-      if (!activeBranch) return;
-
-      const block = freeBlocks.find((entry) => {
-        const [node] = entry;
-        const typedNode = node as { aiSegmentId?: string };
-        return (
-          !typedNode.aiSegmentId &&
-          NodeApi.string(node).trim() === activeBranch.fullText.trim()
-        );
-      });
-
-      if (!block) return;
-      const [node, path] = block;
-      const nodeId =
-        ((node as { id?: string }).id as string | undefined) ||
-        `node-${crypto.randomUUID()}`;
-
-      suppressOnChangeRef.current = true;
-      editor.tf.setNodes(
-        {
-          aiNodeKind: "ai",
-          aiSegmentId: segment.id,
-          id: nodeId,
-        },
-        { at: path },
-      );
-      suppressOnChangeRef.current = false;
-
-      nextSegments[segment.id] = {
-        ...segment,
-        nodeId,
-        updatedAt: new Date().toISOString(),
-      };
-      changed = true;
-    });
-
-    if (changed) {
-      updateDocumentContent(
-        docId,
-        editor.api.markdown.serialize(),
-        nextSegments,
-      );
-    }
-  }, [aiSegments, docId, editor, sortedSegments]);
-
-  const persistEditorState = (mode: "quick" | "deep" = "deep") => {
+  const persistEditorState = () => {
     const persistStart = performance.now();
     const serialized = editor.api.markdown.serialize();
     lastPersistedContentRef.current = serialized;
 
-    if (mode === "quick") {
-      updateDocumentContent(docId, serialized, aiSegments);
-      const persistMs = performance.now() - persistStart;
-      if (persistMs > 24) {
-        console.warn("[EditorPerf] Slow quick persist", {
-          docId,
-          mode,
-          persistMs: Math.round(persistMs),
-          textLength: serialized.length,
-        });
-      }
-      return;
-    }
-
-    const nextSegments: Record<SegmentId, AISegmentMeta> = { ...aiSegments };
-    let changed = false;
-
-    Object.values(nextSegments).forEach((segment) => {
-      const entry = getSegmentEntry(editor, segment.id);
-      if (!entry) return;
-
-      const [node] = entry;
-      const nodeId =
-        ((node as { id?: string }).id as string | undefined) || segment.nodeId;
-      const activeBranch = segment.branches[segment.activeBranchId];
-      const nodeText = NodeApi.string(node);
-      const detached = activeBranch
-        ? nodeText !== activeBranch.fullText
-        : false;
-
-      if (nodeId !== segment.nodeId || detached !== segment.isDetached) {
-        nextSegments[segment.id] = {
-          ...segment,
-          isDetached: detached,
-          nodeId,
-          updatedAt: new Date().toISOString(),
-        };
-        changed = true;
-      }
-    });
-
-    const blocks = editor.api.blocks({ mode: "lowest" });
-    blocks.forEach(([node, path]) => {
-      const typedNode = node as { aiSegmentId?: string; id?: string };
-      if (typedNode.aiSegmentId) return;
-
-      const aiLeaves = [
-        ...editor.api.nodes({
-          at: path,
-          match: (leaf) =>
-            TextApi.isText(leaf) && Boolean((leaf as { ai?: boolean }).ai),
-        }),
-      ];
-      if (!aiLeaves.length) return;
-
-      const text = NodeApi.string(node);
-      if (!text.trim()) return;
-
-      const segmentId: SegmentId = `seg-${crypto.randomUUID()}`;
-      const nodeId = typedNode.id || `node-${crypto.randomUUID()}`;
-      const branchId: BranchId = `br-${crypto.randomUUID()}`;
-      const nowIso = new Date().toISOString();
-
-      editor.tf.setNodes(
-        {
-          aiNodeKind: "ai",
-          aiSegmentId: segmentId,
-          id: nodeId,
-        },
-        { at: path },
-      );
-
-      nextSegments[segmentId] = {
-        id: segmentId,
-        nodeId,
-        activeBranchId: branchId,
-        branches: {
-          [branchId]: {
-            id: branchId,
-            createdAt: nowIso,
-            fullText: text,
-            sourceMessages: [],
-            tokens: [],
-          },
-        },
-        isDetached: false,
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      };
-      changed = true;
-    });
-
-    updateDocumentContent(
-      docId,
-      serialized,
-      changed ? nextSegments : aiSegments,
-    );
+    updateDocumentContent(docId, serialized);
 
     const persistMs = performance.now() - persistStart;
     if (persistMs > 40) {
-      console.warn("[EditorPerf] Slow deep persist", {
-        changedSegments: changed,
+      console.warn("[EditorPerf] Slow persist", {
         docId,
-        mode,
         persistMs: Math.round(persistMs),
-        segmentCount: Object.keys(nextSegments).length,
         textLength: serialized.length,
       });
     }
@@ -404,51 +248,19 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
 
     if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
     persistTimeoutRef.current = setTimeout(() => {
-      persistEditorState("quick");
-    }, 200);
-
-    if (deepPersistTimeoutRef.current)
-      clearTimeout(deepPersistTimeoutRef.current);
-    deepPersistTimeoutRef.current = setTimeout(() => {
-      persistEditorState("deep");
-    }, 900);
+      persistEditorState();
+    }, PERSIST_DEBOUNCE_MS);
   };
 
   useEffect(() => {
     return () => {
       if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
-      if (deepPersistTimeoutRef.current)
-        clearTimeout(deepPersistTimeoutRef.current);
     };
   }, []);
 
-  const createSegmentMeta = (
-    segmentId: SegmentId,
-    fullText: string,
-    sourceMessages: LLMMessage[],
-    tokenProbabilities: TokenProbability[],
-    nodeId: string,
-  ) => {
-    const { branch, branchId, nowIso } = buildInitialBranch(
-      fullText,
-      sourceMessages,
-      tokenProbabilities,
-    );
-
-    const segment: AISegmentMeta = {
-      id: segmentId,
-      nodeId,
-      activeBranchId: branchId,
-      branches: { [branchId]: branch },
-      isDetached: false,
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    };
-    return segment;
-  };
-
   const generateNextSegment = async () => {
     if (isGenerating) return;
+
     const runId = `gen-next-${crypto.randomUUID()}`;
     const runStart = performance.now();
     console.info("[GenerateNext] Run started", {
@@ -456,6 +268,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
       hasInstructions: aiInstructions.trim().length > 0,
       runId,
     });
+
     setIsGenerating(true);
 
     const serialized = editorRef.current.api.markdown.serialize();
@@ -470,33 +283,19 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
       messages.push({ role: "user", content: "Please start writing a story." });
     }
 
-    console.info("[GenerateNext] Messages prepared", {
-      docLength: serialized.length,
-      messageCount: messages.length,
-      runId,
-    });
-
-    const segmentId: SegmentId = `seg-${crypto.randomUUID()}`;
-    const nodeId = `node-${crypto.randomUUID()}`;
-    console.info("[GenerateNext] Segment ids allocated", {
-      nodeId,
-      runId,
-      segmentId,
-    });
-
+    const aiSegmentId = `ai-segment-${crypto.randomUUID()}`;
+    const targetEditor = editorRef.current;
+    const insertedPath: Path = [targetEditor.children.length];
     suppressOnChangeRef.current = true;
-    insertSegmentNodeAtEnd(editorRef.current, segmentId, "", nodeId);
-    suppressOnChangeRef.current = false;
-    console.info("[GenerateNext] Placeholder node inserted", {
-      nodeId,
-      runId,
-      segmentId,
-    });
+    try {
+      insertAISegmentNodeAtEnd(targetEditor, "", aiSegmentId);
+    } finally {
+      suppressOnChangeRef.current = false;
+    }
+    const segmentPathRef = targetEditor.api.pathRef(insertedPath);
 
     try {
       let fullText = "";
-      let sourceMessages: LLMMessage[] = messages;
-      const allProbabilities: TokenProbability[] = [];
       const stream = callLLMStreaming(messages, modelProps$.get());
       const FLUSH_INTERVAL_MS = 50;
       let chunkCount = 0;
@@ -509,14 +308,26 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
 
       const flushStreamedTextToEditor = () => {
         if (fullText.length === appliedLength) return;
+
         const applyStart = performance.now();
         suppressOnChangeRef.current = true;
-        const targetEditor = editorRef.current;
-        if (!getSegmentEntry(targetEditor, segmentId)) {
-          insertSegmentNodeAtEnd(targetEditor, segmentId, "", nodeId);
+        try {
+          const currentEditor = editorRef.current;
+          const segmentPath = getAISegmentPathFromRef(
+            currentEditor,
+            segmentPathRef,
+            aiSegmentId,
+          );
+          replaceAISegmentNodeTextAtPath(
+            currentEditor,
+            segmentPath,
+            aiSegmentId,
+            fullText,
+          );
+        } finally {
+          suppressOnChangeRef.current = false;
         }
-        replaceSegmentNodeText(targetEditor, segmentId, fullText, nodeId);
-        suppressOnChangeRef.current = false;
+
         const applyMs = performance.now() - applyStart;
         appliedLength = fullText.length;
         lastFlushAt = applyStart;
@@ -524,6 +335,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
         if (applyMs > 16) {
           slowApplyCount += 1;
         }
+
         console.debug("[GenerateNext] Editor apply time", {
           applyMs: +applyMs.toFixed(3),
           appliedLength,
@@ -539,7 +351,6 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
           (chunk) => {
             if (chunk.response.done) {
               flushStreamedTextToEditor();
-              sourceMessages = chunk.request.sourceMessages || messages;
               console.info("[GenerateNext] Stream completed", {
                 chunkCount,
                 durationMs: Math.round(performance.now() - runStart),
@@ -548,17 +359,17 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
                   firstChunkAt === null
                     ? null
                     : Math.round(firstChunkAt - runStart),
+                runId,
                 slowApplyCount,
                 totalApplyMs: Math.round(totalApplyMs),
                 totalInterChunkGapMs:
                   firstChunkAt === null || lastChunkAt === null
                     ? 0
                     : Math.round(lastChunkAt - firstChunkAt),
-                requestId: chunk.request.id,
-                runId,
               });
               return;
             }
+
             const chunkNow = performance.now();
             if (firstChunkAt === null) {
               firstChunkAt = chunkNow;
@@ -567,20 +378,18 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
                 timeToFirstChunkMs: Math.round(chunkNow - runStart),
               });
             }
+
             const interChunkGapMs =
               lastChunkAt === null ? 0 : Math.round(chunkNow - lastChunkAt);
             lastChunkAt = chunkNow;
             chunkCount += 1;
             fullText += chunk.response.content;
-            if (chunk.response.probabilities) {
-              allProbabilities.push(...chunk.response.probabilities);
-            }
+
             console.debug("[GenerateNext] Stream chunk", {
               accumulatedLength: fullText.length,
               chunkCount,
               chunkLength: chunk.response.content.length,
               interChunkGapMs,
-              probabilitiesInChunk: chunk.response.probabilities?.length || 0,
               runId,
             });
 
@@ -597,47 +406,30 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
             console.error("[GenerateNext] Stream yielded error", {
               error,
               runId,
-              segmentId,
             });
           },
         );
       }
 
       flushStreamedTextToEditor();
-
-      const segment = createSegmentMeta(
-        segmentId,
-        fullText,
-        sourceMessages,
-        allProbabilities,
-        nodeId,
-      );
-
-      console.info("[GenerateNext] Persisting generated segment", {
-        fullTextLength: fullText.length,
-        probabilityCount: allProbabilities.length,
-        runId,
-        segmentId,
-        sourceMessageCount: sourceMessages.length,
-      });
-      createAISegment(docId, segment);
       persistEditorState();
       console.info("[GenerateNext] Run persisted successfully", {
         durationMs: Math.round(performance.now() - runStart),
         runId,
-        segmentId,
       });
     } catch (error) {
       console.error("[GenerateNext] Run failed", {
+        aiSegmentId,
         durationMs: Math.round(performance.now() - runStart),
         error,
         runId,
-        segmentId,
       });
     } finally {
+      segmentPathRef.unref();
       setAiInstructions("");
       setIsGenerating(false);
       console.info("[GenerateNext] Run finalized", {
+        aiSegmentId,
         durationMs: Math.round(performance.now() - runStart),
         runId,
       });

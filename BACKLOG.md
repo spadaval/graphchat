@@ -6,16 +6,33 @@ Heavily inspired by code editors (refactors, rename, etc.)
 
 
 
-## Features
+## Backlog
 
-A braindump page - you type everything in. Then, extract things to pages, either manually or with AI (e.g. ask AI to create a document for a character)
+Custom blocks are not properly selectable, can't add a new line after ai segment, can't move cursor around them.
 
-Extract - highlight text and specify what to extract. The AI will generate a page for that concept (person, place, etc), move all descriptions there, and replace with a link.
+Document sync turns an AI Segment into normal text
 
-NER - use BERT to identify proper nouns. Then, link to existing pages using fuzzy matching and/or LLMs/reranker. Offer to create pages if nothing can be found. 
-NER data sits as a separate "layer" for the input.
+NER sucks - needs to be more visible, more accurate, locations are inaccurate, model should load automatically
 
-Versioning - a basic git-style version system. Each file is versioned with a hash. a new checkpoint is automatically created whenever running AI. 
-> We will need to implement an efficient way to store versions. Storing hundreds of copies of each file is maybe a bad idea (but IndexedDB can probably handle it)
+Settings need overhaul - better overlay, too much in sidebar, need presets, need test tools for model
 
-A search tool, which will trace links and 
+UI is bland as heck
+
+Handlers (setTimeout) still take way too long
+
+Web workers maybe?
+
+More context control
+
+Need to implement document linking and document index
+
+Need shortcut to create document for NER entity (if not exists) or to jump to it (if exists)
+
+Need to be able to delete NER entity
+
+Need to remove/integrate the platejs AI features (do we even need the assistant one?)
+
+Shortcuts! Everything should be able to be done by keyboard
+
+Need a command pallete.
+

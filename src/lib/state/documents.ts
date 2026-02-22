@@ -1,17 +1,8 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
-import { buildTokenInfosFromProbabilities } from "~/lib/ai-segments";
 import { removeDocumentFromAllBlocks } from "./block";
-import type {
-  AISegmentMeta,
-  BlockId,
-  BranchId,
-  DocumentId,
-  FolderId,
-  SegmentId,
-  WorldId,
-} from "./types";
+import type { BlockId, DocumentId, FolderId, WorldId } from "./types";
 import { worldStore$ } from "./worlds";
 
 export enum DocumentIcon {
@@ -46,7 +37,6 @@ export interface Document {
   blocks: BlockId[]; // Legacy support
   content: string;
   editorVersion?: number;
-  aiSegments?: Record<SegmentId, AISegmentMeta>;
   migrationError?: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -136,7 +126,6 @@ export const createDocument = (
     blocks,
     content: contentToUse,
     editorVersion: 2,
-    aiSegments: {},
     createdAt: now,
     updatedAt: now,
     tags,
@@ -247,66 +236,15 @@ export const syncDocumentContent = (id: DocumentId) => {
   documentStore$.documents[id].content.set(content);
 };
 
-export const updateDocumentContent = (
-  id: DocumentId,
-  content: string,
-  aiSegmentsDelta?: Record<SegmentId, AISegmentMeta>,
-) => {
+export const updateDocumentContent = (id: DocumentId, content: string) => {
   const doc = documentStore$.documents[id].get();
   if (!doc) return;
 
   documentStore$.documents[id].assign({
-    aiSegments: aiSegmentsDelta ?? doc.aiSegments ?? {},
     content,
     editorVersion: 2,
     updatedAt: new Date(),
   });
-};
-
-export const createAISegment = (id: DocumentId, segment: AISegmentMeta) => {
-  const doc = documentStore$.documents[id].get();
-  if (!doc) return;
-
-  const next = {
-    ...(doc.aiSegments || {}),
-    [segment.id]: segment,
-  };
-
-  updateDocumentContent(id, doc.content || "", next);
-};
-
-export const detachAISegment = (id: DocumentId, segmentId: SegmentId) => {
-  const doc = documentStore$.documents[id].get();
-  const segment = doc?.aiSegments?.[segmentId];
-  if (!doc || !segment) return;
-
-  const next = {
-    ...(doc.aiSegments || {}),
-    [segmentId]: {
-      ...segment,
-      isDetached: true,
-      updatedAt: new Date().toISOString(),
-    },
-  };
-
-  updateDocumentContent(id, doc.content || "", next);
-};
-
-export const upsertAISegment = (
-  id: DocumentId,
-  segmentId: SegmentId,
-  updater: (segment: AISegmentMeta) => AISegmentMeta,
-) => {
-  const doc = documentStore$.documents[id].get();
-  const segment = doc?.aiSegments?.[segmentId];
-  if (!doc || !segment) return;
-
-  const nextSegment = updater(segment);
-  const next = {
-    ...(doc.aiSegments || {}),
-    [segmentId]: nextSegment,
-  };
-  updateDocumentContent(id, doc.content || "", next);
 };
 
 export const updateDocument = (
@@ -419,46 +357,6 @@ export const migrateToWorlds = () => {
   });
 };
 
-const createLegacySegmentFromBlock = (
-  _blockId: BlockId,
-  nodeId: string,
-  text: string,
-  metadata: {
-    sourceMessages?: {
-      role: "user" | "assistant" | "system";
-      content: string;
-    }[];
-    tokenProbabilities?: {
-      token: string;
-      logprob: number;
-      top_logprobs?: { token: string; logprob: number }[];
-    }[];
-  },
-): AISegmentMeta => {
-  const branchId: BranchId = `br-${crypto.randomUUID()}`;
-  const segmentId: SegmentId = `seg-${crypto.randomUUID()}`;
-  const nowIso = new Date().toISOString();
-  const tokens = buildTokenInfosFromProbabilities(metadata.tokenProbabilities);
-
-  return {
-    id: segmentId,
-    nodeId,
-    activeBranchId: branchId,
-    branches: {
-      [branchId]: {
-        id: branchId,
-        createdAt: nowIso,
-        sourceMessages: metadata.sourceMessages || [],
-        fullText: text,
-        tokens,
-      },
-    },
-    isDetached: false,
-    createdAt: nowIso,
-    updatedAt: nowIso,
-  };
-};
-
 export const migrateDocumentsToEditorV2 = () => {
   const docs = documentStore$.documents.get();
   const allBlocks = blocks$.get();
@@ -473,28 +371,8 @@ export const migrateDocumentsToEditorV2 = () => {
       const migratedContent =
         doc.content ||
         blockIds.map((blockId) => allBlocks[blockId]?.text || "").join("\n\n");
-      const migratedSegments: Record<SegmentId, AISegmentMeta> = {};
-
-      blockIds.forEach((blockId, index) => {
-        const block = allBlocks[blockId];
-        if (!block) return;
-
-        if (block.role === "assistant" || block.metadata?.aiGenerated) {
-          const segment = createLegacySegmentFromBlock(
-            block.id,
-            `legacy-${index}`,
-            block.text || "",
-            {
-              sourceMessages: block.metadata?.sourceMessages,
-              tokenProbabilities: block.metadata?.tokenProbabilities,
-            },
-          );
-          migratedSegments[segment.id] = segment;
-        }
-      });
 
       documentStore$.documents[doc.id].assign({
-        aiSegments: migratedSegments,
         content: migratedContent,
         editorVersion: 2,
         migrationError: false,

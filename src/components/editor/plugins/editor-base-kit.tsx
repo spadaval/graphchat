@@ -1,3 +1,4 @@
+import { AiSegmentKit } from "~/components/editor/plugins/ai-segment-kit";
 import { BaseAlignKit } from "~/components/editor/plugins/align-base-kit";
 import { BaseBasicBlocksKit } from "~/components/editor/plugins/basic-blocks-base-kit";
 import { BaseBasicMarksKit } from "~/components/editor/plugins/basic-marks-base-kit";
@@ -33,6 +34,7 @@ export const BaseEditorKit = [
   ...BaseDateKit,
   ...BaseLinkKit,
   ...BaseMentionKit,
+  ...AiSegmentKit,
   ...BaseBasicMarksKit,
   ...BaseFontKit,
   ...BaseListKit,
