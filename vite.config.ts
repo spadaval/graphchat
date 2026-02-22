@@ -18,7 +18,7 @@ export default defineConfig({
         enabled: true,
       },
     }),
-    nitro({ preset: "bun" }), 
+    // nitro({ preset: "bun" }), 
     viteReact(),
     tailwindcss(),
   ],
