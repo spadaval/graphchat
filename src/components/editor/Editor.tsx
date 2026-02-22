@@ -3,7 +3,7 @@
 import type { Observable } from "@legendapp/state";
 import { use$ } from "@legendapp/state/react";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { UnifiedEditorKitWithAI } from "~/components/editor/plugins/unified-editor-kit";
 import { preventBackspaceNavigation } from "~/components/editor/prevent-backspace-navigation";
 import { QuickInlineEdit } from "~/components/editor/quick-inline-edit";
@@ -52,7 +52,11 @@ export function Editor({
   // Get current value - handle both string and observable
   const currentValue = typeof value === "string" ? value : use$(value);
 
-  const editorPlugins = plugins || [...UnifiedEditorKitWithAI];
+  const editorPlugins = useMemo(
+    () => plugins || [...UnifiedEditorKitWithAI],
+    [plugins],
+  );
+  const lastSerializedRef = useRef<string>(currentValue || "");
 
   const editor = usePlateEditor({
     id: "editor",
@@ -74,9 +78,11 @@ export function Editor({
   useEffect(() => {
     const myEditor = editor as unknown as MyEditor;
     if (myEditor.api.markdown && currentValue !== undefined) {
+      if (currentValue === lastSerializedRef.current) return;
       try {
         const deserialized = myEditor.api.markdown.deserialize(currentValue);
         editor.tf.setValue(deserialized);
+        lastSerializedRef.current = currentValue;
       } catch (error) {
         console.error("Error updating editor content:", error);
       }
@@ -88,7 +94,18 @@ export function Editor({
     const myEditor = editor as unknown as MyEditor;
     if (myEditor.api.markdown) {
       try {
+        const start = performance.now();
         const content = myEditor.api.markdown.serialize();
+        lastSerializedRef.current = content;
+
+        const serializeMs = performance.now() - start;
+        if (serializeMs > 24) {
+          console.warn("[EditorPerf] Slow serialize", {
+            contentLength: content.length,
+            serializeMs: Math.round(serializeMs),
+          });
+        }
+
         if (config.autoUpdateDocument && documentId) {
           // Update the document directly
           updateDocument(documentId, { content });

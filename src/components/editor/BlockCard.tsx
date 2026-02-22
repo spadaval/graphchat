@@ -15,7 +15,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
@@ -65,10 +65,12 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
     transform: CSS.Transform.toString(transform),
     transition,
   };
+  const editorPlugins = useMemo(() => [...UnifiedEditorKitWithAI], []);
+  const lastSerializedRef = useRef(block.text || "");
 
   const editor = usePlateEditor({
     id: `editor-${blockId}`,
-    plugins: [...UnifiedEditorKitWithAI],
+    plugins: editorPlugins,
     value: block.text
       ? (editor) => {
           try {
@@ -85,14 +87,13 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
   useEffect(() => {
     const myEditor = editor as MyEditor;
     if (myEditor.api.markdown && block.text !== undefined) {
-      const currentMarkdown = myEditor.api.markdown.serialize();
-      if (currentMarkdown !== block.text) {
-        try {
-          const deserialized = myEditor.api.markdown.deserialize(block.text);
-          editor.tf.setValue(deserialized);
-        } catch (error) {
-          console.error("Error updating editor content:", error);
-        }
+      if (lastSerializedRef.current === block.text) return;
+      try {
+        const deserialized = myEditor.api.markdown.deserialize(block.text);
+        editor.tf.setValue(deserialized);
+        lastSerializedRef.current = block.text;
+      } catch (error) {
+        console.error("Error updating editor content:", error);
       }
     }
   }, [block.text, editor]);
@@ -121,8 +122,19 @@ export function BlockCard({ blockId, docId, onDelete }: BlockCardProps) {
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleContentChange = () => {
+    const serializeStart = performance.now();
     const content = (editor as MyEditor).api.markdown.serialize();
+    lastSerializedRef.current = content;
     block$.text.set(content);
+
+    const serializeMs = performance.now() - serializeStart;
+    if (serializeMs > 24) {
+      console.warn("[EditorPerf] Slow block serialize", {
+        blockId,
+        contentLength: content.length,
+        serializeMs: Math.round(serializeMs),
+      });
+    }
 
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(() => {

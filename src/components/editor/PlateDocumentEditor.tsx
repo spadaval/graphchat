@@ -167,15 +167,19 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   const [isRunningNer, setIsRunningNer] = useState(false);
   const aiInputRef = useRef<HTMLInputElement>(null);
   const suppressOnChangeRef = useRef(false);
+  const persistTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const deepPersistTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastPersistedContentRef = useRef<string>("");
 
   const docId = document$.id.peek();
   const content = document.content || "";
   const aiSegments = document.aiSegments || {};
   const sortedSegments = useMemo(() => Object.values(aiSegments), [aiSegments]);
+  const editorPlugins = useMemo(() => [...UnifiedEditorKitWithAI], []);
 
   const editor = usePlateEditor({
     id: `document-editor-${docId}`,
-    plugins: [...UnifiedEditorKitWithAI],
+    plugins: editorPlugins,
     value: content
       ? (editor) => {
           try {
@@ -194,14 +198,23 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   }, [editor]);
 
   useEffect(() => {
+    lastPersistedContentRef.current = content;
+  }, [content]);
+
+  useEffect(() => {
     if (showAiInput && aiInputRef.current) {
       aiInputRef.current.focus();
     }
   }, [showAiInput]);
 
   useEffect(() => {
+    if (content === lastPersistedContentRef.current) return;
+
     const serialized = editor.api.markdown.serialize();
-    if (serialized === content) return;
+    if (serialized === content) {
+      lastPersistedContentRef.current = content;
+      return;
+    }
 
     try {
       suppressOnChangeRef.current = true;
@@ -270,8 +283,25 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
     }
   }, [aiSegments, docId, editor, sortedSegments]);
 
-  const persistEditorState = () => {
+  const persistEditorState = (mode: "quick" | "deep" = "deep") => {
+    const persistStart = performance.now();
     const serialized = editor.api.markdown.serialize();
+    lastPersistedContentRef.current = serialized;
+
+    if (mode === "quick") {
+      updateDocumentContent(docId, serialized, aiSegments);
+      const persistMs = performance.now() - persistStart;
+      if (persistMs > 24) {
+        console.warn("[EditorPerf] Slow quick persist", {
+          docId,
+          mode,
+          persistMs: Math.round(persistMs),
+          textLength: serialized.length,
+        });
+      }
+      return;
+    }
+
     const nextSegments: Record<SegmentId, AISegmentMeta> = { ...aiSegments };
     let changed = false;
 
@@ -355,12 +385,42 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
       serialized,
       changed ? nextSegments : aiSegments,
     );
+
+    const persistMs = performance.now() - persistStart;
+    if (persistMs > 40) {
+      console.warn("[EditorPerf] Slow deep persist", {
+        changedSegments: changed,
+        docId,
+        mode,
+        persistMs: Math.round(persistMs),
+        segmentCount: Object.keys(nextSegments).length,
+        textLength: serialized.length,
+      });
+    }
   };
 
   const handleContentChange = () => {
     if (suppressOnChangeRef.current) return;
-    persistEditorState();
+
+    if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
+    persistTimeoutRef.current = setTimeout(() => {
+      persistEditorState("quick");
+    }, 200);
+
+    if (deepPersistTimeoutRef.current)
+      clearTimeout(deepPersistTimeoutRef.current);
+    deepPersistTimeoutRef.current = setTimeout(() => {
+      persistEditorState("deep");
+    }, 900);
   };
+
+  useEffect(() => {
+    return () => {
+      if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
+      if (deepPersistTimeoutRef.current)
+        clearTimeout(deepPersistTimeoutRef.current);
+    };
+  }, []);
 
   const createSegmentMeta = (
     segmentId: SegmentId,
