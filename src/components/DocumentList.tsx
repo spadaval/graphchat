@@ -33,6 +33,7 @@ import {
   deleteDocument,
   deleteFolder,
   documentStore$,
+  getDocumentTypeDisplayId,
   moveDocument,
   moveFolder,
   updateDocument,
@@ -71,7 +72,7 @@ export function DocumentList({
   const currentWorldId = use$(worldStore$.currentWorldId);
 
   // Format date without external libraries
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -205,7 +206,7 @@ interface FolderListItemProps {
   onSelect: (id: DocumentId) => void;
   onCreateDocument: (typeId: string, parentId: FolderId | "root") => void;
   onCreateFolder: (parentId: FolderId | "root") => void;
-  formatDate: (date: Date) => string;
+  formatDate: (date: Date | string) => string;
   depth?: number;
 }
 
@@ -375,7 +376,7 @@ interface DocumentListItemProps {
   document: Document;
   isActive: boolean;
   onSelect: () => void;
-  formatDate: (date: Date) => string;
+  formatDate: (date: Date | string) => string;
 }
 
 function DocumentListItem({
@@ -385,7 +386,10 @@ function DocumentListItem({
   formatDate,
 }: DocumentListItemProps) {
   const documentTypes = use$(documentStore$.documentTypes);
-  const typeDef = documentTypes[document.type] || documentTypes.general;
+  const typeDef =
+    documentTypes[getDocumentTypeDisplayId(document)] ||
+    documentTypes[document.baseTypeId] ||
+    documentTypes.general;
   const IconComponent = typeDef ? iconMap[typeDef.icon] || FileText : FileText;
 
   const [isRenaming, setIsRenaming] = useState(false);

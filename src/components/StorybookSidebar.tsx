@@ -51,6 +51,7 @@ import {
   deleteDocument,
   deleteFolder,
   documentStore$,
+  getDocumentTypeDisplayId,
   moveDocument,
   moveFolder,
   updateDocument,
@@ -495,7 +496,10 @@ function DocumentItem({
   onChangeTypeRequest,
 }: DocumentItemProps) {
   const documentTypes = use$(documentStore$.documentTypes);
-  const typeDef = documentTypes[document.type] || documentTypes.general;
+  const typeDef =
+    documentTypes[getDocumentTypeDisplayId(document)] ||
+    documentTypes[document.baseTypeId] ||
+    documentTypes.general;
   const IconComponent = typeDef ? iconMap[typeDef.icon] || FileText : FileText;
 
   const [isRenaming, setIsRenaming] = useState(false);
@@ -562,7 +566,7 @@ function DocumentItem({
             >
               <p>{document.title || "Untitled"}</p>
               <p className="text-xs text-zinc-500 capitalize">
-                {typeDef ? typeDef.name : document.type || "general"}
+                {typeDef ? typeDef.name : document.baseTypeId || "general"}
               </p>
             </TooltipContent>
           </Tooltip>

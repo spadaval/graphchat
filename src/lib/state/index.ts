@@ -27,15 +27,33 @@ export {
   setCurrentUserMessage,
   switchThread,
 } from "./chat";
+export type {
+  BaseTypeId,
+  DocumentTypeDefinitionV2,
+  TemplateDefinition,
+} from "./document-model";
+export {
+  canonicalizeName,
+  DOCUMENT_TYPES_V2,
+  normalizeTag,
+  normalizeTags,
+  TEMPLATE_DEFINITIONS,
+} from "./document-model";
 export type { Document } from "./documents";
 // Document exports
 export {
   createDocument,
+  createDocumentForTemplate,
   deleteDocument,
   documentStore$,
   getAllDocuments,
+  getDocumentByCanonicalName,
   getDocumentById,
+  getDocumentTypeDisplayId,
+  getTagSuggestions,
   migrateDocumentsToEditorV2,
+  migrateDocumentsToModelV2,
+  resolveDocumentIdByCanonicalName,
   setCurrentDocument,
   updateDocument,
   updateDocumentContent,
@@ -55,6 +73,25 @@ export {
 } from "./hooks";
 // LLM exports
 export { modelProps$ } from "./llm";
+export type {
+  RelationMetadata,
+  RelationRecord,
+  RelationTypeDefinition,
+} from "./relation-model";
+export { RELATION_TYPE_DEFINITIONS } from "./relation-model";
+export {
+  selectAllTags,
+  selectDocumentsByBaseType,
+  selectDocumentsByTag,
+  selectDocumentsByTemplate,
+  selectIncomingRelationsByDocument,
+  selectOutgoingRelationsByDocument,
+  selectReferencedCanonicalNames,
+  selectReferencedDocuments,
+  selectReferencingDocuments,
+  selectRelationsByDocument,
+  selectTagSuggestions,
+} from "./selectors";
 // Server exports
 export { serverStore$, setError, setLoading, setServerInfo } from "./server";
 // Types

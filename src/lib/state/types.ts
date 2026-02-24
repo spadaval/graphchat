@@ -4,7 +4,7 @@
 export type ChatId = `chat-${string}`;
 export type MessageId = `msg-${string}`;
 export type BlockId = `blk-${string}`;
-export type DocumentId = `doc-${string}`;
+export type DocumentId = string;
 export type FolderId = `folder-${string}`;
 export type WorldId = `world-${string}`;
 

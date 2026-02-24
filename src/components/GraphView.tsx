@@ -5,7 +5,7 @@ import { graphStore$ } from "../lib/state/graph";
 
 export function GraphView() {
   const documents = useObservable(documentStore$.documents);
-  const _edges = useObservable(graphStore$.edges);
+  const _relations = useObservable(graphStore$.relations);
 
   const docsList = Object.values(documents.get());
 

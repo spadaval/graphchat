@@ -2,6 +2,19 @@ import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
 import { removeDocumentFromAllBlocks } from "./block";
+import {
+  type BaseTypeId,
+  canonicalizeName,
+  DOCUMENT_TYPES_V2,
+  type DocumentTypeDefinitionV2,
+  ensureTemplateMatchesBaseType,
+  extractInternalCanonicalLinks,
+  normalizeTags,
+  resolveBaseTypeAndTemplate,
+  rewriteInternalCanonicalLinks,
+  TEMPLATE_DEFINITIONS,
+  type TemplateDefinition,
+} from "./document-model";
 import type { BlockId, DocumentId, FolderId, WorldId } from "./types";
 import { worldStore$ } from "./worlds";
 
@@ -33,54 +46,78 @@ export interface Folder {
 
 export interface Document {
   id: DocumentId;
+  canonicalName: string;
+  aliases: string[];
   title: string;
-  blocks: BlockId[]; // Legacy support
+  blocks: BlockId[];
   content: string;
   editorVersion?: number;
   migrationError?: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   tags: string[];
-  type: string;
+  baseTypeId: BaseTypeId;
+  templateId?: string;
+  frontmatter: Record<string, unknown>;
+  type?: string;
   parentId: FolderId | "root";
   worldId: WorldId;
 }
-
-// export type DocumentType = "character" | "location" | "magic" | "general";
 
 interface DocumentStore {
   documents: Record<DocumentId, Document>;
   folders: Record<FolderId, Folder>;
   documentTypes: Record<string, DocumentTypeDefinition>;
+  documentTypeRegistry: Record<BaseTypeId, DocumentTypeDefinitionV2>;
+  templateRegistry: Record<string, TemplateDefinition>;
   currentDocumentId: DocumentId | undefined;
   openDocumentIds: DocumentId[];
 }
 
-const defaultDocumentTypes: Record<string, DocumentTypeDefinition> = {
-  general: {
-    id: "general",
-    name: "General",
-    icon: DocumentIcon.FileText,
-    template: "",
-  },
-  person: {
-    id: "person",
-    name: "Person",
-    icon: DocumentIcon.User,
-    template: "Name:\nAge:\nOccupation:\n\nDescription:",
-  },
-  place: {
-    id: "place",
-    name: "Place",
-    icon: DocumentIcon.Map,
-    template: "Name:\nLocation:\n\nDescription:",
-  },
+const nowIso = () => new Date().toISOString();
+
+const baseTypeIconMap: Record<BaseTypeId, DocumentIcon> = {
+  general: DocumentIcon.FileText,
+  person: DocumentIcon.User,
+  place: DocumentIcon.Map,
+  organization: DocumentIcon.Building,
+  culture: DocumentIcon.Book,
+  magic_system: DocumentIcon.Sparkles,
+  technology: DocumentIcon.Scroll,
+  natural_law: DocumentIcon.Ghost,
+  species: DocumentIcon.User,
 };
+
+const buildDefaultDocumentTypes = (): Record<
+  string,
+  DocumentTypeDefinition
+> => {
+  const baseTypes = Object.values(DOCUMENT_TYPES_V2).reduce<
+    Record<string, DocumentTypeDefinition>
+  >((acc, definition) => {
+    acc[definition.id] = {
+      id: definition.id,
+      name: definition.name,
+      icon: baseTypeIconMap[definition.id],
+      template: "",
+    };
+    return acc;
+  }, {});
+
+  baseTypes.person.template = "Name:\nAge:\nOccupation:\n\nDescription:";
+  baseTypes.place.template = "Name:\nLocation:\n\nDescription:";
+
+  return baseTypes;
+};
+
+const defaultDocumentTypes = buildDefaultDocumentTypes();
 
 const documentStore: DocumentStore = {
   documents: {} as Record<DocumentId, Document>,
   folders: {} as Record<FolderId, Folder>,
   documentTypes: defaultDocumentTypes,
+  documentTypeRegistry: DOCUMENT_TYPES_V2,
+  templateRegistry: TEMPLATE_DEFINITIONS,
   currentDocumentId: undefined,
   openDocumentIds: [],
 };
@@ -88,6 +125,176 @@ const documentStore: DocumentStore = {
 export const documentStore$ = observable<DocumentStore>(documentStore);
 
 import { blocks$, createBlock } from "./block";
+
+const getCanonicalNameSetForWorld = (
+  worldId: WorldId,
+  excludeDocumentId?: DocumentId,
+): Set<string> => {
+  const documents = documentStore$.documents.get();
+  const names = new Set<string>();
+
+  for (const document of Object.values(documents)) {
+    if (document.worldId !== worldId || document.id === excludeDocumentId) {
+      continue;
+    }
+
+    if (document.canonicalName) {
+      names.add(document.canonicalName);
+    }
+  }
+
+  return names;
+};
+
+const ensureUniqueCanonicalName = (
+  requestedCanonicalName: string,
+  worldId: WorldId,
+  excludeDocumentId?: DocumentId,
+): string => {
+  const canonicalNameSet = getCanonicalNameSetForWorld(
+    worldId,
+    excludeDocumentId,
+  );
+  if (!canonicalNameSet.has(requestedCanonicalName)) {
+    return requestedCanonicalName;
+  }
+
+  let index = 2;
+  while (canonicalNameSet.has(`${requestedCanonicalName}-${index}`)) {
+    index += 1;
+  }
+
+  return `${requestedCanonicalName}-${index}`;
+};
+
+const normalizeTimestamp = (value: unknown): string => {
+  if (typeof value === "string") {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+
+  return nowIso();
+};
+
+const resolveWorldId = (worldId?: WorldId): WorldId => {
+  return (worldId ||
+    worldStore$.currentWorldId.get() ||
+    "world-default") as WorldId;
+};
+
+const resolveLegacyType = (baseTypeId: BaseTypeId): string => baseTypeId;
+
+const mapTypeInputToModel = (
+  typeOrTemplateId?: string,
+): {
+  baseTypeId: BaseTypeId;
+  templateId?: string;
+} => {
+  const resolved = resolveBaseTypeAndTemplate(typeOrTemplateId);
+  return {
+    baseTypeId: resolved.baseTypeId,
+    templateId: ensureTemplateMatchesBaseType(
+      resolved.baseTypeId,
+      resolved.templateId,
+    ),
+  };
+};
+
+const rewriteLinksForCanonicalRename = (
+  previousCanonicalName: string,
+  nextCanonicalName: string,
+) => {
+  const documents = documentStore$.documents.get();
+  for (const document of Object.values(documents)) {
+    const nextContent = rewriteInternalCanonicalLinks(
+      document.content,
+      previousCanonicalName,
+      nextCanonicalName,
+    );
+
+    if (nextContent !== document.content) {
+      documentStore$.documents[document.id].assign({
+        content: nextContent,
+        updatedAt: nowIso(),
+      });
+    }
+  }
+};
+
+const maybeUpdateCanonicalNameFromTitle = (
+  document: Document,
+  title: string,
+): {
+  canonicalName: string;
+  aliases: string[];
+} => {
+  const desiredCanonicalName = canonicalizeName(title);
+  const canonicalName = ensureUniqueCanonicalName(
+    desiredCanonicalName,
+    document.worldId,
+    document.id,
+  );
+
+  if (canonicalName === document.canonicalName) {
+    return {
+      canonicalName: document.canonicalName,
+      aliases: document.aliases || [],
+    };
+  }
+
+  const aliases = [...(document.aliases || [])];
+  if (
+    document.canonicalName &&
+    document.canonicalName !== canonicalName &&
+    !aliases.includes(document.canonicalName)
+  ) {
+    aliases.push(document.canonicalName);
+  }
+
+  rewriteLinksForCanonicalRename(document.canonicalName, canonicalName);
+
+  return { canonicalName, aliases };
+};
+
+export const resolveDocumentIdByCanonicalName = (
+  canonicalName: string,
+  worldId?: WorldId,
+): DocumentId | undefined => {
+  const normalizedCanonicalName = canonicalizeName(canonicalName);
+  const targetWorldId = worldId || worldStore$.currentWorldId.get();
+  const documents = documentStore$.documents.get();
+
+  for (const document of Object.values(documents)) {
+    if (targetWorldId && document.worldId !== targetWorldId) {
+      continue;
+    }
+
+    if (document.canonicalName === normalizedCanonicalName) {
+      return document.id;
+    }
+
+    if (document.aliases?.includes(normalizedCanonicalName)) {
+      return document.id;
+    }
+  }
+
+  return undefined;
+};
+
+export const getDocumentByCanonicalName = (
+  canonicalName: string,
+  worldId?: WorldId,
+): Document | undefined => {
+  const id = resolveDocumentIdByCanonicalName(canonicalName, worldId);
+  if (!id) return undefined;
+  return documentStore$.documents[id].get();
+};
 
 // Actions
 export const createDocument = (
@@ -98,15 +305,18 @@ export const createDocument = (
   parentId: FolderId | "root" = "root",
   worldId?: WorldId,
 ): DocumentId => {
-  const id: DocumentId = `doc-${crypto.randomUUID()}`;
-  const now = new Date();
-  const finalWorldId =
-    worldId || worldStore$.currentWorldId.get() || "world-default";
+  const finalWorldId = resolveWorldId(worldId);
+  const { baseTypeId, templateId } = mapTypeInputToModel(type);
+  const canonicalName = ensureUniqueCanonicalName(
+    canonicalizeName(title),
+    finalWorldId,
+  );
+  const id = canonicalName as DocumentId;
 
   // Use template if initialContent is empty and type has a template
   let contentToUse = initialContent;
   if (!contentToUse) {
-    const typeDef = documentStore$.documentTypes[type].get();
+    const typeDef = documentStore$.documentTypes[baseTypeId].get();
     if (typeDef?.template) {
       contentToUse = typeDef.template;
     }
@@ -120,22 +330,53 @@ export const createDocument = (
     blocks.push(block.id);
   }
 
+  const timestamp = nowIso();
   const document: Document = {
     id,
+    canonicalName,
+    aliases: [],
     title,
     blocks,
     content: contentToUse,
     editorVersion: 2,
-    createdAt: now,
-    updatedAt: now,
-    tags,
-    type,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    tags: normalizeTags(tags),
+    baseTypeId,
+    templateId,
+    frontmatter: {},
+    type: resolveLegacyType(baseTypeId),
     parentId,
-    worldId: finalWorldId as WorldId,
+    worldId: finalWorldId,
   };
 
   documentStore$.documents[id].set(document);
   return id;
+};
+
+export const createDocumentForTemplate = (
+  title: string,
+  templateId: string,
+  options?: {
+    initialContent?: string;
+    tags?: string[];
+    parentId?: FolderId | "root";
+    worldId?: WorldId;
+  },
+): DocumentId => {
+  const template = TEMPLATE_DEFINITIONS[templateId];
+  if (!template) {
+    throw new Error(`Unknown template: ${templateId}`);
+  }
+
+  return createDocument(
+    title,
+    options?.initialContent,
+    template.id,
+    options?.tags,
+    options?.parentId,
+    options?.worldId,
+  );
 };
 
 export const createFolder = (
@@ -144,15 +385,14 @@ export const createFolder = (
   worldId?: WorldId,
 ): FolderId => {
   const id: FolderId = `folder-${crypto.randomUUID()}`;
-  const finalWorldId =
-    worldId || worldStore$.currentWorldId.get() || "world-default";
+  const finalWorldId = resolveWorldId(worldId);
 
   const folder: Folder = {
     id,
     name,
     parentId,
     isOpen: true,
-    worldId: finalWorldId as WorldId,
+    worldId: finalWorldId,
   };
 
   documentStore$.folders[id].set(folder);
@@ -210,7 +450,7 @@ export const moveFolder = (
   if (newParentId !== "root") {
     let current: FolderId | "root" = newParentId;
     while (current !== "root") {
-      if (current === folderId) return; // Recursive move
+      if (current === folderId) return;
       current = documentStore$.folders[current].parentId.get();
     }
   }
@@ -243,7 +483,7 @@ export const updateDocumentContent = (id: DocumentId, content: string) => {
   documentStore$.documents[id].assign({
     content,
     editorVersion: 2,
-    updatedAt: new Date(),
+    updatedAt: nowIso(),
   });
 };
 
@@ -252,19 +492,65 @@ export const updateDocument = (
   updates: Partial<Omit<Document, "id" | "createdAt">>,
 ) => {
   const documents = documentStore$.documents.get();
-  const document = documents[id];
+  const currentDocument = documents[id];
 
-  if (!document) return;
+  if (!currentDocument) return;
 
-  const updatedDocument = {
-    ...document,
+  let baseTypeId = updates.baseTypeId || currentDocument.baseTypeId;
+  let templateId = updates.templateId || currentDocument.templateId;
+
+  if (updates.type && !updates.baseTypeId && !updates.templateId) {
+    const mapped = mapTypeInputToModel(updates.type);
+    baseTypeId = mapped.baseTypeId;
+    templateId = mapped.templateId;
+  }
+
+  templateId = ensureTemplateMatchesBaseType(baseTypeId, templateId);
+
+  const nextTags = updates.tags
+    ? normalizeTags(updates.tags)
+    : currentDocument.tags;
+
+  let canonicalName = currentDocument.canonicalName;
+  let aliases = currentDocument.aliases || [];
+
+  if (typeof updates.title === "string") {
+    const canonicalUpdate = maybeUpdateCanonicalNameFromTitle(
+      currentDocument,
+      updates.title,
+    );
+    canonicalName = canonicalUpdate.canonicalName;
+    aliases = canonicalUpdate.aliases;
+  } else if (updates.canonicalName) {
+    const nextCanonicalName = ensureUniqueCanonicalName(
+      canonicalizeName(updates.canonicalName),
+      currentDocument.worldId,
+      currentDocument.id,
+    );
+
+    if (nextCanonicalName !== canonicalName) {
+      if (!aliases.includes(canonicalName)) {
+        aliases = [...aliases, canonicalName];
+      }
+      rewriteLinksForCanonicalRename(canonicalName, nextCanonicalName);
+      canonicalName = nextCanonicalName;
+    }
+  }
+
+  const updatedDocument: Document = {
+    ...currentDocument,
     ...updates,
-    updatedAt: new Date(),
+    baseTypeId,
+    templateId,
+    canonicalName,
+    aliases,
+    tags: nextTags,
+    type: resolveLegacyType(baseTypeId),
+    updatedAt: nowIso(),
   };
 
   documentStore$.documents[id].set(updatedDocument);
 
-  // If blocks were updated, sync content
   if (updates.blocks) {
     syncDocumentContent(id);
   }
@@ -273,23 +559,19 @@ export const updateDocument = (
 };
 
 export const deleteDocument = (id: DocumentId) => {
-  // Remove the document reference from all blocks first
   try {
     removeDocumentFromAllBlocks(id);
   } catch (error) {
     console.error("Error removing document from blocks:", error);
   }
 
-  // Then delete the document from the document store
   documentStore$.documents[id].delete();
 
-  // If we're deleting the current document, unset current document
   const currentDocumentId = documentStore$.currentDocumentId.get();
   if (currentDocumentId === id) {
     documentStore$.currentDocumentId.set(undefined);
   }
 
-  // Remove from open documents
   const openIds = documentStore$.openDocumentIds.get();
   if (openIds.includes(id)) {
     documentStore$.openDocumentIds.set(openIds.filter((oid) => oid !== id));
@@ -325,22 +607,58 @@ export const getDocumentById = (id: DocumentId): Document | undefined => {
   return documents[id];
 };
 
+export const getDocumentTypeDisplayId = (document: Document): string => {
+  if (document.templateId) {
+    return document.templateId;
+  }
+  if (document.baseTypeId) {
+    return document.baseTypeId;
+  }
+  return document.type || "general";
+};
+
+export const getAllCanonicalTags = (): string[] => {
+  const documents = documentStore$.documents.get();
+  const tags = new Set<string>();
+
+  for (const document of Object.values(documents)) {
+    for (const tag of document.tags || []) {
+      tags.add(tag);
+    }
+  }
+
+  return [...tags].sort((a, b) => a.localeCompare(b));
+};
+
+export const getTagSuggestions = (prefix = ""): string[] => {
+  const normalizedPrefix = canonicalizeName(prefix);
+  const tags = getAllCanonicalTags();
+  if (!normalizedPrefix) {
+    return tags;
+  }
+
+  return tags.filter((tag) => tag.startsWith(normalizedPrefix));
+};
+
+export const getReferencedCanonicalNames = (
+  documentId: DocumentId,
+): string[] => {
+  const document = documentStore$.documents[documentId].get();
+  if (!document) return [];
+  return extractInternalCanonicalLinks(document.content || "");
+};
+
 export const ensureDefaultDocumentTypes = () => {
   const types = documentStore$.documentTypes.get();
-  if (!types.person) {
-    documentStore$.documentTypes.person.set(defaultDocumentTypes.person);
-  }
-  if (!types.place) {
-    documentStore$.documentTypes.place.set(defaultDocumentTypes.place);
-  }
-  if (!types.general) {
-    documentStore$.documentTypes.general.set(defaultDocumentTypes.general);
+  for (const [id, typeDef] of Object.entries(defaultDocumentTypes)) {
+    if (!types[id]) {
+      documentStore$.documentTypes[id].set(typeDef);
+    }
   }
 };
 
 export const migrateToWorlds = () => {
-  const defaultWorldId = (worldStore$.currentWorldId.get() ||
-    "world-default") as WorldId;
+  const defaultWorldId = resolveWorldId();
 
   const docs = documentStore$.documents.get();
   Object.values(docs).forEach((doc) => {
@@ -387,6 +705,41 @@ export const migrateDocumentsToEditorV2 = () => {
   });
 };
 
+export const migrateDocumentsToModelV2 = () => {
+  const docs = documentStore$.documents.get();
+
+  for (const doc of Object.values(docs)) {
+    const { baseTypeId, templateId } = mapTypeInputToModel(
+      doc.templateId || doc.baseTypeId || doc.type,
+    );
+
+    const canonicalName = ensureUniqueCanonicalName(
+      canonicalizeName(doc.canonicalName || doc.title || doc.id),
+      doc.worldId,
+      doc.id,
+    );
+
+    const aliases = Array.isArray(doc.aliases)
+      ? normalizeTags(doc.aliases)
+      : [];
+
+    documentStore$.documents[doc.id].assign({
+      canonicalName,
+      aliases,
+      baseTypeId,
+      templateId,
+      frontmatter:
+        doc.frontmatter && typeof doc.frontmatter === "object"
+          ? doc.frontmatter
+          : {},
+      type: resolveLegacyType(baseTypeId),
+      tags: normalizeTags(doc.tags || []),
+      createdAt: normalizeTimestamp(doc.createdAt),
+      updatedAt: normalizeTimestamp(doc.updatedAt),
+    });
+  }
+};
+
 // Persist state
 syncObservable(documentStore$, {
   persist: {
@@ -399,5 +752,6 @@ syncObservable(documentStore$, {
 ensureDefaultDocumentTypes();
 migrateToWorlds();
 migrateDocumentsToEditorV2();
+migrateDocumentsToModelV2();
 
 export default documentStore$;
