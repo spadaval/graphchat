@@ -18,10 +18,11 @@
 
 ## ✨ Improvements
 
-### Placeholder Block Completion (Do First)
-- Complete placeholder block implementation before other document-overhaul features.
-- Ensure dedicated block type behavior is production-ready (insert, transform to paragraph, bulk replace).
-- Add acceptance tests for template-driven placeholder insertion and editing flows.
+### Placeholder Block Completion
+- [x] Complete placeholder block implementation before other document-overhaul features.
+- [x] Ensure dedicated block type behavior is production-ready (insert via slash menu, click-to-select, transform to paragraph on type).
+- [ ] Add acceptance tests for template-driven placeholder insertion and editing flows.
+- [ ] Add bulk-replace flow for template placeholders.
 
 ### Document Overhaul Prerequisites (Phase A)
 
