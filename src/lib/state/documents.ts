@@ -1,6 +1,13 @@
-import { observable } from "@legendapp/state";
-import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
+import { observable, syncState, when } from "@legendapp/state";
+import { observablePersistIndexedDB } from "@legendapp/state/persist-plugins/indexeddb";
 import { syncObservable } from "@legendapp/state/sync";
+import type { DocumentModel } from "~/lib/document-content";
+import {
+  deserializeMarkdownToModel,
+  extractInternalCanonicalLinksFromModel,
+  isValidModel,
+  rewriteInternalCanonicalLinksInModel,
+} from "~/lib/document-content";
 import { removeDocumentFromAllBlocks } from "./block";
 import {
   type BaseTypeId,
@@ -8,10 +15,8 @@ import {
   DOCUMENT_TYPES_V2,
   type DocumentTypeDefinitionV2,
   ensureTemplateMatchesBaseType,
-  extractInternalCanonicalLinks,
   normalizeTags,
   resolveBaseTypeAndTemplate,
-  rewriteInternalCanonicalLinks,
   TEMPLATE_DEFINITIONS,
   type TemplateDefinition,
 } from "./document-model";
@@ -50,7 +55,9 @@ export interface Document {
   aliases: string[];
   title: string;
   blocks: BlockId[];
-  content: string;
+  contentModel: DocumentModel;
+  contentModelVersion: number;
+  content?: string;
   editorVersion?: number;
   migrationError?: boolean;
   createdAt: string;
@@ -73,6 +80,18 @@ interface DocumentStore {
   currentDocumentId: DocumentId | undefined;
   openDocumentIds: DocumentId[];
 }
+
+interface DocumentPersistenceState {
+  failedDocuments: DocumentId[];
+  isMigrating: boolean;
+  isReady: boolean;
+  migrationError?: string;
+  migrationVersion: number;
+}
+
+const CONTENT_MODEL_VERSION = 1;
+const DOCUMENT_MIGRATION_VERSION = 1;
+const LEGACY_DOCUMENT_STORE_KEY = "documentStore";
 
 const nowIso = () => new Date().toISOString();
 
@@ -123,6 +142,12 @@ const documentStore: DocumentStore = {
 };
 
 export const documentStore$ = observable<DocumentStore>(documentStore);
+export const documentPersistence$ = observable<DocumentPersistenceState>({
+  failedDocuments: [],
+  isMigrating: false,
+  isReady: false,
+  migrationVersion: 0,
+});
 
 import { blocks$, createBlock } from "./block";
 
@@ -212,15 +237,19 @@ const rewriteLinksForCanonicalRename = (
 ) => {
   const documents = documentStore$.documents.get();
   for (const document of Object.values(documents)) {
-    const nextContent = rewriteInternalCanonicalLinks(
-      document.content,
+    if (!isValidModel(document.contentModel)) {
+      continue;
+    }
+
+    const nextModel = rewriteInternalCanonicalLinksInModel(
+      document.contentModel,
       previousCanonicalName,
       nextCanonicalName,
     );
 
-    if (nextContent !== document.content) {
+    if (nextModel !== document.contentModel) {
       documentStore$.documents[document.id].assign({
-        content: nextContent,
+        contentModel: nextModel,
         updatedAt: nowIso(),
       });
     }
@@ -337,7 +366,8 @@ export const createDocument = (
     aliases: [],
     title,
     blocks,
-    content: contentToUse,
+    contentModel: deserializeMarkdownToModel(contentToUse || ""),
+    contentModelVersion: CONTENT_MODEL_VERSION,
     editorVersion: 2,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -460,28 +490,16 @@ export const moveFolder = (
   documentStore$.folders[folderId].parentId.set(newParentId);
 };
 
-export const syncDocumentContent = (id: DocumentId) => {
-  const doc = documentStore$.documents[id].get();
-  if (!doc) return;
-
-  if (doc.editorVersion === 2) return;
-
-  const blockIds = doc.blocks || [];
-  const allBlocks = blocks$.get();
-
-  const content = blockIds
-    .map((bid) => allBlocks[bid]?.text || "")
-    .join("\n\n");
-
-  documentStore$.documents[id].content.set(content);
-};
-
-export const updateDocumentContent = (id: DocumentId, content: string) => {
+export const updateDocumentContentModel = (
+  id: DocumentId,
+  contentModel: DocumentModel,
+) => {
   const doc = documentStore$.documents[id].get();
   if (!doc) return;
 
   documentStore$.documents[id].assign({
-    content,
+    contentModel,
+    contentModelVersion: CONTENT_MODEL_VERSION,
     editorVersion: 2,
     updatedAt: nowIso(),
   });
@@ -550,10 +568,6 @@ export const updateDocument = (
   };
 
   documentStore$.documents[id].set(updatedDocument);
-
-  if (updates.blocks) {
-    syncDocumentContent(id);
-  }
 
   return updatedDocument;
 };
@@ -645,7 +659,7 @@ export const getReferencedCanonicalNames = (
 ): string[] => {
   const document = documentStore$.documents[documentId].get();
   if (!document) return [];
-  return extractInternalCanonicalLinks(document.content || "");
+  return extractInternalCanonicalLinksFromModel(document.contentModel || []);
 };
 
 export const ensureDefaultDocumentTypes = () => {
@@ -675,35 +689,7 @@ export const migrateToWorlds = () => {
   });
 };
 
-export const migrateDocumentsToEditorV2 = () => {
-  const docs = documentStore$.documents.get();
-  const allBlocks = blocks$.get();
-
-  Object.values(docs).forEach((doc) => {
-    if (doc.editorVersion === 2) {
-      return;
-    }
-
-    try {
-      const blockIds = doc.blocks || [];
-      const migratedContent =
-        doc.content ||
-        blockIds.map((blockId) => allBlocks[blockId]?.text || "").join("\n\n");
-
-      documentStore$.documents[doc.id].assign({
-        content: migratedContent,
-        editorVersion: 2,
-        migrationError: false,
-      });
-    } catch (error) {
-      console.error("Failed to migrate document", {
-        documentId: doc.id,
-        error,
-      });
-      documentStore$.documents[doc.id].migrationError.set(true);
-    }
-  });
-};
+export const migrateDocumentsToEditorV2 = () => {};
 
 export const migrateDocumentsToModelV2 = () => {
   const docs = documentStore$.documents.get();
@@ -740,18 +726,143 @@ export const migrateDocumentsToModelV2 = () => {
   }
 };
 
-// Persist state
+export const migrateDocumentsToContentModelV1 = () => {
+  const docs = documentStore$.documents.get();
+  const allBlocks = blocks$.get();
+  const failed: DocumentId[] = [];
+
+  for (const doc of Object.values(docs)) {
+    if (isValidModel(doc.contentModel) && doc.contentModel.length > 0) {
+      if (doc.content) {
+        const withoutLegacy = { ...doc };
+        delete withoutLegacy.content;
+        documentStore$.documents[doc.id].set(withoutLegacy);
+      }
+      continue;
+    }
+
+    const blockText = (doc.blocks || [])
+      .map((blockId) => allBlocks[blockId]?.text || "")
+      .join("\n\n");
+    const legacyMarkdown = typeof doc.content === "string" ? doc.content : "";
+    const markdown = legacyMarkdown || blockText;
+
+    if (!markdown.trim()) {
+      failed.push(doc.id);
+      documentStore$.documents[doc.id].migrationError.set(true);
+      continue;
+    }
+
+    try {
+      const contentModel = deserializeMarkdownToModel(markdown);
+      const nextDoc: Document = {
+        ...doc,
+        contentModel,
+        contentModelVersion: CONTENT_MODEL_VERSION,
+        editorVersion: 2,
+        migrationError: false,
+        updatedAt: nowIso(),
+      };
+      delete nextDoc.content;
+      documentStore$.documents[doc.id].set(nextDoc);
+    } catch (error) {
+      failed.push(doc.id);
+      console.error("Failed to migrate markdown to model", {
+        documentId: doc.id,
+        error,
+      });
+      documentStore$.documents[doc.id].migrationError.set(true);
+    }
+  }
+
+  documentPersistence$.failedDocuments.set(failed);
+  documentPersistence$.migrationVersion.set(DOCUMENT_MIGRATION_VERSION);
+};
+
+const indexedDbPlugin = observablePersistIndexedDB({
+  databaseName: "worldcrafter",
+  tableNames: ["documents"],
+  version: 1,
+});
+
 syncObservable(documentStore$, {
   persist: {
-    name: "documentStore",
-    plugin: ObservablePersistLocalStorage,
+    name: "documents",
+    plugin: indexedDbPlugin,
   },
 });
 
-// Run initialization check
-ensureDefaultDocumentTypes();
-migrateToWorlds();
-migrateDocumentsToEditorV2();
-migrateDocumentsToModelV2();
+const bootstrapFromLegacyLocalStorage = (): boolean => {
+  if (typeof window === "undefined") return false;
+  if (Object.keys(documentStore$.documents.get()).length > 0) return false;
+
+  const raw = window.localStorage.getItem(LEGACY_DOCUMENT_STORE_KEY);
+  if (!raw) return false;
+
+  try {
+    const parsed = JSON.parse(raw) as
+      | Partial<DocumentStore>
+      | { state?: Partial<DocumentStore> };
+    const candidate =
+      parsed && "state" in parsed ? (parsed.state ?? null) : parsed;
+
+    if (!candidate || typeof candidate !== "object") return false;
+    if (!candidate.documents || typeof candidate.documents !== "object") {
+      return false;
+    }
+
+    documentStore$.assign({
+      currentDocumentId: candidate.currentDocumentId,
+      documentTypeRegistry: candidate.documentTypeRegistry || DOCUMENT_TYPES_V2,
+      documentTypes: candidate.documentTypes || defaultDocumentTypes,
+      documents: candidate.documents as Record<DocumentId, Document>,
+      folders: candidate.folders || {},
+      openDocumentIds: candidate.openDocumentIds || [],
+      templateRegistry: candidate.templateRegistry || TEMPLATE_DEFINITIONS,
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Failed to import legacy localStorage document store", {
+      error,
+    });
+    return false;
+  }
+};
+
+const initializeDocumentStore = async () => {
+  if (typeof window === "undefined") {
+    documentPersistence$.isReady.set(true);
+    return;
+  }
+
+  documentPersistence$.isMigrating.set(true);
+  try {
+    const state$ = syncState(documentStore$);
+    await when(state$.isPersistLoaded);
+
+    const importedFromLegacy = bootstrapFromLegacyLocalStorage();
+
+    ensureDefaultDocumentTypes();
+    migrateToWorlds();
+    migrateDocumentsToEditorV2();
+    migrateDocumentsToModelV2();
+    migrateDocumentsToContentModelV1();
+
+    if (importedFromLegacy) {
+      window.localStorage.removeItem(LEGACY_DOCUMENT_STORE_KEY);
+    }
+  } catch (error) {
+    documentPersistence$.migrationError.set(
+      error instanceof Error ? error.message : String(error),
+    );
+    console.error("Document store initialization failed", { error });
+  } finally {
+    documentPersistence$.isMigrating.set(false);
+    documentPersistence$.isReady.set(true);
+  }
+};
+
+void initializeDocumentStore();
 
 export default documentStore$;

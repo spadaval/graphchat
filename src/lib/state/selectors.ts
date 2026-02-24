@@ -1,8 +1,5 @@
-import {
-  type BaseTypeId,
-  extractInternalCanonicalLinks,
-  normalizeTag,
-} from "./document-model";
+import { extractInternalCanonicalLinksFromModel } from "../document-content";
+import { type BaseTypeId, normalizeTag } from "./document-model";
 import {
   type Document,
   documentStore$,
@@ -131,7 +128,9 @@ export const selectReferencingDocuments = (
       return false;
     }
 
-    const references = extractInternalCanonicalLinks(document.content || "");
+    const references = extractInternalCanonicalLinksFromModel(
+      document.contentModel || [],
+    );
     return references.includes(targetDocument.canonicalName);
   });
 };

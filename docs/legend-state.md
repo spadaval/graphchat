@@ -90,3 +90,55 @@ function NameDisplay() {
     return <div>{name}</div>
 }
 ```
+
+## Persistence
+
+The IndexedDB plugin can be used in two ways:
+
+Persisting a dictionary where each value has an id field, and each value will create a row in the table
+Persisting multiple observables to their own rows in the table with the itemID option
+It requires some extra configuration for the database name, the table names, and the version.
+
+IndexedDB requires changing the version whenever the tables change, so you can start with version 1 and increment the version whenever you add/change tables.
+
+```typescript
+import { observable } from "@legendapp/state";
+import { configureSynced, syncObservable } from "@legendapp/state/sync"
+import { observablePersistIndexedDB } from "@legendapp/state/persist-plugins/indexeddb"
+// Create default persist options
+const persistOptions = configureSynced({
+    persist: {
+        plugin: observablePersistIndexedDB({
+            databaseName: "Legend",
+            version: 1,
+            tableNames: ["documents", "store"]
+        })
+    }
+})
+// Mode 1: Persist a dictionary
+const state$ = observable({
+    obj1: { id: "obj1", text: "..." },
+    obj2: { id: "obj2", text: "..." },
+})
+syncObservable(state$, persistOptions({
+    persist: {
+        name: "documents" // IndexedDB table name
+    }
+}))
+// Mode 2: Persist an object with itemId
+const settings$ = observable({ theme: "light" })
+syncObservable(settings$, persistOptions({
+    persist: {
+        name: "store", // IndexedDB table name
+        indexedDB: {
+            itemID: "settings"
+        }
+    }
+}))
+```
+Because IndexedDB is an asynchronous API, observables will not load from persistence immediately, so if you're persisting a large amount of data you may want to show a loading state while persistence is loading.
+
+
+const syncState$ = syncState(state$)
+await when(syncState$.isPersistLoaded)
+// Continue with load

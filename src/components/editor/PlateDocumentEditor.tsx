@@ -3,17 +3,21 @@
 import type { Observable } from "@legendapp/state";
 import { use$ } from "@legendapp/state/react";
 import { Loader2, Send, Sparkles, WandSparkles, X } from "lucide-react";
-import { NodeApi, type Path, type PathRef, TextApi, type TText } from "platejs";
+import { type Path, type PathRef, TextApi } from "platejs";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { debugInfo, debugLog } from "~/lib/debug";
-import { detectNamedEntities } from "~/lib/ner";
-import { updateDocument, updateDocumentContent } from "~/lib/state";
+import {
+  deserializeMarkdownToModel,
+  isValidModel,
+} from "~/lib/document-content";
+import { warmupNerPipeline } from "~/lib/ner";
+import { updateDocument, updateDocumentContentModel } from "~/lib/state";
 import type { Document } from "~/lib/state/documents";
 import { callLLMStreaming, modelProps$ } from "~/lib/state/llm";
 import type { LLMMessage } from "~/lib/state/types";
 import { uiPreferences$ } from "~/lib/state/ui";
-import type { MyEditor, MyValue } from "./plate-types";
+import type { MyEditor } from "./plate-types";
 import { AI_SEGMENT_TYPE } from "./plugins/ai-segment-kit";
 import { UnifiedEditorKitWithAI } from "./plugins/unified-editor-kit";
 import { preventBackspaceNavigation } from "./prevent-backspace-navigation";
@@ -110,61 +114,9 @@ const insertAISegmentNodeAtEnd = (
   );
 };
 
-function offsetsToRange(
-  editor: MyEditor,
-  paragraphPath: Path,
-  start: number,
-  end: number,
-) {
-  const textNodes = [
-    ...editor.api.nodes<TText>({ at: paragraphPath, match: TextApi.isText }),
-  ];
-  if (!textNodes.length) return null;
-
-  const totalLength = textNodes.reduce(
-    (sum, [node]) => sum + node.text.length,
-    0,
-  );
-  const normalizedStart = Math.min(Math.max(start, 0), totalLength);
-  const normalizedEnd = Math.min(Math.max(end, normalizedStart), totalLength);
-
-  let currentOffset = 0;
-  let anchor: { offset: number; path: Path } | null = null;
-  let focus: { offset: number; path: Path } | null = null;
-
-  for (const [node, path] of textNodes) {
-    const textLength = node.text.length;
-    const nodeStart = currentOffset;
-    const nodeEnd = nodeStart + textLength;
-
-    if (!anchor && normalizedStart >= nodeStart && normalizedStart <= nodeEnd) {
-      anchor = { offset: normalizedStart - nodeStart, path };
-    }
-
-    if (!focus && normalizedEnd >= nodeStart && normalizedEnd <= nodeEnd) {
-      focus = { offset: normalizedEnd - nodeStart, path };
-      break;
-    }
-
-    currentOffset = nodeEnd;
-  }
-
-  if (!anchor) {
-    const [_firstNode, firstPath] = textNodes[0];
-    anchor = { offset: 0, path: firstPath };
-  }
-
-  if (!focus) {
-    const [lastNode, lastPath] = textNodes[textNodes.length - 1];
-    focus = { offset: lastNode.text.length, path: lastPath };
-  }
-
-  return { anchor, focus };
-}
-
 export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   const document = use$(document$);
-  const { documentWidth = 800 } = use$(uiPreferences$);
+  const { documentWidth = 800, nerPreloadModel = true } = use$(uiPreferences$);
   const [showAiInput, setShowAiInput] = useState(false);
   const [aiInstructions, setAiInstructions] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -175,22 +127,15 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   const lastPersistedContentRef = useRef<string>("");
 
   const docId = document$.id.peek();
-  const content = document.content || "";
+  const contentModel = isValidModel(document.contentModel)
+    ? document.contentModel
+    : deserializeMarkdownToModel("");
   const editorPlugins = useMemo(() => [...UnifiedEditorKitWithAI], []);
 
   const editor = usePlateEditor({
     id: `document-editor-${docId}`,
     plugins: editorPlugins,
-    value: content
-      ? (editor) => {
-          try {
-            return (editor as MyEditor).api.markdown.deserialize(content);
-          } catch (error) {
-            console.error("Error deserializing document content:", error);
-            return [{ type: "p", children: [{ text: content }] }] as MyValue;
-          }
-        }
-      : undefined,
+    value: () => contentModel,
   }) as MyEditor;
   const editorRef = useRef(editor);
 
@@ -199,8 +144,8 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   }, [editor]);
 
   useEffect(() => {
-    lastPersistedContentRef.current = content;
-  }, [content]);
+    lastPersistedContentRef.current = JSON.stringify(contentModel);
+  }, [contentModel]);
 
   useEffect(() => {
     if (showAiInput && aiInputRef.current) {
@@ -209,39 +154,65 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   }, [showAiInput]);
 
   useEffect(() => {
-    if (content === lastPersistedContentRef.current) return;
+    if (!nerPreloadModel) return;
 
-    const serialized = editor.api.markdown.serialize();
-    if (serialized === content) {
-      lastPersistedContentRef.current = content;
+    const idleCallback = (
+      window as Window & {
+        requestIdleCallback?: (cb: () => void) => number;
+        cancelIdleCallback?: (id: number) => void;
+      }
+    ).requestIdleCallback;
+    const cancelIdle = (
+      window as Window & {
+        cancelIdleCallback?: (id: number) => void;
+      }
+    ).cancelIdleCallback;
+
+    if (idleCallback) {
+      const handle = idleCallback(() => {
+        void warmupNerPipeline().catch((error) => {
+          console.error("[NER] Pipeline warmup failed", { error });
+        });
+      });
+
+      return () => {
+        if (cancelIdle) cancelIdle(handle);
+      };
+    }
+
+    const timeout = setTimeout(() => {
+      void warmupNerPipeline().catch((error) => {
+        console.error("[NER] Pipeline warmup failed", { error });
+      });
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [nerPreloadModel]);
+
+  useEffect(() => {
+    const serializedModel = JSON.stringify(contentModel);
+    if (serializedModel === lastPersistedContentRef.current) return;
+
+    const currentSerializedModel = JSON.stringify(editor.children);
+    if (currentSerializedModel === serializedModel) {
+      lastPersistedContentRef.current = serializedModel;
       return;
     }
 
     try {
       suppressOnChangeRef.current = true;
-      editor.tf.setValue(editor.api.markdown.deserialize(content));
+      editor.tf.setValue(contentModel as never);
     } catch (error) {
       console.error("Error updating editor content:", error);
     } finally {
       suppressOnChangeRef.current = false;
     }
-  }, [content, editor]);
+  }, [contentModel, editor]);
 
   const persistEditorState = () => {
-    const persistStart = performance.now();
-    const serialized = editor.api.markdown.serialize();
-    lastPersistedContentRef.current = serialized;
-
-    updateDocumentContent(docId, serialized);
-
-    const persistMs = performance.now() - persistStart;
-    if (persistMs > 40) {
-      console.warn("[EditorPerf] Slow persist", {
-        docId,
-        persistMs: Math.round(persistMs),
-        textLength: serialized.length,
-      });
-    }
+    const persistedModel = editor.children as unknown[];
+    lastPersistedContentRef.current = JSON.stringify(persistedModel);
+    updateDocumentContentModel(docId, persistedModel);
   };
 
   const handleContentChange = () => {
@@ -439,55 +410,20 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
 
   const runDocumentNer = async () => {
     if (isRunningNer || isGenerating) return;
+    const nerApi = (
+      editor.api as { ner?: { runDocument?: () => Promise<void> } }
+    ).ner;
+    if (!nerApi?.runDocument) {
+      console.warn("[NER] Plugin API missing: ner.runDocument");
+      return;
+    }
+
     setIsRunningNer(true);
     setShowAiInput(false);
     suppressOnChangeRef.current = true;
 
     try {
-      const paragraphEntries = [
-        ...editor.api.blocks({
-          match: (node) =>
-            !TextApi.isText(node) && (node as { type?: string }).type === "p",
-          mode: "lowest",
-        }),
-      ];
-
-      for (const [node, paragraphPath] of paragraphEntries) {
-        const paragraphText = NodeApi.string(node);
-
-        editor.tf.unsetNodes(["ner", "nerType"], {
-          at: paragraphPath,
-          match: TextApi.isText,
-          split: true,
-        });
-
-        if (!paragraphText.trim()) {
-          continue;
-        }
-
-        const entities = await detectNamedEntities(paragraphText);
-        for (const entity of entities) {
-          const range = offsetsToRange(
-            editor,
-            paragraphPath,
-            entity.start,
-            entity.end,
-          );
-          if (!range) continue;
-
-          editor.tf.setNodes(
-            {
-              ner: true,
-              nerType: entity.type,
-            },
-            {
-              at: range,
-              match: TextApi.isText,
-              split: true,
-            },
-          );
-        }
-      }
+      await nerApi.runDocument();
     } catch (error) {
       console.error("[NER] Document pass failed", { error });
     } finally {

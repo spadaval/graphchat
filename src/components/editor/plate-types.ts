@@ -22,7 +22,7 @@ import type {
   TTextAlignProps,
 } from "platejs";
 import type { PlateEditor } from "platejs/react";
-import type { NerEntityType } from "~/lib/ner";
+import type { NerEntityType } from "~/lib/ner-types";
 import type { PLACEHOLDER_TYPE } from "./plugins/placeholder-kit";
 
 export interface MyBlockElement extends TElement, TListProps {
@@ -158,6 +158,9 @@ export interface RichText extends TBasicMarks, TCommentText, TFontMarks, TText {
   kbd?: boolean;
   ner?: boolean;
   nerType?: NerEntityType;
+  nerSource?: "manual" | "model";
+  nerCanonicalName?: string;
+  nerConfidence?: number;
 }
 
 export type MyValue = (
@@ -185,9 +188,21 @@ export interface MyEditor extends PlateEditor {
       serialize: () => string;
       deserialize: (content: string) => MyValue;
     };
+    ner?: {
+      runDocument: () => Promise<void>;
+      runParagraph: (path: number[]) => Promise<void>;
+    };
     aiChat: {
       show: () => void;
       hide: () => void;
     };
   } & PlateEditor["api"];
+  tf: PlateEditor["tf"] & {
+    ner?: {
+      adjustBoundary: (direction: "expand" | "shrink", amount: number) => void;
+      convertToLink: (canonicalName: string) => void;
+      remove: () => void;
+      setType: (type: NerEntityType) => void;
+    };
+  };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { debugInfo, debugLog } from "~/lib/debug";
+import type { NerEntityType, NerSpan } from "~/lib/ner-types";
 
 const NER_MODEL_ID = "onnx-community/distilbert-NER-ONNX";
 
@@ -24,13 +25,8 @@ type RawEntity = {
   word?: string;
 };
 
-export type NerEntityType = "location" | "organization" | "person";
-
-export interface NerEntity {
-  end: number;
-  start: number;
-  type: NerEntityType;
-}
+export type { NerEntityType };
+export type NerEntity = NerSpan;
 
 let nerPipelinePromise: Promise<TokenClassifier> | null = null;
 let nerPipelineReady = false;
@@ -124,31 +120,58 @@ function findTokenOffsets(
   return null;
 }
 
-async function getNerPipeline(): Promise<TokenClassifier> {
-  if (!nerPipelinePromise) {
-    const webGpuInfo = getWebGpuInfo();
-    debugInfo("[NER] Initializing pipeline", {
-      model: NER_MODEL_ID,
-      webGpuAvailable: webGpuInfo.available,
-      webGpuReason: webGpuInfo.reason,
+async function loadClassifier(): Promise<TokenClassifier> {
+  const loadStart = performance.now();
+  const { pipeline } = await import("@huggingface/transformers");
+  const webGpuInfo = getWebGpuInfo();
+
+  try {
+    const classifier = await pipeline("token-classification", NER_MODEL_ID, {
+      ...(webGpuInfo.available ? { device: "webgpu" } : {}),
     });
 
-    nerPipelinePromise = (async () => {
-      const loadStart = performance.now();
-      const { pipeline } = await import("@huggingface/transformers");
-      const classifier = await pipeline("token-classification", NER_MODEL_ID, {
-        device: "webgpu",
-      });
-      const loadMs = Math.round(performance.now() - loadStart);
-      nerPipelineReady = true;
+    const loadMs = Math.round(performance.now() - loadStart);
+    debugInfo("[NER] Pipeline ready", {
+      device: webGpuInfo.available ? "webgpu" : "cpu",
+      loadMs,
+      model: NER_MODEL_ID,
+    });
 
-      debugInfo("[NER] Pipeline ready", {
-        loadMs,
-        model: NER_MODEL_ID,
-      });
+    return classifier as TokenClassifier;
+  } catch (error) {
+    debugInfo("[NER] WebGPU pipeline failed; retrying CPU", {
+      error,
+      model: NER_MODEL_ID,
+    });
 
-      return classifier as TokenClassifier;
-    })();
+    const classifier = await pipeline("token-classification", NER_MODEL_ID, {});
+    const loadMs = Math.round(performance.now() - loadStart);
+
+    debugInfo("[NER] CPU pipeline ready", {
+      loadMs,
+      model: NER_MODEL_ID,
+    });
+
+    return classifier as TokenClassifier;
+  }
+}
+
+async function getNerPipeline(): Promise<TokenClassifier> {
+  if (!nerPipelinePromise) {
+    debugInfo("[NER] Initializing pipeline", {
+      model: NER_MODEL_ID,
+      webGpuInfo: getWebGpuInfo(),
+    });
+
+    nerPipelinePromise = loadClassifier()
+      .then((classifier) => {
+        nerPipelineReady = true;
+        return classifier;
+      })
+      .catch((error) => {
+        nerPipelinePromise = null;
+        throw error;
+      });
   } else if (nerPipelineReady) {
     debugLog("[NER] Reusing cached pipeline");
   }
@@ -156,7 +179,11 @@ async function getNerPipeline(): Promise<TokenClassifier> {
   return nerPipelinePromise;
 }
 
-export async function detectNamedEntities(text: string): Promise<NerEntity[]> {
+export async function warmupNerPipeline(): Promise<void> {
+  await getNerPipeline();
+}
+
+export async function detectNamedEntities(text: string): Promise<NerSpan[]> {
   if (!text.trim()) {
     debugLog("[NER] Skipping inference for empty paragraph");
     return [];
@@ -219,10 +246,11 @@ export async function detectNamedEntities(text: string): Promise<NerEntity[]> {
 
       if (hasOffsets) {
         return {
+          confidence: item.score,
           end: item.end as number,
           start: item.start as number,
           type: item.type as NerEntityType,
-        };
+        } satisfies NerSpan;
       }
 
       const derived = findTokenOffsets(text, item.word, searchCursor);
@@ -231,15 +259,16 @@ export async function detectNamedEntities(text: string): Promise<NerEntity[]> {
       derivedOffsetCount += 1;
       searchCursor = derived.end;
       return {
+        confidence: item.score,
         end: derived.end,
         start: derived.start,
         type: item.type as NerEntityType,
-      };
+      } satisfies NerSpan;
     })
-    .filter((item): item is NerEntity => item !== null)
+    .filter((item): item is NerSpan => item !== null)
     .sort((a, b) => a.start - b.start);
 
-  const merged: NerEntity[] = [];
+  const merged: NerSpan[] = [];
   for (const entity of mappedWithOffsets) {
     const previous = merged[merged.length - 1];
 
@@ -251,6 +280,10 @@ export async function detectNamedEntities(text: string): Promise<NerEntity[]> {
     const overlapsOrTouches = entity.start <= previous.end + 1;
     if (overlapsOrTouches && entity.type === previous.type) {
       previous.end = Math.max(previous.end, entity.end);
+      previous.confidence = Math.max(
+        previous.confidence ?? 0,
+        entity.confidence ?? 0,
+      );
       continue;
     }
 
@@ -264,39 +297,6 @@ export async function detectNamedEntities(text: string): Promise<NerEntity[]> {
     rawCount: result.length,
   });
 
-  if (result.length > 0) {
-    const sample = result.slice(0, 8).map((item) => {
-      const entity = item as RawEntity;
-      return {
-        end: entity.end,
-        entity_group: entity.entity_group,
-        start: entity.start,
-      };
-    });
-    debugLog("[NER] Raw entity sample", sample);
-  }
-
   debugLog("[NER] Raw label counts", labelCounts);
-
-  if (merged.length > 0) {
-    debugLog("[NER] Normalized entities", merged);
-    debugInfo(
-      "[NER] Normalized entity spans",
-      merged.map((entity, index) => ({
-        end: entity.end,
-        entityIndex: index,
-        spanText: text.slice(entity.start, entity.end),
-        start: entity.start,
-        type: entity.type,
-      })),
-    );
-  } else {
-    console.warn("[NER] No normalized entities from raw result", {
-      labelCounts,
-      note: "If labels are mostly O/undefined, the model is not finding entities for this input.",
-      typedRawCount: mappedRaw.length,
-    });
-  }
-
   return merged;
 }

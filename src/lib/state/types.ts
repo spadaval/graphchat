@@ -52,6 +52,9 @@ export interface UIPreferences {
   huggingfaceToken?: string;
   enableTokenProbabilities: boolean;
   serverModelId?: string;
+  nerAutoRunOnIdle: boolean;
+  nerAutoLinkStrictMatches: boolean;
+  nerPreloadModel: boolean;
 }
 
 // Document linking state

@@ -92,6 +92,14 @@ export function Editor({
   // Handle content changes
   const handleContentChange = () => {
     const myEditor = editor as unknown as MyEditor;
+    if (config.autoUpdateDocument && documentId) {
+      updateDocument(documentId, {
+        contentModel: myEditor.children as unknown[],
+        contentModelVersion: 1,
+      });
+      return;
+    }
+
     if (myEditor.api.markdown) {
       try {
         const start = performance.now();
@@ -106,17 +114,12 @@ export function Editor({
           });
         }
 
-        if (config.autoUpdateDocument && documentId) {
-          // Update the document directly
-          updateDocument(documentId, { content });
-        } else {
-          if (onChange) {
-            onChange(content);
-          }
-          // For observables, update directly
-          if (typeof value !== "string") {
-            (value as Observable<string>).set(content);
-          }
+        if (onChange) {
+          onChange(content);
+        }
+        // For observables, update directly
+        if (typeof value !== "string") {
+          (value as Observable<string>).set(content);
         }
       } catch (error) {
         console.error("Error serializing markdown:", error);

@@ -25,6 +25,7 @@ import {
   ContextMenuTrigger,
 } from "~/components/ui/context-menu";
 import { Input } from "~/components/ui/input";
+import { serializeModelToPreviewText } from "~/lib/document-content";
 import type { Document, Folder } from "~/lib/state/documents";
 import {
   createDocument,
@@ -98,7 +99,9 @@ export function DocumentList({
     (doc) =>
       doc.worldId === currentWorldId &&
       (doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (doc.content || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        serializeModelToPreviewText(doc.contentModel || [])
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
         doc.tags.some((tag) =>
           tag.toLowerCase().includes(searchTerm.toLowerCase()),
         )),
@@ -451,11 +454,12 @@ function DocumentListItem({
               </span>
             )}
           </div>
-          {!isRenaming && document.content && (
-            <p className="text-xs text-zinc-500 line-clamp-1 ml-6">
-              {document.content}
-            </p>
-          )}
+          {!isRenaming &&
+            serializeModelToPreviewText(document.contentModel || []).trim() && (
+              <p className="text-xs text-zinc-500 line-clamp-1 ml-6">
+                {serializeModelToPreviewText(document.contentModel || [])}
+              </p>
+            )}
           {!isRenaming && (
             <div className="flex items-center justify-between ml-6 mt-1">
               <span className="text-[10px] text-zinc-600 font-mono">

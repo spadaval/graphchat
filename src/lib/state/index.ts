@@ -45,6 +45,7 @@ export {
   createDocument,
   createDocumentForTemplate,
   deleteDocument,
+  documentPersistence$,
   documentStore$,
   getAllDocuments,
   getDocumentByCanonicalName,
@@ -56,7 +57,7 @@ export {
   resolveDocumentIdByCanonicalName,
   setCurrentDocument,
   updateDocument,
-  updateDocumentContent,
+  updateDocumentContentModel,
 } from "./documents";
 // Hooks exports
 export {
@@ -123,6 +124,9 @@ export {
   setAPIBackendEnabled,
   setDebugMode,
   setMessageDocumentLinks,
+  setNerAutoLinkStrictMatches,
+  setNerAutoRunOnIdle,
+  setNerPreloadModel,
   uiPreferences$,
 } from "./ui";
 // World exports

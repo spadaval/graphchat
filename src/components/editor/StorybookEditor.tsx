@@ -13,6 +13,7 @@ import {
 import { PlateDocumentEditor } from "~/components/editor/PlateDocumentEditor";
 import {
   DocumentIcon,
+  documentPersistence$,
   documentStore$,
   getDocumentTypeDisplayId,
 } from "~/lib/state/documents";
@@ -47,6 +48,23 @@ export function StorybookEditor({
   onCloseDocument,
   topbarRight,
 }: StorybookEditorProps) {
+  const { isMigrating, isReady } = use$(documentPersistence$);
+  const documents = use$(documentStore$.documents);
+  const activeDocument = activeDocumentId ? documents[activeDocumentId] : null;
+
+  if (!isReady || isMigrating) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-zinc-950 text-zinc-400">
+        <div className="text-center">
+          <p className="text-sm font-medium">Loading documents…</p>
+          <p className="text-xs text-zinc-500 mt-2">
+            Migrating legacy markdown to editor model
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (openDocumentIds.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center bg-zinc-950 text-zinc-500">
@@ -78,12 +96,25 @@ export function StorybookEditor({
 
       {/* Editor Area */}
       <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden">
-        {activeDocumentId && (
-          <PlateDocumentEditor
-            key={activeDocumentId} // Force re-mount on doc switch to ensure clean state if needed, though observable should handle it.
-            document$={documentStore$.documents[activeDocumentId]}
-          />
-        )}
+        {activeDocumentId &&
+          (activeDocument?.migrationError ? (
+            <div className="flex-1 flex items-center justify-center bg-zinc-950 text-zinc-400">
+              <div className="text-center max-w-md px-6">
+                <p className="text-sm font-semibold text-zinc-200">
+                  Document migration failed
+                </p>
+                <p className="text-xs text-zinc-500 mt-2">
+                  This legacy markdown document could not be converted to the
+                  editor model during startup migration.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <PlateDocumentEditor
+              key={activeDocumentId} // Force re-mount on doc switch to ensure clean state if needed, though observable should handle it.
+              document$={documentStore$.documents[activeDocumentId]}
+            />
+          ))}
       </div>
     </div>
   );

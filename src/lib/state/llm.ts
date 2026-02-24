@@ -5,8 +5,8 @@ import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { postV1ChatCompletions } from "../../llamacpp-client";
 import { client } from "../../llamacpp-client/client.gen";
 import { debugInfo, debugLog } from "../debug";
+import { serializeModelToReadableMarkdown } from "../document-content";
 import { type AppError, type AppResult, createLLMError } from "../errors";
-import { blocks$ } from "./block";
 import { getDocumentById } from "./documents";
 import { getRelatedDocuments } from "./graph";
 import type {
@@ -327,12 +327,7 @@ export function formatDocumentsForContext(documentIds: DocumentId[]): string {
 
   const formattedDocs = documents
     .map((doc) => {
-      const content =
-        doc.editorVersion === 2
-          ? doc.content || ""
-          : doc.blocks
-              .map((blockId) => blocks$.get()[blockId]?.text || "")
-              .join("\n\n");
+      const content = serializeModelToReadableMarkdown(doc.contentModel || []);
       return `### ${doc.title}\n${content}`;
     })
     .join("\n\n");

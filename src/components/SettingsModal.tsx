@@ -34,6 +34,9 @@ import {
   setEnableTokenProbabilities,
   setHuggingfaceToken,
   setInlineCompletionEnabled,
+  setNerAutoLinkStrictMatches,
+  setNerAutoRunOnIdle,
+  setNerPreloadModel,
   setTokenizerModelId,
   uiPreferences$,
 } from "~/lib/state/ui";
@@ -138,6 +141,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     enableTokenProbabilities,
     huggingfaceToken,
     inlineCompletion,
+    nerAutoLinkStrictMatches,
+    nerAutoRunOnIdle,
+    nerPreloadModel,
     tokenizerModelId,
   } = use$(uiPreferences$);
   const [activeSection, setActiveSection] =
@@ -278,6 +284,24 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   onChange={setInlineCompletionEnabled}
                   title="Inline completion"
                   description="Show ghost-text suggestions while you type."
+                />
+                <ToggleRow
+                  checked={nerAutoRunOnIdle}
+                  onChange={setNerAutoRunOnIdle}
+                  title="NER auto-run on idle"
+                  description="Auto-run NER on edited paragraphs after typing pauses."
+                />
+                <ToggleRow
+                  checked={nerAutoLinkStrictMatches}
+                  onChange={setNerAutoLinkStrictMatches}
+                  title="NER strict auto-link"
+                  description="Convert strict entity matches to canonical document links."
+                />
+                <ToggleRow
+                  checked={nerPreloadModel}
+                  onChange={setNerPreloadModel}
+                  title="Preload NER model"
+                  description="Warm up the browser NER model when the editor is idle."
                 />
 
                 <div className="rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
