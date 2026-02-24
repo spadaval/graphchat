@@ -23,6 +23,7 @@ import type {
 } from "platejs";
 import type { PlateEditor } from "platejs/react";
 import type { NerEntityType } from "~/lib/ner";
+import type { PLACEHOLDER_TYPE } from "./plugins/placeholder-kit";
 
 export interface MyBlockElement extends TElement, TListProps {
   id?: string;
@@ -129,6 +130,11 @@ export interface MyAISegmentElement extends MyTextBlockElement {
   type: "ai_segment";
 }
 
+export interface MyPlaceholderElement extends TElement {
+  children: PlainText[];
+  type: typeof PLACEHOLDER_TYPE;
+}
+
 export interface MyTableCellElement extends TElement {
   children: MyNestableBlock[];
   type: typeof KEYS.td;
@@ -167,6 +173,7 @@ export type MyValue = (
   | MyImageElement
   | MyMediaEmbedElement
   | MyAISegmentElement
+  | MyPlaceholderElement
   | MyParagraphElement
   | MyTableElement
   | MyToggleElement

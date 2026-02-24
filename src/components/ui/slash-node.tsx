@@ -20,12 +20,13 @@ import {
   Square,
   Table,
   TableOfContentsIcon,
+  TextCursorInput,
 } from "lucide-react";
 import { KEYS, type TComboboxInputElement } from "platejs";
 import type { PlateEditor, PlateElementProps } from "platejs/react";
 import { PlateElement } from "platejs/react";
 import type * as React from "react";
-
+import { PLACEHOLDER_TYPE } from "~/components/editor/plugins/placeholder-kit";
 import {
   insertBlock,
   insertInlineElement,
@@ -142,6 +143,12 @@ const groups: Group[] = [
         keywords: ["note"],
         label: "Callout",
         value: KEYS.callout,
+      },
+      {
+        icon: <TextCursorInput />,
+        keywords: ["template", "stub", "token"],
+        label: "Placeholder",
+        value: PLACEHOLDER_TYPE,
       },
     ].map((item) => ({
       ...item,

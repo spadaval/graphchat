@@ -3,6 +3,7 @@ import { KEYS, NodeApi } from "platejs";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { AI_SEGMENT_TYPE } from "./ai-segment-kit";
+import { PLACEHOLDER_TYPE } from "./placeholder-kit";
 
 interface AISegmentPayload {
   aiSegmentId?: string;
@@ -10,7 +11,12 @@ interface AISegmentPayload {
   text: string;
 }
 
+interface PlaceholderPayload {
+  text: string;
+}
+
 const AI_SEGMENT_PREFIX = "<!--wc:ai-segment ";
+const PLACEHOLDER_PREFIX = "<!--wc:placeholder ";
 const AI_SEGMENT_SUFFIX = "-->";
 
 const encodeBase64 = (value: string) => {
@@ -46,6 +52,8 @@ const decodeBase64 = (value: string) => {
 
 const serializeAISegmentPayload = (payload: AISegmentPayload) =>
   `${AI_SEGMENT_PREFIX}${JSON.stringify(payload)}${AI_SEGMENT_SUFFIX}`;
+const serializePlaceholderPayload = (payload: PlaceholderPayload) =>
+  `${PLACEHOLDER_PREFIX}${JSON.stringify(payload)}${AI_SEGMENT_SUFFIX}`;
 
 const parseAISegmentPayload = (value?: string | null) => {
   if (
@@ -74,6 +82,30 @@ const parseAISegmentPayload = (value?: string | null) => {
   }
 };
 
+const parsePlaceholderPayload = (value?: string | null) => {
+  if (
+    !value ||
+    !value.startsWith(PLACEHOLDER_PREFIX) ||
+    !value.endsWith(AI_SEGMENT_SUFFIX)
+  ) {
+    return null;
+  }
+
+  const json = value.slice(
+    PLACEHOLDER_PREFIX.length,
+    -AI_SEGMENT_SUFFIX.length,
+  );
+  try {
+    const parsed = JSON.parse(json) as Partial<PlaceholderPayload>;
+    if (typeof parsed.text !== "string") return null;
+    return {
+      text: decodeBase64(parsed.text),
+    } satisfies PlaceholderPayload;
+  } catch (_error) {
+    return null;
+  }
+};
+
 export const MarkdownKit = [
   MarkdownPlugin.configure({
     options: {
@@ -97,19 +129,38 @@ export const MarkdownKit = [
             };
           },
         },
+        placeholder: {
+          serialize: (node) => ({
+            type: "html",
+            value: serializePlaceholderPayload({
+              text: encodeBase64(NodeApi.string(node)),
+            }),
+          }),
+        },
         html: {
           deserialize: (mdastNode, _deco, _options) => {
             const value = (mdastNode as { value?: string }).value;
-            const payload = parseAISegmentPayload(value);
-            if (!payload) {
-              return { text: (value || "").replaceAll("<br />", "\n") };
+            const aiSegmentPayload = parseAISegmentPayload(value);
+            if (aiSegmentPayload) {
+              return {
+                aiSegmentId: aiSegmentPayload.aiSegmentId,
+                children: [{ text: aiSegmentPayload.text }],
+                type: AI_SEGMENT_TYPE,
+              };
             }
 
-            return {
-              aiSegmentId: payload.aiSegmentId,
-              children: [{ text: payload.text }],
-              type: AI_SEGMENT_TYPE,
-            };
+            const placeholderPayload = parsePlaceholderPayload(value);
+            if (placeholderPayload) {
+              return {
+                children: [{ text: placeholderPayload.text }],
+                type: PLACEHOLDER_TYPE,
+              };
+            }
+
+            if (!value) {
+              return { text: (value || "").replaceAll("<br />", "\n") };
+            }
+            return { text: value.replaceAll("<br />", "\n") };
           },
         },
       },

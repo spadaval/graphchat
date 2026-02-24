@@ -11,6 +11,7 @@ import { DndKit } from "./dnd-kit";
 import { MarkdownKit } from "./markdown-kit";
 import { MentionKit } from "./mention-kit";
 import { NerKit } from "./ner-kit";
+import { PlaceholderKit } from "./placeholder-kit";
 import { SlashKit } from "./slash-kit";
 
 // Unified editor kit that includes all plugins needed for both chat and document editors
@@ -30,6 +31,9 @@ const UnifiedPlugins = [
 
   // Mention support for document referencing
   ...MentionKit,
+
+  // Placeholder blocks
+  ...PlaceholderKit,
 
   // Browser-side NER marks
   ...NerKit,
