@@ -1,130 +1,102 @@
-# Document Overhaul: Simplified Product and Technical Plan
+# Document Overhaul
 
-## 1. Objective
+## Objective
 
 Rebuild document handling around three core primitives:
 
-- Universal markdown-style document references
-- Frontmatter for structured metadata
-- Placeholder blocks for guided authoring
+1. **Universal markdown-style references** - Canonical-name-based internal linking
+2. **Frontmatter metadata** - Structured, typed metadata at document top
+3. **Placeholder blocks** - Guided authoring prompts
 
-At the same time, remove explicit document structure (folders/tree) and replace it with:
+Replace folder-based organization with:
 
-- Tags
-- Implicit collections derived from document type and template
+- **Tags** - Freeform labels for flexible categorization
+- **Implicit collections** - Auto-generated views by type, template, or tag
 
-This plan assumes pre-production data and allows direct model replacement.
+## Rationale
 
-## Motives and High-Level Objectives
+| Problem | Solution |
+|---------|----------|
+| Folder hierarchy forces single classification | Tags enable many-to-many organization |
+| Metadata is inconsistent in free-form content | Frontmatter provides typed, validated fields |
+| Cross-document references are fragile | Universal markdown links resolved to canonical document names |
+| Template guidance is weak | Placeholder blocks as first-class authoring prompts |
 
-### Motives
+## Scope and Phasing
 
-- Current document management creates friction during writing and discovery.
-- Folder-based structure forces a single hierarchy, while worldbuilding data is naturally many-to-many.
-- Important metadata is hard to model and keep consistent in free-form-only content.
-- Cross-document references are not yet universal or robust enough for large worlds.
-- Template guidance is weak without first-class placeholder authoring flows.
+This document describes the end-state v1 model, implemented in phases.
 
-### High-level objectives
+- **Phase A (current planning scope):** model/registry foundations, references, typed relations, indexes/selectors, tag normalization contract.
+- **Phases B-D (later):** frontmatter UI depth, placeholder authoring UX, folder removal + collection-first navigation, final migration hardening.
 
-1. Reduce creation and management friction for worldbuilders.
-2. Shift from rigid structure to flexible organization via tags and implicit collections.
-3. Make references and relationships first-class so world entities are deeply connected.
-4. Introduce structured metadata through frontmatter without sacrificing markdown flexibility.
-5. Provide guided authoring with placeholder blocks to improve template usability and completion rates.
-6. Align editor, state, and navigation architecture around one coherent document model.
+Note: folder removal is not a Phase A deliverable.
 
-## 2. Product Direction
+## Document Model
 
-### What changes
+### Document fields
 
-1. No folder/document hierarchy.
-2. Documents are organized by:
-   - `baseTypeId`
-   - `templateId`
-   - tags
-3. Navigation is collection-first:
-   - “People”, “Places”, “Organizations”, etc.
-   - Dynamic filtered views (for example: `tag:empire`, `template:religion`).
+```
+id, canonicalName, title, baseTypeId, templateId, tags[], frontmatter, content, worldId, createdAt, updatedAt
+```
 
-### Why this is better
+Field constraints:
+- `id`: name-based canonical identifier. Defaults to `canonicalName` and is used in exports/imports.
+- `canonicalName`: required slug derived from title canonicalization, unique per world.
+- `baseTypeId`: required, one of the base types below.
+- `templateId`: optional, but when present it must belong to the selected `baseTypeId`.
+- `tags[]`: normalized canonical slugs (lowercase, trimmed, spaces/underscores converted to `-`).
+- `createdAt`, `updatedAt`: ISO-8601 UTC timestamps.
 
-- Less structural overhead for users.
-- Better fit for worldbuilding workflows where entities belong to multiple contexts.
-- Stronger discovery via tags + typed relationships.
+Canonicalization rules for `canonicalName`:
+- lowercase
+- trim surrounding whitespace
+- replace spaces/underscores with `-`
+- remove punctuation except `-`
+- collapse repeated `-`
 
-## 3. v1 Scope (Must Ship Together)
-
-v1 includes product features and code migration in the same release scope.
-
-1. New document reference syntax (markdown-link based).
-2. Frontmatter model and rendering.
-3. Placeholder block type.
-4. Type/template system with curated built-ins.
-5. Typed relation model and relation UI.
-6. Folder removal and replacement with tag/collection navigation.
-7. Code migration across state, editor, sidebar/navigation, and graph/relations.
-
-## 4. Document Model (v1)
-
-Each document uses:
-
-- `id`
-- `title`
-- `baseTypeId`
-- `templateId`
-- `tags: string[]`
-- `frontmatter: Record<string, unknown>`
-- `content` (markdown body)
-- `worldId`
-- `createdAt`
-- `updatedAt`
+Rename behavior:
+- Renaming a title recomputes `canonicalName`.
+- Internal markdown links targeting the previous canonical name are rewritten.
+- Previous canonical names are retained as aliases for import/backward compatibility.
 
 ### Base types
 
-- `general`
-- `person`
-- `place`
-- `organization`
-- `culture`
-- `magic_system`
-- `technology`
-- `natural_law`
-- `species`
+`general` | `person` | `place` | `organization` | `culture` | `magic_system` | `technology` | `natural_law` | `species`
 
-### Required specialization templates
+### Templates (specializations)
 
-- `organization`: religion, guild, corporation, military_order, government_agency, rebel_faction
-- `place`: city, nation_state, region, planet, station_ship, landmark
-- `person`: ruler, hero, antagonist, deity, historical_figure
-- `culture`: religion_tradition_set, ethnic_culture, diaspora_culture
-- `magic_system`: hard_rule, soft_mythic, ritual, artifact_driven
-- `technology`: transport, weapon_system, communication, biotech, ai_synthetic
-- `natural_law`: physics_variant, metaphysical_rule, cosmological_constraint, afterlife_rule
-- `species`: biological, synthetic, uplifted, hybrid_lineage
+| Base Type | Templates |
+|-----------|-----------|
+| organization | religion, guild, corporation, military_order, government_agency, rebel_faction |
+| place | city, nation_state, region, planet, station_ship, landmark |
+| person | ruler, hero, antagonist, deity, historical_figure |
+| culture | religion_tradition_set, ethnic_culture, diaspora_culture |
+| magic_system | hard_rule, soft_mythic, ritual, artifact_driven |
+| technology | transport, weapon_system, communication, biotech, ai_synthetic |
+| natural_law | physics_variant, metaphysical_rule, cosmological_constraint, afterlife_rule |
+| species | biological, synthetic, uplifted, hybrid_lineage |
 
-## 5. Reference, Frontmatter, and Placeholder Features
+## Core Features
 
-## 5.1 Universal document references
+### Document references
 
-Use markdown-link-compatible syntax as canonical references:
+**Syntax:** `[Display Label](canonical-name)`
 
-- `[[doc:doc-123|The Iron Covenant]]` (internal canonical form)
-- Rendered/editor-friendly as markdown links where possible.
+Examples:
+- `[Ardelia](ardelia)`
+- `[Iron Covenant](iron-covenant)`
 
 Requirements:
+- Markdown-native syntax only for internal links (no custom `[[...]]` grammar)
+- Name-based targeting via canonical document names
+- Label text is user-controlled markdown link text
+- Click-through navigation
+- Parser/serializer resolves links with no base URL to internal documents
+- On title rename (canonical name change), internal links are rewritten to new canonical target
 
-- Stable ID-based targeting.
-- Human-readable label support.
-- Automatic relabel when title changes.
-- Click-through navigation.
-- Parser support in editor and markdown serialization.
+### Frontmatter
 
-## 5.2 Frontmatter
-
-Frontmatter appears at document top and stores structured metadata for the current template.
-
-Example:
+**Example:**
 
 ```yaml
 ---
@@ -134,184 +106,154 @@ tags: [empire, nobility]
 traits:
   height: "193 cm"
   eyeColor: "Amber"
-primaryAffiliation: "doc:org-empire-court"
+primaryAffiliationId: "empire-court"
 ---
 ```
 
 Requirements:
+- Schema defined by template
+- Form-based and raw YAML editing
+- Custom content blocks for rendering (e.g., stat cards)
+- Inline validation errors
+- Reference-valued fields in frontmatter store canonical names unless a field explicitly opts into markdown link text.
 
-- Typed frontmatter schema from template definitions.
-- Form-based editing + raw YAML editing.
-- Custom content blocks for frontmatter rendering (for example: stat card block).
-- Validation with inline errors.
+### Placeholder blocks
 
-## 5.3 Placeholder blocks
+Gray, visually distinct blocks for guided writing:
 
-Placeholder blocks are gray, visually distinct blocks used as guided writing prompts.
+- Dedicated block type (not styled paragraphs)
+- One-click conversion to normal paragraph
+- Template-driven insertion
+- Optional bulk replacement workflow
 
-Requirements:
+### Tags
 
-- Dedicated block type, not plain paragraph styling.
-- One-click “convert to paragraph” and normal editing behavior.
-- Template-driven insertion in new documents.
-- Optional bulk replace workflow for unresolved placeholders.
+- Freeform input, normalized on write to canonical slug
+- Autocomplete from existing canonical tags
+- Multi-tag filtering (AND logic; OR later)
 
-## 6. Tags and Implicit Collections
+### Implicit collections
 
-## 6.1 Tags
+Auto-generated, no manual management:
 
-- Freeform tags with normalization rules.
-- Tag autocomplete from existing tags.
-- Multi-tag filtering (`AND` first; optional `OR` later).
+- By base type: all `person` documents
+- By template: all `religion` documents  
+- By tag: all `tag:desert` documents
+- By relation: connected documents for a selected document
 
-## 6.2 Implicit collections
+No folder CRUD in v1 (deferred until Phase C).
 
-Collections are computed, not manually managed:
+### Relations
 
-- By base type: all `person` docs
-- By template: all `religion` docs
-- By tag: all `tag:desert`
-- By relation adjacency: for a selected doc, show connected docs by relation type
+Relation identifiers and allowed endpoints use canonical base type IDs only.
 
-No folder CRUD in v1.
+| Relation | From | To | Symmetric |
+|----------|------|-----|-----------|
+| belongs_to | person | organization | no |
+| member_of | person/species | organization | no |
+| affiliated_with | organization | organization | yes |
+| governs | organization/person | place | no |
+| located_in | place/organization | place | no |
+| part_of | place/organization/species | place/organization/species | no |
+| originated_in | culture/species/technology | place/culture | no |
+| practices | person/organization/culture | magic_system | no |
+| uses | person/organization/species | technology/magic_system | no |
+| follows_law | * | natural_law | no |
+| constrained_by | * | natural_law | no |
+| conflicts_with | person/organization/species/culture | person/organization/species/culture | yes |
+| allied_with | organization/species/culture | organization/species/culture | yes |
 
-## 7. Linking and Relations
+`*` means any base type.
 
-### Relation catalog (v1)
+**Relation metadata:** `status`, `startDate`, `endDate`, `notes`, `strength`, `provenance`, `confidence`
 
-- `belongs_to` (person -> organization)
-- `member_of` (person/species -> organization)
-- `affiliated_with` (organization <-> organization)
-- `governs` (organization/person -> place)
-- `located_in` (place/organization -> place)
-- `part_of` (place/organization/species -> place/organization/species)
-- `originated_in` (culture/species/technology -> place or culture)
-- `practices` (person/organization/culture -> magic_system/religion)
-- `uses` (person/organization/species -> technology/magic_system)
-- `follows_law` (any -> natural_law)
-- `constrained_by` (any -> natural_law)
-- `conflicts_with` (person/org/species/culture <-> person/org/species/culture)
-- `allied_with` (org/species/culture <-> org/species/culture)
+**Requirements:**
+- Typed domain/range validation
+- Canonical record storage supports both directed and symmetric relations
+- Inline creation and relations panel flows both create canonical records
 
-### General requirements
+## Technical Implementation
 
-- Typed domain/range validation.
-- Directed and symmetric support.
-- Relation metadata (`status`, `startDate`, `endDate`, `notes`, `strength`, `provenance`, `confidence`).
-- Inline reference creation flow and relations panel flow both create canonical relation records.
+### State changes
 
-## 8. Technical Implementation Plan (v1)
+- Replace folder-centric state with collection selectors
+- Add registries: `DocumentTypeDefinitionV2`, `TemplateDefinition`, `RelationTypeDefinition`
+- Extend document record with `baseTypeId`, `templateId`, `tags`, `frontmatter`
+- Replace edge list with typed relation records
 
-## 8.1 State and type changes
+### Editor changes
 
-- Replace folder-centric state with collection-centric selectors.
-- Introduce registries:
-  - `DocumentTypeDefinitionV2`
-  - `TemplateDefinition`
-  - `RelationTypeDefinition`
-- Extend document record with `baseTypeId`, `templateId`, `tags`, `frontmatter`.
-- Replace simple edge list with relation records using stable IDs and metadata.
+- Parser/serializer for markdown internal links (`[label](canonical-name)`)
+- Frontmatter parsing and editing pipeline
+- Placeholder block node with UI treatment
+- Markdown round-trip consistency
 
-## 8.2 Editor changes
+### Navigation changes
 
-- Add parser/serializer support for canonical doc references.
-- Add frontmatter parsing and editing pipeline.
-- Add dedicated placeholder block node with UI treatment.
-- Ensure markdown round-trip consistency.
+- Remove folder tree and actions (Phase C)
+- Add collection sidebar (base type sections, template filters, tag filters)
+- Add relation panel on document view
 
-## 8.3 Navigation/UI changes
+### Search and indexing
 
-- Remove folder tree and all folder actions.
-- Add collection sidebar:
-  - base type sections
-  - template filters
-  - tag filters
-- Add relation panel on document view.
+In-memory indexes for:
+- Documents by base type, template, tag
+- Outgoing/incoming relations by document
+- Documents referenced in markdown links
 
-## 8.4 Search and indexing
+### AI context integration
 
-Add in-memory indexes for:
+Prompt context includes: frontmatter summary, relation neighborhood, resolved references, placeholder state
 
-- docs by base type
-- docs by template
-- docs by tag
-- outgoing/incoming relations by doc
-- docs referenced in markdown links
+## Migration Checklist
 
-## 8.5 AI context integration
+1. Replace `document.type` with `baseTypeId/templateId`
+2. Update document creation for template selection
+3. Implement canonical name generation and alias handling
+4. Implement markdown internal-link resolution (`[label](canonical-name)`)
+5. Replace edge model with typed relation records
+6. Add indexes/selectors for type/template/tag/relation/reference
+7. Define and enforce tag normalization contract
+8. Implement frontmatter parse/render/validation
+9. Implement placeholder block node and transforms
+10. Update sidebar to collection-based navigation
+11. Remove folder state and UI paths
+12. Update tests and fixtures
 
-Prompt context builder should include:
+## Testing
 
-- frontmatter summary
-- selected relation neighborhood
-- resolved internal references
-- placeholder state (optional prompt hinting)
+### Phase A critical scenarios
 
-## 9. Code Migration Work (In Scope for v1)
+1. Create `religion` template -> verify base type `organization`
+2. Create markdown internal link `[Ardelia](ardelia)` -> verify navigation resolution
+3. Create relation chain: person -> organization -> place
+4. Reject invalid relation: `natural_law belongs_to person`
+5. Filter by base type, template, tag, relation
+6. Rename title -> verify canonical name updates and existing internal links are rewritten/resolved via alias
+7. Legacy `document.type` migrates without data loss
 
-This is required work, not deferred work.
+### Full rollout acceptance criteria (Phases A-D)
 
-1. Remove folder state and folder UI paths.
-2. Replace `document.type` usage with `baseTypeId/templateId`.
-3. Update document creation flows to require template selection.
-4. Implement frontmatter parse/render + validation pipeline.
-5. Implement placeholder block node and transforms.
-6. Implement universal reference syntax support in editor and utilities.
-7. Replace `graphStore$` edge model with typed relation records.
-8. Update search/filter logic to tags + implicit collections.
-9. Update sidebar and related components to collection-based navigation.
-10. Update tests and fixtures for new document shape and relation model.
+- [ ] Folder-based organization removed
+- [ ] Tags and collections are primary organization
+- [ ] Frontmatter validated and renderable
+- [ ] Placeholders are first-class blocks
+- [ ] Universal references round-trip safely
+- [ ] Typed relations are canonical
+- [ ] Code migration complete
 
-## 10. Test Scenarios and Acceptance Criteria
+## Rollout
 
-## 10.1 Critical test scenarios
+| Phase | Focus |
+|-------|-------|
+| A: Foundation | Registries, document model, relation model, reference parser, indexes/selectors, tag normalization |
+| B: Authoring | Frontmatter UI, placeholder blocks, template-driven creation |
+| C: Navigation | Folder removal, collection navigation, relations panel |
+| D: Hardening | Migration completion, tests, performance, polish |
 
-1. Create a `religion` template document and verify base type `organization`.
-2. Create frontmatter through form UI and verify markdown/frontmatter round-trip.
-3. Insert placeholder blocks from template and convert them to normal paragraphs.
-4. Create internal references and verify stable ID navigation and label rendering.
-5. Create relation chain: person `belongs_to` organization `located_in` nation.
-6. Reject invalid relation: `natural_law belongs_to person`.
-7. Filter documents by base type, template, tag, and relation adjacency.
-8. Verify no folder actions remain in UI and all docs are discoverable via collections.
+## Assumptions
 
-## 10.2 v1 acceptance criteria
-
-- Folder-based organization is fully removed.
-- Tags and implicit collections are the primary organization model.
-- Frontmatter is supported, validated, and renderable with custom blocks.
-- Placeholder blocks are first-class and template-integrated.
-- Universal document references are stable and round-trip safely.
-- Typed relations are canonical for semantic linking.
-- Code migration is complete across state, editor, and navigation.
-
-## 11. Rollout Phases (Simplified)
-
-### Phase A: Foundation
-
-- Registries, document model updates, relation model updates.
-- Canonical reference syntax parser/serializer.
-
-### Phase B: Authoring
-
-- Frontmatter UI + validation.
-- Placeholder block implementation.
-- Type/template-driven creation flow.
-
-### Phase C: Navigation and linking
-
-- Folder removal.
-- Tag and implicit collection navigation.
-- Relations panel and graph/list updates.
-
-### Phase D: Hardening
-
-- End-to-end migration of code paths.
-- Test stabilization, performance checks, UX polish.
-
-## 12. Defaults and Assumptions
-
-- Built-in type/template catalog only for v1.
-- Local-first persistence remains acceptable for v1.
-- AI relation suggestions remain optional and non-blocking.
-- Markdown remains canonical narrative body with frontmatter + structured relation layer.
+- Built-in type/template catalog only (no custom definitions in v1)
+- Local-first persistence acceptable
+- AI relation suggestions optional and non-blocking
+- Markdown remains canonical for document content and frontmatter; relation records persist in the structured graph store

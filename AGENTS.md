@@ -9,19 +9,15 @@ Use bun for all commands.
 - **Format**: `bun run format` | - **Lint**: `bun run lint --fix` (run after all changes)
 
 ## Architecture
-- **State**: `@legendapp/state` for persistent/shared state, `useState` only for ephemeral UI state
-- **LLM Integration**: SSE streaming, configurable model parameters, real-time slots monitoring
-- **Error Handling**: `neverthrow` for functional errors, try/catch for async operations
+- **State**: `@legendapp/state` for persistent/shared state, `useState` only for ephemeral UI state (reference `docs/legend-state.md`)
+- **Error Handling**: `neverthrow` for functional errors, try/catch for async operations (reference `docs/neverthrow.md`)
+- **Tech Stack**: Tanstack Start (React + Vite), tailwindcss (styling), trpc (API replacement)
+- **Editor**: `platejs` - highly configurable and flexible react-based editor. Based on the `slate` editor. See `/src/components/editor` and `/src/docs/editor`.
 
-## Code Style
-- **Imports**: Path aliases `~/` for `./src/`, group by React/third-party/local, prefer named imports
-- **TypeScript**: Strict mode, interfaces for objects, types for unions, `const` assertions, `neverthrow` for errors
-- **Naming**: PascalCase (components/types), camelCase (functions/vars), kebab-case (component files)
-- **React**: Functional components, `@legendapp/state` with `use$()`, destructure props, minimize `useEffect`
-- **Error Handling**: try/catch for async, `console.error` logging, user-friendly fallbacks, `neverthrow` Results
-- **Styling**: Tailwind CSS, semantic colors, responsive with `lg:`, consistent spacing
-- **File Org**: `routes/` (pages), `components/` (UI), `lib/` (logic), `utils/` (helpers), `client/` (API)
-- **Formatting**: Space indentation, double quotes, semicolons, trailing commas
+## File Structure
+Top-level has app/config/docs files (package.json, vite.config.ts, tailwind.config.mjs, README.md, AGENTS.md) plus generated/output dirs like dist/, .output/.
+Core source code is under src/, organized by feature/type: routes/ (pages), components/ (UI), lib/ (logic), utils/ (helpers), plus hooks/, styles/, and llamacpp-client/.
+Static assets live in public/, and project docs/reference material are in docs/
 
 ## Rules
 Avoid using `any` type. Use `unknown` type instead. 
