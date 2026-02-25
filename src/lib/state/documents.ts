@@ -97,6 +97,7 @@ const nowIso = () => new Date().toISOString();
 
 const baseTypeIconMap: Record<BaseTypeId, DocumentIcon> = {
   general: DocumentIcon.FileText,
+  story: DocumentIcon.Book,
   person: DocumentIcon.User,
   place: DocumentIcon.Map,
   organization: DocumentIcon.Building,
@@ -125,6 +126,8 @@ const buildDefaultDocumentTypes = (): Record<
 
   baseTypes.person.template = "Name:\nAge:\nOccupation:\n\nDescription:";
   baseTypes.place.template = "Name:\nLocation:\n\nDescription:";
+  baseTypes.story.template =
+    "Title:\nPremise:\nPOV:\n\n## Scene 1\n\n## Scene 2";
 
   return baseTypes;
 };

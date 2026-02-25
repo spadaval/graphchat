@@ -7,10 +7,8 @@ import {
   FileText,
   Folder as FolderIcon,
   FolderOpen,
-  FolderPlus,
   Ghost,
   Map as MapIcon,
-  Plus,
   Scroll,
   Sparkles,
   User,
@@ -22,6 +20,9 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "~/components/ui/context-menu";
 import {
@@ -30,12 +31,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
 import { Input } from "~/components/ui/input";
 import {
   Tooltip,
@@ -128,111 +123,87 @@ export function StorybookSidebar({
   return (
     <div className="wc-panel flex h-full w-72 flex-col border-r border-white/10">
       <WorldSwitcher />
-      <div className="border-b border-white/10 px-4 pb-4 pt-0">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="wc-title text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">
-            Content
-          </h2>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 rounded-full border border-white/10 text-slate-400 hover:bg-slate-800/70 hover:text-slate-100"
-                  onClick={() => handleCreateFolder("root")}
-                >
-                  <FolderPlus className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent className="border border-slate-700 bg-slate-900 text-slate-100">
-                New Folder
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="wc-title flex w-full items-center justify-center gap-2 rounded-xl border border-amber-200/20 bg-gradient-to-r from-teal-500/80 to-cyan-500/65 p-2 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-950/45 transition hover:brightness-110"
-            >
-              <Plus className="size-4" />
-              New Document
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            className="w-56 border border-slate-600 bg-slate-900/95 text-slate-100 backdrop-blur"
-          >
-            {Object.values(documentTypes).map((type) => {
-              const IconComponent = iconMap[type.icon] || FileText;
-              return (
-                <DropdownMenuItem
-                  key={type.id}
-                  onClick={() => handleCreateDocument(type.id)}
-                  className="cursor-pointer rounded-md hover:bg-slate-700/80 focus:bg-slate-700/80 focus:text-slate-100"
-                >
-                  <span className="mr-2">
-                    <IconComponent className="size-4" />
-                  </span>
-                  {type.name}
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
-        <section
-          className="space-y-1 h-full"
-          aria-label="Document list"
-          onDragOver={(e) => {
-            e.preventDefault();
-            e.currentTarget.classList.add("bg-zinc-800/20");
-          }}
-          onDragLeave={(e) => {
-            e.currentTarget.classList.remove("bg-zinc-800/20");
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            e.currentTarget.classList.remove("bg-zinc-800/20");
-            const data = e.dataTransfer.getData(
-              "application/worldcrafter-item",
-            );
-            if (!data) return;
-            const { type, id } = JSON.parse(data);
-            if (type === "document") moveDocument(id as DocumentId, "root");
-            else if (type === "folder") moveFolder(id as FolderId, "root");
-          }}
-        >
-          {rootFolders.map((folder) => (
-            <FolderItem
-              key={folder.id}
-              folder={folder}
-              activeDocumentId={activeDocumentId}
-              onSelectDocument={onSelectDocument}
-              setChangeTypeDocId={setChangeTypeDocId}
-              onCreateDocument={handleCreateDocument}
-              onCreateFolder={handleCreateFolder}
-            />
-          ))}
-          {rootDocuments.map((doc) => (
-            <DocumentItem
-              key={doc.id}
-              document={doc}
-              isActive={doc.id === activeDocumentId}
-              onClick={() => onSelectDocument(doc.id)}
-              onChangeTypeRequest={() => setChangeTypeDocId(doc.id)}
-            />
-          ))}
-          {rootFolders.length === 0 && rootDocuments.length === 0 && (
-            <div className="mt-4 text-center text-sm text-slate-500">
-              No documents yet.
-            </div>
-          )}
-        </section>
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <section
+              className="h-full space-y-1 rounded-lg"
+              aria-label="Document list"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add("bg-zinc-800/20");
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.classList.remove("bg-zinc-800/20");
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove("bg-zinc-800/20");
+                const data = e.dataTransfer.getData(
+                  "application/worldcrafter-item",
+                );
+                if (!data) return;
+                const { type, id } = JSON.parse(data);
+                if (type === "document") moveDocument(id as DocumentId, "root");
+                else if (type === "folder") moveFolder(id as FolderId, "root");
+              }}
+            >
+              {rootFolders.map((folder) => (
+                <FolderItem
+                  key={folder.id}
+                  folder={folder}
+                  activeDocumentId={activeDocumentId}
+                  onSelectDocument={onSelectDocument}
+                  setChangeTypeDocId={setChangeTypeDocId}
+                  onCreateDocument={handleCreateDocument}
+                  onCreateFolder={handleCreateFolder}
+                />
+              ))}
+              {rootDocuments.map((doc) => (
+                <DocumentItem
+                  key={doc.id}
+                  document={doc}
+                  isActive={doc.id === activeDocumentId}
+                  onClick={() => onSelectDocument(doc.id)}
+                  onChangeTypeRequest={() => setChangeTypeDocId(doc.id)}
+                />
+              ))}
+              {rootFolders.length === 0 && rootDocuments.length === 0 && (
+                <div className="mt-4 text-center text-sm text-slate-500">
+                  Right-click to create a document or folder.
+                </div>
+              )}
+            </section>
+          </ContextMenuTrigger>
+          <ContextMenuContent className="w-56 border-slate-700 bg-slate-950 text-slate-100">
+            <ContextMenuSub>
+              <ContextMenuSubTrigger className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100">
+                New Document
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className="w-56 border-slate-700 bg-slate-950 text-slate-100">
+                {Object.values(documentTypes).map((type) => {
+                  const IconComponent = iconMap[type.icon] || FileText;
+                  return (
+                    <ContextMenuItem
+                      key={type.id}
+                      onClick={() => handleCreateDocument(type.id)}
+                      className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100"
+                    >
+                      <IconComponent className="mr-2 size-4 opacity-80" />
+                      {type.name}
+                    </ContextMenuItem>
+                  );
+                })}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+            <ContextMenuItem
+              onClick={() => handleCreateFolder("root")}
+              className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100"
+            >
+              New Folder
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
       </div>
 
       <Dialog
@@ -399,41 +370,29 @@ function FolderItem({
           >
             New Subfolder
           </ContextMenuItem>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <ContextMenuItem
-                onSelect={(e) => e.preventDefault()}
-                className="flex cursor-pointer items-center justify-between focus:bg-slate-800/75 focus:text-slate-100"
-              >
-                New Document
-                <ChevronRight className="size-3 ml-2 opacity-50" />
-              </ContextMenuItem>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              side="right"
-              align="start"
-              className="w-48 border border-slate-600 bg-slate-900/95 text-slate-100"
-            >
+          <ContextMenuSub>
+            <ContextMenuSubTrigger className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100">
+              New Document
+            </ContextMenuSubTrigger>
+            <ContextMenuSubContent className="w-48 border-slate-700 bg-slate-950 text-slate-100">
               {Object.values(documentTypes).map((type) => {
                 const IconComponent = iconMap[type.icon] || FileText;
                 return (
-                  <DropdownMenuItem
+                  <ContextMenuItem
                     key={type.id}
                     onClick={() => {
                       onCreateDocument(type.id, folder.id);
                       updateFolder(folder.id, { isOpen: true });
                     }}
-                    className="cursor-pointer rounded-md hover:bg-slate-700/80 focus:bg-slate-700/80 focus:text-slate-100"
+                    className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100"
                   >
-                    <span className="mr-2">
-                      <IconComponent className="size-4" />
-                    </span>
+                    <IconComponent className="mr-2 size-4 opacity-80" />
                     {type.name}
-                  </DropdownMenuItem>
+                  </ContextMenuItem>
                 );
               })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </ContextMenuSubContent>
+          </ContextMenuSub>
           <ContextMenuSeparator className="bg-slate-700/80" />
           <ContextMenuItem
             onClick={() => setIsRenaming(true)}

@@ -60,15 +60,15 @@ export function WorldSwitcher() {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="group flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-white/10 bg-slate-900/45 px-3 py-2 text-left transition hover:bg-slate-800/60"
+            className="group flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-white/10 bg-slate-900/45 px-3 py-1.5 text-left transition hover:bg-slate-800/60"
           >
-            <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-teal-400/30 to-amber-300/25">
-              <Globe className="size-3.5 text-teal-200" />
+            <div className="flex size-5 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-teal-400/20 to-amber-300/15">
+              <Globe className="size-3 text-teal-200/90" />
             </div>
-            <span className="wc-title flex-1 truncate text-base font-semibold text-slate-100">
+            <span className="flex-1 truncate text-sm font-medium text-slate-200">
               {currentWorld?.name || "Select World"}
             </span>
-            <ChevronDown className="size-4 text-slate-500 transition-colors group-hover:text-slate-300" />
+            <ChevronDown className="size-3.5 text-slate-500 transition-colors group-hover:text-slate-300" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

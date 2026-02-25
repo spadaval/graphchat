@@ -1,5 +1,6 @@
 export const BASE_TYPE_IDS = [
   "general",
+  "story",
   "person",
   "place",
   "organization",
@@ -32,6 +33,11 @@ export const DOCUMENT_TYPES_V2: Record<BaseTypeId, DocumentTypeDefinitionV2> = {
     id: "general",
     name: "General",
     description: "Unstructured worldbuilding notes.",
+  },
+  story: {
+    id: "story",
+    name: "Story",
+    description: "Narratives, scenes, and plot-focused documents.",
   },
   person: {
     id: "person",
