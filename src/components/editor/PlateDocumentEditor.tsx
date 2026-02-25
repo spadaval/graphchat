@@ -436,33 +436,35 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-zinc-950">
+    <div className="flex min-h-0 flex-1 flex-col bg-transparent">
       <div className="flex-1 overflow-y-auto">
         <div
-          className="mx-auto w-full p-8 pb-32 transition-all duration-300 ease-in-out"
+          className="mx-auto w-full p-6 pb-32 transition-all duration-300 ease-in-out md:p-8"
           style={{ maxWidth: `${documentWidth}px` }}
         >
-          <input
-            type="text"
-            value={document.title || ""}
-            onChange={(e) => updateDocument(docId, { title: e.target.value })}
-            className="w-full text-4xl font-bold bg-transparent border-none outline-none mb-8 text-zinc-100 placeholder-zinc-800"
-            placeholder="Untitled Document"
-          />
-
-          <Plate editor={editor} onChange={handleContentChange}>
-            <PlateContent
-              className="min-h-[420px] text-zinc-200 outline-none px-1"
-              placeholder="Start writing..."
-              onKeyDownCapture={preventBackspaceNavigation}
+          <div className="rounded-[1.35rem] border border-white/10 bg-slate-950/45 px-6 py-6 shadow-[0_30px_70px_rgba(2,10,18,0.5)] backdrop-blur md:px-8">
+            <input
+              type="text"
+              value={document.title || ""}
+              onChange={(e) => updateDocument(docId, { title: e.target.value })}
+              className="wc-title mb-8 w-full border-none bg-transparent text-3xl font-semibold text-slate-100 outline-none placeholder:text-slate-600 md:text-4xl"
+              placeholder="Untitled Document"
             />
-          </Plate>
+
+            <Plate editor={editor} onChange={handleContentChange}>
+              <PlateContent
+                className="min-h-[420px] px-1 text-slate-200 outline-none"
+                placeholder="Start writing..."
+                onKeyDownCapture={preventBackspaceNavigation}
+              />
+            </Plate>
+          </div>
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-zinc-800/80 bg-zinc-950/90 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/70">
+      <div className="shrink-0 border-t border-white/10 bg-slate-950/55 backdrop-blur supports-[backdrop-filter]:bg-slate-950/45">
         <div
-          className="mx-auto w-full px-8 py-3"
+          className="mx-auto w-full px-6 py-3 md:px-8"
           style={{ maxWidth: `${documentWidth}px` }}
         >
           <div className="flex flex-wrap items-center gap-2">
@@ -470,14 +472,14 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
               type="button"
               onClick={() => setShowAiInput((v) => !v)}
               disabled={isGenerating || isRunningEntityDetection}
-              className="px-3 py-1.5 text-xs rounded border border-blue-900/40 text-blue-300 hover:bg-blue-900/20 disabled:opacity-50"
+              className="rounded-full border border-teal-200/25 bg-teal-400/10 px-3 py-1.5 text-xs text-teal-100 transition hover:bg-teal-400/20 disabled:opacity-50"
             >
               <span className="inline-flex items-center gap-1">
                 <Sparkles size={12} /> Generate Next
               </span>
             </button>
             {isGenerating && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-blue-900/40 text-blue-300">
+              <span className="inline-flex items-center gap-1 rounded-full border border-teal-200/25 px-2 py-1 text-xs text-teal-100">
                 <Loader2 size={12} className="animate-spin" />
                 Generating...
               </span>
@@ -486,7 +488,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
               type="button"
               onClick={() => void runDocumentEntityDetection()}
               disabled={isGenerating || isRunningEntityDetection}
-              className="px-3 py-1.5 text-xs rounded border border-zinc-700 text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+              className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-slate-200 transition hover:bg-slate-800/65 disabled:opacity-50"
               title="Re-run entity detection for the whole document"
             >
               <span className="inline-flex items-center gap-1">
@@ -508,7 +510,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
                 value={aiInstructions}
                 onChange={(e) => setAiInstructions(e.target.value)}
                 placeholder="What should I generate?"
-                className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-100 outline-none"
+                className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-cyan-800/70"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     void generateNextSegment();
@@ -521,7 +523,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
               <button
                 type="button"
                 onClick={() => setShowAiInput(false)}
-                className="p-2 rounded text-zinc-500 hover:text-zinc-200"
+                className="rounded-md p-2 text-slate-500 transition hover:bg-slate-800/60 hover:text-slate-200"
               >
                 <X size={14} />
               </button>
@@ -529,7 +531,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
                 type="button"
                 onClick={() => void generateNextSegment()}
                 disabled={isGenerating || isRunningEntityDetection}
-                className="p-2 rounded text-blue-300 hover:text-blue-200 disabled:opacity-50"
+                className="rounded-md p-2 text-teal-200 transition hover:bg-teal-500/15 hover:text-teal-100 disabled:opacity-50"
               >
                 {isGenerating ? (
                   <Loader2 size={14} className="animate-spin" />

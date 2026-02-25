@@ -73,7 +73,7 @@ function StorybookPage() {
               variant="ghost"
               size="icon"
               onClick={handleToggleModelServer}
-              className="rounded-none border-l border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+              className="mr-2 rounded-full border border-white/10 text-slate-300 hover:bg-slate-800/70 hover:text-slate-100"
               aria-label="Open model server sidebar"
               title="Open sidebar"
             >

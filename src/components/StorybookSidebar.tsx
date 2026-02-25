@@ -126,11 +126,11 @@ export function StorybookSidebar({
   );
 
   return (
-    <div className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col h-full">
+    <div className="wc-panel flex h-full w-72 flex-col border-r border-white/10">
       <WorldSwitcher />
-      <div className="p-4 border-b border-zinc-800 pt-0">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-zinc-100 uppercase tracking-widest text-[10px] opacity-50">
+      <div className="border-b border-white/10 px-4 pb-4 pt-0">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="wc-title text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">
             Content
           </h2>
           <TooltipProvider>
@@ -139,13 +139,13 @@ export function StorybookSidebar({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-8 text-zinc-400 hover:text-zinc-100"
+                  className="size-8 rounded-full border border-white/10 text-slate-400 hover:bg-slate-800/70 hover:text-slate-100"
                   onClick={() => handleCreateFolder("root")}
                 >
                   <FolderPlus className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent className="bg-zinc-800 text-zinc-100 border-zinc-700">
+              <TooltipContent className="border border-slate-700 bg-slate-900 text-slate-100">
                 New Folder
               </TooltipContent>
             </Tooltip>
@@ -155,7 +155,7 @@ export function StorybookSidebar({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="w-full flex items-center justify-center gap-2 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors text-sm font-medium"
+              className="wc-title flex w-full items-center justify-center gap-2 rounded-xl border border-amber-200/20 bg-gradient-to-r from-teal-500/80 to-cyan-500/65 p-2 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-950/45 transition hover:brightness-110"
             >
               <Plus className="size-4" />
               New Document
@@ -163,7 +163,7 @@ export function StorybookSidebar({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="w-56 bg-zinc-800 border-zinc-700 text-zinc-100"
+            className="w-56 border border-slate-600 bg-slate-900/95 text-slate-100 backdrop-blur"
           >
             {Object.values(documentTypes).map((type) => {
               const IconComponent = iconMap[type.icon] || FileText;
@@ -171,7 +171,7 @@ export function StorybookSidebar({
                 <DropdownMenuItem
                   key={type.id}
                   onClick={() => handleCreateDocument(type.id)}
-                  className="cursor-pointer hover:bg-zinc-700 focus:bg-zinc-700 focus:text-zinc-100"
+                  className="cursor-pointer rounded-md hover:bg-slate-700/80 focus:bg-slate-700/80 focus:text-slate-100"
                 >
                   <span className="mr-2">
                     <IconComponent className="size-4" />
@@ -184,7 +184,7 @@ export function StorybookSidebar({
         </DropdownMenu>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 min-h-0">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
         <section
           className="space-y-1 h-full"
           aria-label="Document list"
@@ -228,7 +228,7 @@ export function StorybookSidebar({
             />
           ))}
           {rootFolders.length === 0 && rootDocuments.length === 0 && (
-            <div className="text-zinc-500 text-sm text-center mt-4">
+            <div className="mt-4 text-center text-sm text-slate-500">
               No documents yet.
             </div>
           )}
@@ -239,9 +239,11 @@ export function StorybookSidebar({
         open={!!changeTypeDocId}
         onOpenChange={(open) => !open && setChangeTypeDocId(null)}
       >
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-100 sm:max-w-xs">
+        <DialogContent className="border-slate-700 bg-slate-950 text-slate-100 sm:max-w-xs">
           <DialogHeader>
-            <DialogTitle>Change Document Type</DialogTitle>
+            <DialogTitle className="wc-title text-xl">
+              Change Document Type
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-1 py-2">
             {Object.values(documentTypes).map((type) => {
@@ -251,7 +253,7 @@ export function StorybookSidebar({
                   key={type.id}
                   variant="ghost"
                   onClick={() => handleChangeType(type.id)}
-                  className="justify-start hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100"
+                  className="justify-start text-slate-300 hover:bg-slate-800/70 hover:text-slate-100"
                 >
                   <IconComponent className="mr-2 size-4 opacity-70" />
                   {type.name}
@@ -348,8 +350,8 @@ function FolderItem({
             onDrop={handleDrop}
             className={`w-full flex items-center gap-1 p-2 rounded-md text-sm transition-colors cursor-pointer group text-left ${
               isDragOver
-                ? "bg-zinc-800/50 outline-2 outline-dashed outline-zinc-700"
-                : "hover:bg-zinc-800/30"
+                ? "bg-cyan-950/30 outline-2 outline-dashed outline-cyan-700/70"
+                : "hover:bg-slate-800/45"
             }`}
             onClick={handleToggle}
             onKeyDown={(e) => {
@@ -361,14 +363,14 @@ function FolderItem({
           >
             <div className="flex items-center gap-1 flex-1 min-w-0">
               {folder.isOpen ? (
-                <ChevronDown className="size-3.5 text-zinc-500" />
+                <ChevronDown className="size-3.5 text-slate-500" />
               ) : (
-                <ChevronRight className="size-3.5 text-zinc-500" />
+                <ChevronRight className="size-3.5 text-slate-500" />
               )}
               {folder.isOpen ? (
-                <FolderOpen className="size-4 text-blue-400 shrink-0" />
+                <FolderOpen className="size-4 shrink-0 text-teal-300" />
               ) : (
-                <FolderIcon className="size-4 text-blue-400 shrink-0" />
+                <FolderIcon className="size-4 shrink-0 text-cyan-300" />
               )}
               {isRenaming ? (
                 <Input
@@ -379,21 +381,21 @@ function FolderItem({
                     if (e.key === "Enter") handleRename(e.currentTarget.value);
                     if (e.key === "Escape") setIsRenaming(false);
                   }}
-                  className="h-6 text-xs bg-zinc-800 border-zinc-700 text-zinc-100 focus-visible:ring-zinc-600 px-1"
+                  className="h-6 border-slate-700 bg-slate-900 text-xs text-slate-100 px-1 focus-visible:ring-cyan-700/60"
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <span className="truncate text-zinc-300 group-hover:text-zinc-100">
+                <span className="truncate text-slate-300 group-hover:text-slate-100">
                   {folder.name || "Untitled Folder"}
                 </span>
               )}
             </div>
           </button>
         </ContextMenuTrigger>
-        <ContextMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+        <ContextMenuContent className="border-slate-700 bg-slate-950 text-slate-100">
           <ContextMenuItem
             onClick={() => onCreateFolder(folder.id)}
-            className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+            className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100"
           >
             New Subfolder
           </ContextMenuItem>
@@ -401,7 +403,7 @@ function FolderItem({
             <DropdownMenuTrigger asChild>
               <ContextMenuItem
                 onSelect={(e) => e.preventDefault()}
-                className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer flex justify-between items-center"
+                className="flex cursor-pointer items-center justify-between focus:bg-slate-800/75 focus:text-slate-100"
               >
                 New Document
                 <ChevronRight className="size-3 ml-2 opacity-50" />
@@ -410,7 +412,7 @@ function FolderItem({
             <DropdownMenuContent
               side="right"
               align="start"
-              className="w-48 bg-zinc-800 border-zinc-700 text-zinc-100"
+              className="w-48 border border-slate-600 bg-slate-900/95 text-slate-100"
             >
               {Object.values(documentTypes).map((type) => {
                 const IconComponent = iconMap[type.icon] || FileText;
@@ -421,7 +423,7 @@ function FolderItem({
                       onCreateDocument(type.id, folder.id);
                       updateFolder(folder.id, { isOpen: true });
                     }}
-                    className="cursor-pointer hover:bg-zinc-700 focus:bg-zinc-700 focus:text-zinc-100"
+                    className="cursor-pointer rounded-md hover:bg-slate-700/80 focus:bg-slate-700/80 focus:text-slate-100"
                   >
                     <span className="mr-2">
                       <IconComponent className="size-4" />
@@ -432,16 +434,16 @@ function FolderItem({
               })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <ContextMenuSeparator className="bg-zinc-800" />
+          <ContextMenuSeparator className="bg-slate-700/80" />
           <ContextMenuItem
             onClick={() => setIsRenaming(true)}
-            className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+            className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100"
           >
             Rename
           </ContextMenuItem>
           <ContextMenuItem
             onClick={() => deleteFolder(folder.id)}
-            className="text-red-500 focus:text-red-400 focus:bg-zinc-800 cursor-pointer"
+            className="cursor-pointer text-rose-400 focus:bg-slate-800/75 focus:text-rose-300"
           >
             Delete
           </ContextMenuItem>
@@ -449,7 +451,7 @@ function FolderItem({
       </ContextMenu>
 
       {folder.isOpen && (
-        <div className="ml-4 border-l border-zinc-800 pl-1 mt-0.5 space-y-0.5">
+        <div className="mt-0.5 ml-4 space-y-0.5 border-l border-slate-700/70 pl-1">
           {childFolders.map((f) => (
             <FolderItem
               key={f.id}
@@ -472,7 +474,7 @@ function FolderItem({
             />
           ))}
           {childFolders.length === 0 && childDocuments.length === 0 && (
-            <div className="text-zinc-600 text-[10px] pl-6 py-1 italic">
+            <div className="py-1 pl-6 text-[10px] italic text-slate-600">
               Empty
             </div>
           )}
@@ -530,7 +532,7 @@ function DocumentItem({
             if (e.key === "Enter") handleRename(e.currentTarget.value);
             if (e.key === "Escape") setIsRenaming(false);
           }}
-          className="h-8 text-sm bg-zinc-800 border-zinc-700 text-zinc-100 focus-visible:ring-zinc-600"
+          className="h-8 border-slate-700 bg-slate-900 text-sm text-slate-100 focus-visible:ring-cyan-700/60"
         />
       </div>
     );
@@ -549,8 +551,8 @@ function DocumentItem({
                 onClick={onClick}
                 className={`w-full flex items-center gap-2 p-2 rounded-md text-sm transition-colors ${
                   isActive
-                    ? "bg-zinc-800 text-zinc-100 font-medium"
-                    : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                    ? "bg-slate-800/85 text-slate-100 font-medium shadow-[0_0_0_1px_rgba(148,189,210,0.24)]"
+                    : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200"
                 }`}
               >
                 <div className="w-4 shrink-0" />
@@ -562,33 +564,33 @@ function DocumentItem({
             </TooltipTrigger>
             <TooltipContent
               side="right"
-              className="bg-zinc-900 border-zinc-800 text-zinc-300"
+              className="border border-slate-700 bg-slate-950 text-slate-200"
             >
               <p>{document.title || "Untitled"}</p>
-              <p className="text-xs text-zinc-500 capitalize">
+              <p className="text-xs text-slate-500 capitalize">
                 {typeDef ? typeDef.name : document.baseTypeId || "general"}
               </p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </ContextMenuTrigger>
-      <ContextMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+      <ContextMenuContent className="border-slate-700 bg-slate-950 text-slate-100">
         <ContextMenuItem
           onClick={() => setIsRenaming(true)}
-          className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+          className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100"
         >
           Rename
         </ContextMenuItem>
         <ContextMenuItem
           onClick={onChangeTypeRequest}
-          className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+          className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100"
         >
           Change Type...
         </ContextMenuItem>
-        <ContextMenuSeparator className="bg-zinc-800" />
+        <ContextMenuSeparator className="bg-slate-700/80" />
         <ContextMenuItem
           onClick={() => deleteDocument(document.id)}
-          className="text-red-500 focus:text-red-400 focus:bg-zinc-800 cursor-pointer"
+          className="cursor-pointer text-rose-400 focus:bg-slate-800/75 focus:text-rose-300"
         >
           Delete
         </ContextMenuItem>

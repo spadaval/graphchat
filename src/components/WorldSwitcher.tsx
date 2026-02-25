@@ -55,35 +55,35 @@ export function WorldSwitcher() {
   };
 
   return (
-    <div className="flex items-center gap-2 px-2 py-2 mb-2">
+    <div className="mb-2 flex items-center gap-2 px-2 py-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex items-center gap-2 px-3 py-1.5 flex-1 text-left hover:bg-zinc-800 rounded-lg transition-colors group min-w-0"
+            className="group flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-white/10 bg-slate-900/45 px-3 py-2 text-left transition hover:bg-slate-800/60"
           >
-            <div className="size-6 rounded bg-blue-600/20 flex items-center justify-center shrink-0">
-              <Globe className="size-3.5 text-blue-400" />
+            <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-teal-400/30 to-amber-300/25">
+              <Globe className="size-3.5 text-teal-200" />
             </div>
-            <span className="text-sm font-semibold text-zinc-100 truncate flex-1">
+            <span className="wc-title flex-1 truncate text-base font-semibold text-slate-100">
               {currentWorld?.name || "Select World"}
             </span>
-            <ChevronDown className="size-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
+            <ChevronDown className="size-4 text-slate-500 transition-colors group-hover:text-slate-300" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="start"
-          className="w-56 bg-zinc-900 border-zinc-800 text-zinc-100 shadow-xl"
+          className="w-56 border border-slate-700 bg-slate-950/95 text-slate-100 shadow-xl backdrop-blur"
         >
-          <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 uppercase tracking-tight">
+          <div className="wc-title px-2 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
             Worlds
           </div>
           {Object.values(worlds).map((world) => (
             <DropdownMenuItem
               key={world.id}
               onClick={() => setCurrentWorld(world.id)}
-              className={`flex items-center justify-between cursor-pointer focus:bg-zinc-800 focus:text-zinc-100 px-2 py-2 rounded-md transition-colors ${
-                world.id === currentWorldId ? "bg-zinc-800" : ""
+              className={`flex cursor-pointer items-center justify-between rounded-md px-2 py-2 transition-colors focus:bg-slate-800 focus:text-slate-100 ${
+                world.id === currentWorldId ? "bg-slate-800/85" : ""
               }`}
             >
               <span className="truncate flex-1">{world.name}</span>
@@ -97,7 +97,7 @@ export function WorldSwitcher() {
                       setNewWorldName(world.name);
                       setIsRenameDialogOpen(true);
                     }}
-                    className="p-1 hover:bg-zinc-700 rounded text-zinc-400 hover:text-zinc-200"
+                    className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
                   >
                     <Edit2 className="size-3" />
                   </button>
@@ -113,7 +113,7 @@ export function WorldSwitcher() {
                         deleteWorld(world.id);
                       }
                     }}
-                    className="p-1 hover:bg-zinc-700 rounded text-zinc-400 hover:text-red-400"
+                    className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-rose-300"
                   >
                     <Trash2 className="size-3" />
                   </button>
@@ -121,21 +121,23 @@ export function WorldSwitcher() {
               )}
             </DropdownMenuItem>
           ))}
-          <DropdownMenuSeparator className="bg-zinc-800" />
+          <DropdownMenuSeparator className="bg-slate-700/80" />
           <DropdownMenuItem
             onClick={() => setIsCreateDialogOpen(true)}
-            className="flex items-center gap-2 cursor-pointer focus:bg-zinc-800 focus:text-zinc-100 px-2 py-2 rounded-md"
+            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 focus:bg-slate-800 focus:text-slate-100"
           >
-            <Plus className="size-4 text-blue-400" />
-            <span className="text-blue-400 font-medium">New World</span>
+            <Plus className="size-4 text-teal-300" />
+            <span className="font-medium text-teal-300">New World</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-100 sm:max-w-md">
+        <DialogContent className="border-slate-700 bg-slate-950 text-slate-100 sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create New World</DialogTitle>
+            <DialogTitle className="wc-title text-xl">
+              Create New World
+            </DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <Input
@@ -144,7 +146,7 @@ export function WorldSwitcher() {
               value={newWorldName}
               onChange={(e) => setNewWorldName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCreateWorld()}
-              className="bg-zinc-800 border-zinc-700 focus:ring-blue-500"
+              className="border-slate-700 bg-slate-900 focus-visible:ring-cyan-700/65"
             />
           </div>
           <DialogFooter>
@@ -156,7 +158,7 @@ export function WorldSwitcher() {
             </Button>
             <Button
               onClick={handleCreateWorld}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-gradient-to-r from-teal-500 to-cyan-500 text-slate-950 hover:brightness-110"
             >
               Create World
             </Button>
@@ -165,9 +167,9 @@ export function WorldSwitcher() {
       </Dialog>
 
       <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-100 sm:max-w-md">
+        <DialogContent className="border-slate-700 bg-slate-950 text-slate-100 sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Rename World</DialogTitle>
+            <DialogTitle className="wc-title text-xl">Rename World</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <Input
@@ -176,7 +178,7 @@ export function WorldSwitcher() {
               value={newWorldName}
               onChange={(e) => setNewWorldName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleRenameWorld()}
-              className="bg-zinc-800 border-zinc-700 focus:ring-blue-500"
+              className="border-slate-700 bg-slate-900 focus-visible:ring-cyan-700/65"
             />
           </div>
           <DialogFooter>
@@ -188,7 +190,7 @@ export function WorldSwitcher() {
             </Button>
             <Button
               onClick={handleRenameWorld}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-gradient-to-r from-teal-500 to-cyan-500 text-slate-950 hover:brightness-110"
             >
               Rename World
             </Button>

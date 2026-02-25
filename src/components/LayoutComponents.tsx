@@ -25,7 +25,7 @@ export function ChatThreadsSidebar({
   deleteAllThreads,
 }: ChatThreadsSidebarProps) {
   return (
-    <div className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col">
+    <div className="wc-panel flex w-64 flex-col border-r">
       <SidebarHeader />
       <SidebarContent
         createNewThread={createNewThread}
@@ -70,13 +70,13 @@ interface ModelServerSidebarProps {
 
 export function ModelServerSidebar({ onToggle }: ModelServerSidebarProps) {
   return (
-    <div className="relative w-80 bg-zinc-900 border-l border-zinc-800 flex flex-col h-full">
+    <div className="wc-panel relative flex h-full w-[20rem] max-w-[42vw] flex-col border-l">
       <Button
         type="button"
         variant="ghost"
         size="icon-sm"
         onClick={onToggle}
-        className="absolute right-1 top-1 z-10 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+        className="absolute right-2 top-2 z-10 rounded-full border border-white/10 text-slate-300 hover:bg-slate-800/60 hover:text-slate-100"
         aria-label="Close model server sidebar"
         title="Close sidebar"
       >
@@ -100,9 +100,9 @@ export function MainLayout({
   modelServer,
 }: MainLayoutProps) {
   return (
-    <div className="flex h-full bg-zinc-950">
+    <div className="wc-shell flex h-full min-h-0 min-w-0 overflow-x-auto bg-transparent">
       {sidebar}
-      <div className="flex-1 flex flex-col min-h-0">{children}</div>
+      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       {modelServer}
     </div>
   );

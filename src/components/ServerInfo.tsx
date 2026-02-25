@@ -110,7 +110,7 @@ export function ServerInfoComponent({
         <div className="space-y-2">
           <label
             htmlFor="server-url"
-            className="text-[10px] uppercase tracking-wider font-bold text-zinc-500"
+            className="text-[10px] font-bold uppercase tracking-wider text-slate-500"
           >
             Base URL
           </label>
@@ -121,7 +121,7 @@ export function ServerInfoComponent({
               value={serverUrl}
               onChange={(e) => setServerUrl(e.target.value)}
               placeholder="http://localhost:8080"
-              className="flex-1 px-3 py-1.5 text-xs bg-zinc-800 border border-zinc-700 rounded-md text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="flex-1 rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-700"
             />
             <Button
               size="sm"
@@ -140,16 +140,16 @@ export function ServerInfoComponent({
       ) : null}
 
       {showStatus ? (
-        <div className="flex items-center gap-2 p-2 rounded-md bg-zinc-800/30 border border-zinc-700/50">
+        <div className="flex items-center gap-2 rounded-md border border-white/10 bg-slate-900/45 p-2">
           {!hasValidServerUrl || isError ? (
-            <XCircle size={14} className="text-red-500" />
+            <XCircle size={14} className="text-rose-500" />
           ) : models && models.length > 0 ? (
-            <CheckCircle2 size={14} className="text-green-500" />
+            <CheckCircle2 size={14} className="text-emerald-400" />
           ) : (
-            <RefreshCw size={14} className="text-zinc-500" />
+            <RefreshCw size={14} className="text-slate-500" />
           )}
           <span
-            className={`text-[11px] font-medium ${!hasValidServerUrl || isError ? "text-red-400" : "text-zinc-400"}`}
+            className={`text-[11px] font-medium ${!hasValidServerUrl || isError ? "text-rose-300" : "text-slate-400"}`}
           >
             {!hasValidServerUrl
               ? "Invalid URL"
@@ -163,13 +163,13 @@ export function ServerInfoComponent({
       ) : null}
 
       {!hasValidServerUrl && mode !== "sidebar" ? (
-        <div className="text-[10px] text-red-500/80 bg-red-950/20 p-2 rounded border border-red-900/30">
+        <div className="rounded border border-rose-900/30 bg-rose-950/20 p-2 text-[10px] text-rose-300/85">
           Enter a valid http(s) URL.
         </div>
       ) : null}
 
       {isError ? (
-        <div className="text-[10px] text-red-500/80 bg-red-950/20 p-2 rounded border border-red-900/30">
+        <div className="rounded border border-rose-900/30 bg-rose-950/20 p-2 text-[10px] text-rose-300/85">
           {error instanceof Error
             ? error.message
             : "Failed to connect to server"}
@@ -179,8 +179,8 @@ export function ServerInfoComponent({
       {showModelDropdown ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
-              <Link2 size={16} className="text-blue-400" />
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+              <Link2 size={16} className="text-teal-300" />
               Model Picker
             </h3>
             {!showBaseUrl ? (
@@ -190,7 +190,7 @@ export function ServerInfoComponent({
                 variant="outline"
                 onClick={handleLoadModels}
                 disabled={!hasValidServerUrl || isFetching}
-                className="h-7 border-zinc-700 bg-zinc-900 text-[11px] hover:bg-zinc-800"
+                className="h-7 border-slate-700 bg-slate-900 text-[11px] hover:bg-slate-800"
               >
                 {isFetching ? "Loading..." : "Load Models"}
               </Button>
@@ -198,20 +198,20 @@ export function ServerInfoComponent({
           </div>
 
           {isLoading ? (
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
               <RefreshCw size={14} className="animate-spin" />
               Loading models from /v1/models...
             </div>
           ) : null}
 
           {!isLoading && hasValidServerUrl && models && models.length === 0 ? (
-            <div className="text-xs text-zinc-500">
+            <div className="text-xs text-slate-500">
               No models returned by /v1/models.
             </div>
           ) : null}
 
           {!hasValidServerUrl ? (
-            <div className="text-xs text-zinc-500">
+            <div className="text-xs text-slate-500">
               {mode === "sidebar"
                 ? "Configure a valid server URL in Full Settings to load models."
                 : "Configure a valid server URL to load available models."}
@@ -222,7 +222,7 @@ export function ServerInfoComponent({
             value={selectedModelId}
             onChange={(event) => setServerModelId(event.target.value)}
             disabled={!models || models.length === 0}
-            className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-2 text-xs text-zinc-100 disabled:opacity-50"
+            className="h-9 w-full rounded-md border border-slate-700 bg-slate-950 px-2 text-xs text-slate-100 disabled:opacity-50"
           >
             <option value="">Select a model</option>
             {(models || []).map((model) => (
@@ -235,22 +235,22 @@ export function ServerInfoComponent({
       ) : null}
 
       {showReadonlyList ? (
-        <div className="space-y-2 rounded-md border border-zinc-700/70 bg-zinc-900/50 p-3">
-          <p className="text-xs font-medium text-zinc-300">Fetched Models</p>
+        <div className="space-y-2 rounded-md border border-white/10 bg-slate-900/50 p-3">
+          <p className="text-xs font-medium text-slate-300">Fetched Models</p>
           {!models || models.length === 0 ? (
-            <p className="text-xs text-zinc-500">No fetched models.</p>
+            <p className="text-xs text-slate-500">No fetched models.</p>
           ) : (
             <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
               {models.map((model) => (
                 <div
                   key={model.id}
-                  className="rounded border border-zinc-800 px-2 py-1.5"
+                  className="rounded border border-slate-700 px-2 py-1.5"
                 >
-                  <div className="text-xs text-zinc-100 break-all">
+                  <div className="text-xs break-all text-slate-100">
                     {model.id}
                   </div>
                   {formatModelMeta(model) ? (
-                    <div className="text-[10px] text-zinc-500">
+                    <div className="text-[10px] text-slate-500">
                       {formatModelMeta(model)}
                     </div>
                   ) : null}
