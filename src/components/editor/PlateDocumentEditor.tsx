@@ -11,7 +11,7 @@ import {
   deserializeMarkdownToModel,
   isValidModel,
 } from "~/lib/document-content";
-import { warmupNerPipeline } from "~/lib/ner";
+import { warmupEntityDetectionPipeline } from "~/lib/entity-detection";
 import { updateDocument, updateDocumentContentModel } from "~/lib/state";
 import type { Document } from "~/lib/state/documents";
 import { callLLMStreaming, modelProps$ } from "~/lib/state/llm";
@@ -116,11 +116,13 @@ const insertAISegmentNodeAtEnd = (
 
 export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   const document = use$(document$);
-  const { documentWidth = 800, nerPreloadModel = true } = use$(uiPreferences$);
+  const { documentWidth = 800, entityPreloadModel = true } =
+    use$(uiPreferences$);
   const [showAiInput, setShowAiInput] = useState(false);
   const [aiInstructions, setAiInstructions] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isRunningNer, setIsRunningNer] = useState(false);
+  const [isRunningEntityDetection, setIsRunningEntityDetection] =
+    useState(false);
   const aiInputRef = useRef<HTMLInputElement>(null);
   const suppressOnChangeRef = useRef(false);
   const persistTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -154,7 +156,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   }, [showAiInput]);
 
   useEffect(() => {
-    if (!nerPreloadModel) return;
+    if (!entityPreloadModel) return;
 
     const idleCallback = (
       window as Window & {
@@ -170,8 +172,8 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
 
     if (idleCallback) {
       const handle = idleCallback(() => {
-        void warmupNerPipeline().catch((error) => {
-          console.error("[NER] Pipeline warmup failed", { error });
+        void warmupEntityDetectionPipeline().catch((error) => {
+          console.error("[EntityDetection] Pipeline warmup failed", { error });
         });
       });
 
@@ -181,13 +183,13 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
     }
 
     const timeout = setTimeout(() => {
-      void warmupNerPipeline().catch((error) => {
-        console.error("[NER] Pipeline warmup failed", { error });
+      void warmupEntityDetectionPipeline().catch((error) => {
+        console.error("[EntityDetection] Pipeline warmup failed", { error });
       });
     }, 400);
 
     return () => clearTimeout(timeout);
-  }, [nerPreloadModel]);
+  }, [entityPreloadModel]);
 
   useEffect(() => {
     const serializedModel = JSON.stringify(contentModel);
@@ -408,28 +410,28 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
     }
   };
 
-  const runDocumentNer = async () => {
-    if (isRunningNer || isGenerating) return;
-    const nerApi = (
-      editor.api as { ner?: { runDocument?: () => Promise<void> } }
-    ).ner;
-    if (!nerApi?.runDocument) {
-      console.warn("[NER] Plugin API missing: ner.runDocument");
+  const runDocumentEntityDetection = async () => {
+    if (isRunningEntityDetection || isGenerating) return;
+    const entityApi = (
+      editor.api as { entity?: { runDocument?: () => Promise<void> } }
+    ).entity;
+    if (!entityApi?.runDocument) {
+      console.warn("[Entity] Plugin API missing: entity.runDocument");
       return;
     }
 
-    setIsRunningNer(true);
+    setIsRunningEntityDetection(true);
     setShowAiInput(false);
     suppressOnChangeRef.current = true;
 
     try {
-      await nerApi.runDocument();
+      await entityApi.runDocument();
     } catch (error) {
-      console.error("[NER] Document pass failed", { error });
+      console.error("[Entity] Document pass failed", { error });
     } finally {
       suppressOnChangeRef.current = false;
       persistEditorState();
-      setIsRunningNer(false);
+      setIsRunningEntityDetection(false);
     }
   };
 
@@ -467,7 +469,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
             <button
               type="button"
               onClick={() => setShowAiInput((v) => !v)}
-              disabled={isGenerating || isRunningNer}
+              disabled={isGenerating || isRunningEntityDetection}
               className="px-3 py-1.5 text-xs rounded border border-blue-900/40 text-blue-300 hover:bg-blue-900/20 disabled:opacity-50"
             >
               <span className="inline-flex items-center gap-1">
@@ -482,18 +484,18 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
             )}
             <button
               type="button"
-              onClick={() => void runDocumentNer()}
-              disabled={isGenerating || isRunningNer}
+              onClick={() => void runDocumentEntityDetection()}
+              disabled={isGenerating || isRunningEntityDetection}
               className="px-3 py-1.5 text-xs rounded border border-zinc-700 text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
-              title="Re-run named entity recognition for the whole document"
+              title="Re-run entity detection for the whole document"
             >
               <span className="inline-flex items-center gap-1">
-                {isRunningNer ? (
+                {isRunningEntityDetection ? (
                   <Loader2 size={12} className="animate-spin" />
                 ) : (
                   <WandSparkles size={12} />
                 )}
-                NER
+                Entity
               </span>
             </button>
           </div>
@@ -526,7 +528,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
               <button
                 type="button"
                 onClick={() => void generateNextSegment()}
-                disabled={isGenerating || isRunningNer}
+                disabled={isGenerating || isRunningEntityDetection}
                 className="p-2 rounded text-blue-300 hover:text-blue-200 disabled:opacity-50"
               >
                 {isGenerating ? (

@@ -11,10 +11,13 @@
 - Preserve AI segments during sync
 - Prevent conversion to plain text
 
-### NER (Named Entity Recognition)
-- Fix global NER functionality (paragraph-level works)
-- Consider better NER model
-- Auto-extend entity marks to full words (whitespace boundaries)
+### Entity Candidates
+- [x] Hard rename from `ner` to `entity`/`candidate` across code + UI.
+- [x] Settings/state rename: `entityAutoRunOnIdle`, `entityAutoLinkStrictMatches`, `entityPreloadModel`.
+- [x] Legacy mark migration on normalization (`ner*` -> `entity*`, id generation for legacy leaves).
+- [x] Keep editor model as canonical persistence; markdown export/import may be lossy for editor-only candidate data.
+- [x] Assume external links are absolute URLs for now.
+- [ ] Fix remaining boundary-adjust edge case where a stale range can still resolve wider than expected in specific mutation sequences.
 
 ## ✨ Improvements
 
@@ -98,17 +101,40 @@ Status: Foundation implementation complete in code. Formal acceptance tests and 
 #### Assumptions and Defaults
 - Scope locked to Foundation (Phase A) only.
 - Built-in type/template catalog only in v1 (no user-defined types yet).
-- Markdown remains canonical persistence format.
+- Editor `contentModel` is canonical persistence; markdown is primarily for export and AI context.
+- Markdown export/import may be lossy for editor-only metadata.
+- Assume external links are absolute URLs for now (backlog item to relax later if needed).
 - Folder removal/navigation rewrite is deferred to later phases, but indexes/selectors are added now.
 - Frontmatter-heavy authoring UX and placeholder block UX are deferred to later phases.
 
-### NER Enhancements
-- Make entity highlights more visible
-- Auto-load NER model
-- Add manual boundary adjustment for entities
-- Create entity cards with document previews/links
-- Add mention syntax (@Ardelia) with dropdown for existing documents
-- Implement NER persistence (consider markdown links)
+### Entity Candidate Overhaul (Phases 1-2)
+Status: Core implementation complete. Remaining work is targeted stabilization and test coverage.
+
+- [x] Phase 1 safeguards:
+  - [x] Link-intersection skip logic during candidate application.
+  - [x] Candidate overlap rejection policy.
+  - [x] Boundary adjustment controls (expand/contract left/right).
+- [x] Phase 2 lifecycle:
+  - [x] Candidate dismiss transform.
+  - [x] Runtime dismissal registry (editor-only, non-durable).
+  - [x] Rerun suppression for dismissed candidates in unchanged windows.
+- [x] Transform/API work:
+  - [x] `editor.api.entity.runDocument` and `runParagraph`.
+  - [x] `editor.tf.entity.setType/remove/convertToLink/adjustBoundary/dismiss`.
+- [x] Refactor to Slate refs:
+  - [x] Use `RangeRef`/`PathRef` in entity transforms and queue/dismiss runtime tracking.
+  - [x] Validation path moved to ref-first lookups.
+- [x] Debug instrumentation:
+  - [x] Global debug-gated logs throughout entity flows.
+  - [x] Log verbosity reduced to operation before/after offsets + selected text.
+- [ ] Add focused regression tests for boundary adjust under tree-splitting mutations.
+- [ ] Add integration tests for dismiss+rerun suppression and mixed linked/unlinked paragraphs.
+
+### Entity UX Enhancements
+- [ ] Make entity highlights more visible.
+- [ ] Auto-load entity model.
+- [ ] Add mention syntax (`@Ardelia`) with dropdown for existing documents.
+- [ ] Evaluate optional sidecar persistence for editor-only candidate state (not required for current overhaul).
 
 ### Settings Redesign (Completed)
 - [x] Reduce sidebar clutter

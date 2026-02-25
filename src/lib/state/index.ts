@@ -123,10 +123,10 @@ export {
   removeDocumentFromMessage,
   setAPIBackendEnabled,
   setDebugMode,
+  setEntityAutoLinkStrictMatches,
+  setEntityAutoRunOnIdle,
+  setEntityPreloadModel,
   setMessageDocumentLinks,
-  setNerAutoLinkStrictMatches,
-  setNerAutoRunOnIdle,
-  setNerPreloadModel,
   uiPreferences$,
 } from "./ui";
 // World exports

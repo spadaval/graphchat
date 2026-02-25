@@ -7,10 +7,10 @@ import { AiSegmentKit } from "./ai-segment-kit";
 import { BasicMarksKit } from "./basic-marks-kit";
 import { BlockMenuKit } from "./block-menu-kit";
 import { DndKit } from "./dnd-kit";
+import { EntityKit } from "./entity-kit";
 // import { CursorOverlayKit } from "./cursor-overlay-kit";
 import { MarkdownKit } from "./markdown-kit";
 import { MentionKit } from "./mention-kit";
-import { NerKit } from "./ner-kit";
 import { PlaceholderKit } from "./placeholder-kit";
 import { SlashKit } from "./slash-kit";
 
@@ -35,8 +35,8 @@ const UnifiedPlugins = [
   // Placeholder blocks
   ...PlaceholderKit,
 
-  // Browser-side NER marks
-  ...NerKit,
+  // Browser-side entity candidate marks
+  ...EntityKit,
 
   // Drag and drop support
   ...DndKit,

@@ -16,9 +16,9 @@ const uiPreferences: UIPreferences = {
   tokenizerModelId: "default", // Assuming a default value for the new required property
   enableTokenProbabilities: true,
   serverModelId: "",
-  nerAutoRunOnIdle: false,
-  nerAutoLinkStrictMatches: true,
-  nerPreloadModel: true,
+  entityAutoRunOnIdle: false,
+  entityAutoLinkStrictMatches: true,
+  entityPreloadModel: true,
 };
 
 export const uiPreferences$ = observable<UIPreferences>(uiPreferences);
@@ -70,16 +70,16 @@ export const setHuggingfaceToken = (token: string) => {
   uiPreferences$.huggingfaceToken.set(token);
 };
 
-export const setNerAutoRunOnIdle = (enabled: boolean) => {
-  uiPreferences$.nerAutoRunOnIdle.set(enabled);
+export const setEntityAutoRunOnIdle = (enabled: boolean) => {
+  uiPreferences$.entityAutoRunOnIdle.set(enabled);
 };
 
-export const setNerAutoLinkStrictMatches = (enabled: boolean) => {
-  uiPreferences$.nerAutoLinkStrictMatches.set(enabled);
+export const setEntityAutoLinkStrictMatches = (enabled: boolean) => {
+  uiPreferences$.entityAutoLinkStrictMatches.set(enabled);
 };
 
-export const setNerPreloadModel = (enabled: boolean) => {
-  uiPreferences$.nerPreloadModel.set(enabled);
+export const setEntityPreloadModel = (enabled: boolean) => {
+  uiPreferences$.entityPreloadModel.set(enabled);
 };
 
 // Document linking actions

@@ -13,3 +13,13 @@ export function debugLog(message?: unknown, ...optionalParams: unknown[]) {
   if (!isDebugModeEnabled()) return;
   console.debug(message, ...optionalParams);
 }
+
+export function debugWarn(message?: unknown, ...optionalParams: unknown[]) {
+  if (!isDebugModeEnabled()) return;
+  console.warn(message, ...optionalParams);
+}
+
+export function debugError(message?: unknown, ...optionalParams: unknown[]) {
+  if (!isDebugModeEnabled()) return;
+  console.error(message, ...optionalParams);
+}

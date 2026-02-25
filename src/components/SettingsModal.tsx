@@ -32,11 +32,11 @@ import {
   setDebugMode,
   setDocumentWidth,
   setEnableTokenProbabilities,
+  setEntityAutoLinkStrictMatches,
+  setEntityAutoRunOnIdle,
+  setEntityPreloadModel,
   setHuggingfaceToken,
   setInlineCompletionEnabled,
-  setNerAutoLinkStrictMatches,
-  setNerAutoRunOnIdle,
-  setNerPreloadModel,
   setTokenizerModelId,
   uiPreferences$,
 } from "~/lib/state/ui";
@@ -141,9 +141,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     enableTokenProbabilities,
     huggingfaceToken,
     inlineCompletion,
-    nerAutoLinkStrictMatches,
-    nerAutoRunOnIdle,
-    nerPreloadModel,
+    entityAutoLinkStrictMatches,
+    entityAutoRunOnIdle,
+    entityPreloadModel,
     tokenizerModelId,
   } = use$(uiPreferences$);
   const [activeSection, setActiveSection] =
@@ -286,22 +286,22 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   description="Show ghost-text suggestions while you type."
                 />
                 <ToggleRow
-                  checked={nerAutoRunOnIdle}
-                  onChange={setNerAutoRunOnIdle}
-                  title="NER auto-run on idle"
-                  description="Auto-run NER on edited paragraphs after typing pauses."
+                  checked={entityAutoRunOnIdle}
+                  onChange={setEntityAutoRunOnIdle}
+                  title="Entity auto-run on idle"
+                  description="Auto-run entity detection on edited paragraphs after typing pauses."
                 />
                 <ToggleRow
-                  checked={nerAutoLinkStrictMatches}
-                  onChange={setNerAutoLinkStrictMatches}
-                  title="NER strict auto-link"
+                  checked={entityAutoLinkStrictMatches}
+                  onChange={setEntityAutoLinkStrictMatches}
+                  title="Entity strict auto-link"
                   description="Convert strict entity matches to canonical document links."
                 />
                 <ToggleRow
-                  checked={nerPreloadModel}
-                  onChange={setNerPreloadModel}
-                  title="Preload NER model"
-                  description="Warm up the browser NER model when the editor is idle."
+                  checked={entityPreloadModel}
+                  onChange={setEntityPreloadModel}
+                  title="Preload entity model"
+                  description="Warm up the browser entity model when the editor is idle."
                 />
 
                 <div className="rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
@@ -532,13 +532,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     checked={debugMode}
                     onChange={setDebugMode}
                     title="Debug mode"
-                    description="Enable verbose runtime logs for LLM and NER internals."
+                    description="Enable verbose runtime logs for LLM and entity internals."
                   />
                 </div>
 
                 <div className="rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4 text-xs text-zinc-400">
                   <p>
-                    With debug mode enabled, verbose stream and NER
+                    With debug mode enabled, verbose stream and entity
                     instrumentation are printed to the browser console.
                   </p>
                 </div>

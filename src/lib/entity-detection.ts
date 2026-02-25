@@ -1,9 +1,9 @@
 "use client";
 
-import { debugInfo, debugLog } from "~/lib/debug";
-import type { NerEntityType, NerSpan } from "~/lib/ner-types";
+import { debugInfo, debugLog, debugWarn } from "~/lib/debug";
+import type { EntitySpan, EntityType } from "~/lib/entity-types";
 
-const NER_MODEL_ID = "onnx-community/distilbert-NER-ONNX";
+const ENTITY_MODEL_ID = "onnx-community/distilbert-NER-ONNX";
 
 type TokenClassificationOptions = {
   aggregation_strategy: "simple";
@@ -25,11 +25,11 @@ type RawEntity = {
   word?: string;
 };
 
-export type { NerEntityType };
-export type NerEntity = NerSpan;
+export type { EntityType };
+export type DetectedEntity = EntitySpan;
 
-let nerPipelinePromise: Promise<TokenClassifier> | null = null;
-let nerPipelineReady = false;
+let entityPipelinePromise: Promise<TokenClassifier> | null = null;
+let entityPipelineReady = false;
 
 function getWebGpuInfo() {
   if (typeof navigator === "undefined") {
@@ -44,7 +44,7 @@ function getWebGpuInfo() {
   return { available: true, reason: "ok" };
 }
 
-function normalizeEntityType(value: string | undefined): NerEntityType | null {
+function normalizeEntityType(value: string | undefined): EntityType | null {
   if (!value) return null;
 
   const normalized = value.toUpperCase().replace(/^[BI]-/, "");
@@ -126,84 +126,88 @@ async function loadClassifier(): Promise<TokenClassifier> {
   const webGpuInfo = getWebGpuInfo();
 
   try {
-    const classifier = await pipeline("token-classification", NER_MODEL_ID, {
+    const classifier = await pipeline("token-classification", ENTITY_MODEL_ID, {
       ...(webGpuInfo.available ? { device: "webgpu" } : {}),
     });
 
     const loadMs = Math.round(performance.now() - loadStart);
-    debugInfo("[NER] Pipeline ready", {
+    debugInfo("[EntityDetection] Pipeline ready", {
       device: webGpuInfo.available ? "webgpu" : "cpu",
       loadMs,
-      model: NER_MODEL_ID,
+      model: ENTITY_MODEL_ID,
     });
 
     return classifier as TokenClassifier;
   } catch (error) {
-    debugInfo("[NER] WebGPU pipeline failed; retrying CPU", {
+    debugWarn("[EntityDetection] WebGPU pipeline failed; retrying CPU", {
       error,
-      model: NER_MODEL_ID,
+      model: ENTITY_MODEL_ID,
     });
 
-    const classifier = await pipeline("token-classification", NER_MODEL_ID, {});
+    const classifier = await pipeline(
+      "token-classification",
+      ENTITY_MODEL_ID,
+      {},
+    );
     const loadMs = Math.round(performance.now() - loadStart);
 
-    debugInfo("[NER] CPU pipeline ready", {
+    debugInfo("[EntityDetection] CPU pipeline ready", {
       loadMs,
-      model: NER_MODEL_ID,
+      model: ENTITY_MODEL_ID,
     });
 
     return classifier as TokenClassifier;
   }
 }
 
-async function getNerPipeline(): Promise<TokenClassifier> {
-  if (!nerPipelinePromise) {
-    debugInfo("[NER] Initializing pipeline", {
-      model: NER_MODEL_ID,
+async function getEntityPipeline(): Promise<TokenClassifier> {
+  if (!entityPipelinePromise) {
+    debugInfo("[EntityDetection] Initializing pipeline", {
+      model: ENTITY_MODEL_ID,
       webGpuInfo: getWebGpuInfo(),
     });
 
-    nerPipelinePromise = loadClassifier()
+    entityPipelinePromise = loadClassifier()
       .then((classifier) => {
-        nerPipelineReady = true;
+        entityPipelineReady = true;
         return classifier;
       })
       .catch((error) => {
-        nerPipelinePromise = null;
+        entityPipelinePromise = null;
         throw error;
       });
-  } else if (nerPipelineReady) {
-    debugLog("[NER] Reusing cached pipeline");
+  } else if (entityPipelineReady) {
+    debugLog("[EntityDetection] Reusing cached pipeline");
   }
 
-  return nerPipelinePromise;
+  return entityPipelinePromise;
 }
 
-export async function warmupNerPipeline(): Promise<void> {
-  await getNerPipeline();
+export async function warmupEntityDetectionPipeline(): Promise<void> {
+  await getEntityPipeline();
 }
 
-export async function detectNamedEntities(text: string): Promise<NerSpan[]> {
+export async function detectEntitySpans(text: string): Promise<EntitySpan[]> {
   if (!text.trim()) {
-    debugLog("[NER] Skipping inference for empty paragraph");
+    debugLog("[EntityDetection] Skipping inference for empty paragraph");
     return [];
   }
 
   const preview = text.slice(0, 120);
-  debugInfo("[NER] Inference started", {
+  debugInfo("[EntityDetection] Inference started", {
     length: text.length,
     preview,
   });
 
   const inferenceStart = performance.now();
-  const model = await getNerPipeline();
+  const model = await getEntityPipeline();
   const result = await model(text, {
     aggregation_strategy: "simple",
   });
   const inferenceMs = Math.round(performance.now() - inferenceStart);
 
   if (!Array.isArray(result)) {
-    console.warn("[NER] Inference result is not an array", {
+    debugWarn("[EntityDetection] Inference result is not an array", {
       inferenceMs,
       resultType: typeof result,
     });
@@ -249,8 +253,8 @@ export async function detectNamedEntities(text: string): Promise<NerSpan[]> {
           confidence: item.score,
           end: item.end as number,
           start: item.start as number,
-          type: item.type as NerEntityType,
-        } satisfies NerSpan;
+          type: item.type as EntityType,
+        } satisfies EntitySpan;
       }
 
       const derived = findTokenOffsets(text, item.word, searchCursor);
@@ -262,13 +266,13 @@ export async function detectNamedEntities(text: string): Promise<NerSpan[]> {
         confidence: item.score,
         end: derived.end,
         start: derived.start,
-        type: item.type as NerEntityType,
-      } satisfies NerSpan;
+        type: item.type as EntityType,
+      } satisfies EntitySpan;
     })
-    .filter((item): item is NerSpan => item !== null)
+    .filter((item): item is EntitySpan => item !== null)
     .sort((a, b) => a.start - b.start);
 
-  const merged: NerSpan[] = [];
+  const merged: EntitySpan[] = [];
   for (const entity of mappedWithOffsets) {
     const previous = merged[merged.length - 1];
 
@@ -290,13 +294,13 @@ export async function detectNamedEntities(text: string): Promise<NerSpan[]> {
     merged.push(entity);
   }
 
-  debugInfo("[NER] Inference completed", {
+  debugInfo("[EntityDetection] Inference completed", {
     derivedOffsetCount,
     inferenceMs,
     mappedCount: merged.length,
     rawCount: result.length,
   });
 
-  debugLog("[NER] Raw label counts", labelCounts);
+  debugLog("[EntityDetection] Raw label counts", labelCounts);
   return merged;
 }

@@ -9,37 +9,38 @@ import { cn } from "~/lib/utils";
 export function ParagraphElement(props: PlateElementProps) {
   const { editor, element } = props;
   const readOnly = useReadOnly();
-  const [isRunningNer, setIsRunningNer] = useState(false);
+  const [isRunningEntityDetection, setIsRunningEntityDetection] =
+    useState(false);
 
-  const runNer = async () => {
+  const runEntityDetection = async () => {
     const paragraphPath = editor.api.findPath(element);
     if (!paragraphPath || paragraphPath.length !== 1) {
-      console.warn("[NER] Skipping paragraph: invalid path", {
+      console.warn("[Entity] Skipping paragraph: invalid path", {
         paragraphPath,
       });
       return;
     }
 
-    const nerApi = (
+    const entityApi = (
       editor.api as {
-        ner?: { runParagraph?: (path: number[]) => Promise<void> };
+        entity?: { runParagraph?: (path: number[]) => Promise<void> };
       }
-    ).ner;
-    if (!nerApi?.runParagraph) {
-      console.warn("[NER] Plugin API missing: ner.runParagraph");
+    ).entity;
+    if (!entityApi?.runParagraph) {
+      console.warn("[Entity] Plugin API missing: entity.runParagraph");
       return;
     }
 
-    setIsRunningNer(true);
+    setIsRunningEntityDetection(true);
     try {
-      await nerApi.runParagraph(paragraphPath);
+      await entityApi.runParagraph(paragraphPath);
     } catch (error) {
-      console.error("[NER] Paragraph pass failed", {
+      console.error("[Entity] Paragraph pass failed", {
         error,
         paragraphPath,
       });
     } finally {
-      setIsRunningNer(false);
+      setIsRunningEntityDetection(false);
     }
   };
 
@@ -56,13 +57,13 @@ export function ParagraphElement(props: PlateElementProps) {
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            void runNer();
+            void runEntityDetection();
           }}
-          disabled={isRunningNer}
-          title="Run named entity recognition"
+          disabled={isRunningEntityDetection}
+          title="Detect entities in this paragraph"
         >
           <WandSparkles className="size-3" />
-          {isRunningNer ? "Running..." : "NER"}
+          {isRunningEntityDetection ? "Running..." : "Entity"}
         </button>
       )}
       {props.children}

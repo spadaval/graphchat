@@ -22,7 +22,7 @@ import type {
   TTextAlignProps,
 } from "platejs";
 import type { PlateEditor } from "platejs/react";
-import type { NerEntityType } from "~/lib/ner-types";
+import type { EntityType } from "~/lib/entity-types";
 import type { PLACEHOLDER_TYPE } from "./plugins/placeholder-kit";
 
 export interface MyBlockElement extends TElement, TListProps {
@@ -155,12 +155,15 @@ export interface MyToggleElement extends MyTextBlockElement {
 }
 
 export interface RichText extends TBasicMarks, TCommentText, TFontMarks, TText {
+  candidateRevision?: number;
+  candidateState?: "active" | "dismissed";
+  entity?: boolean;
+  entityCanonicalName?: string;
+  entityConfidence?: number;
+  entityId?: string;
+  entitySource?: "manual" | "model";
+  entityType?: EntityType;
   kbd?: boolean;
-  ner?: boolean;
-  nerType?: NerEntityType;
-  nerSource?: "manual" | "model";
-  nerCanonicalName?: string;
-  nerConfidence?: number;
 }
 
 export type MyValue = (
@@ -188,7 +191,7 @@ export interface MyEditor extends PlateEditor {
       serialize: () => string;
       deserialize: (content: string) => MyValue;
     };
-    ner?: {
+    entity?: {
       runDocument: () => Promise<void>;
       runParagraph: (path: number[]) => Promise<void>;
     };
@@ -198,11 +201,16 @@ export interface MyEditor extends PlateEditor {
     };
   } & PlateEditor["api"];
   tf: PlateEditor["tf"] & {
-    ner?: {
-      adjustBoundary: (direction: "expand" | "shrink", amount: number) => void;
-      convertToLink: (canonicalName: string) => void;
-      remove: () => void;
-      setType: (type: NerEntityType) => void;
+    entity?: {
+      adjustBoundary: (
+        entityId: string,
+        edge: "left" | "right",
+        direction: "expand" | "contract",
+      ) => void;
+      convertToLink: (entityId: string, canonicalName: string) => void;
+      dismiss: (entityId: string) => void;
+      remove: (entityId: string) => void;
+      setType: (entityId: string, type: EntityType) => void;
     };
   };
 }
