@@ -211,7 +211,9 @@ function DocumentListItem({
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span className={`truncate text-[13px] ${isActive ? "font-bold" : "font-medium"}`}>
+              <span
+                className={`truncate text-[13px] ${isActive ? "font-bold" : "font-medium"}`}
+              >
                 {document.title || "Untitled"}
               </span>
             )}
@@ -221,13 +223,17 @@ function DocumentListItem({
           </div>
           {!isRenaming &&
             serializeModelToPreviewText(document.contentModel || []).trim() && (
-              <p className={`text-[11px] line-clamp-1 ml-6 leading-relaxed transition-colors ${isActive ? "text-emerald-400/60" : "text-zinc-600"}`}>
+              <p
+                className={`text-[11px] line-clamp-1 ml-6 leading-relaxed transition-colors ${isActive ? "text-emerald-400/60" : "text-zinc-600"}`}
+              >
                 {serializeModelToPreviewText(document.contentModel || [])}
               </p>
             )}
           {!isRenaming && (
             <div className="flex items-center justify-between ml-6 mt-2">
-              <span className={`text-[9px] font-mono uppercase tracking-wider transition-colors ${isActive ? "text-emerald-500/40" : "text-zinc-700"}`}>
+              <span
+                className={`text-[9px] font-mono uppercase tracking-wider transition-colors ${isActive ? "text-emerald-500/40" : "text-zinc-700"}`}
+              >
                 {formatDate(document.updatedAt)}
               </span>
               <div className="flex gap-1.5">
@@ -235,8 +241,8 @@ function DocumentListItem({
                   <span
                     key={tag}
                     className={`text-[9px] px-1.5 py-0.5 rounded-sm border font-mono uppercase tracking-wider ${
-                      isActive 
-                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500/60" 
+                      isActive
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500/60"
                         : "bg-zinc-900/50 border-zinc-800 text-zinc-600"
                     }`}
                   >
@@ -266,4 +272,3 @@ function DocumentListItem({
     </ContextMenu>
   );
 }
-

@@ -67,7 +67,10 @@ function ThreadItem({
           <TooltipTrigger asChild>
             <div className="truncate pr-6">{thread.title}</div>
           </TooltipTrigger>
-          <TooltipContent side="right" className="max-w-xs break-words bg-[#0d0d0d] border-zinc-800 text-zinc-300">
+          <TooltipContent
+            side="right"
+            className="max-w-xs break-words bg-[#0d0d0d] border-zinc-800 text-zinc-300"
+          >
             {thread.title}
           </TooltipContent>
         </Tooltip>
@@ -237,7 +240,6 @@ function EditNameModal({
         <form onSubmit={handleSubmit} className="space-y-6">
           <input
             type="text"
-            autoFocus
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             className="w-full h-10 px-3 border border-zinc-800 rounded-md bg-zinc-900/50 text-[13px] text-emerald-400 placeholder:text-zinc-800 focus:outline-none focus:border-emerald-500/50 transition-colors font-medium"
@@ -288,7 +290,9 @@ function DeleteAllButton({
             : "text-zinc-700 hover:text-rose-400/60 border-transparent"
         }`}
         title={
-          confirmation ? "Confirm destruction of all sessions" : "Purge session history"
+          confirmation
+            ? "Confirm destruction of all sessions"
+            : "Purge session history"
         }
       >
         {confirmation ? "Confirm Purge" : "Purge History"}
@@ -390,7 +394,6 @@ export function SidebarContent({
             onBlur={() => setDeleteAllConfirmation(false)}
           />
         </div>
-
 
         {/* Edit Name Modal */}
         {editingThread && (

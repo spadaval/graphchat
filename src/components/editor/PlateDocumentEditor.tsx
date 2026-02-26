@@ -769,9 +769,13 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
                         }
                         className="group flex items-start gap-3 rounded-md py-2.5 transition-all focus:bg-emerald-500/5"
                       >
-                        <TypeIcon className={`mt-0.5 size-4 ${isActive ? "text-emerald-500" : "text-zinc-600 group-data-[highlighted]:text-zinc-300"}`} />
+                        <TypeIcon
+                          className={`mt-0.5 size-4 ${isActive ? "text-emerald-500" : "text-zinc-600 group-data-[highlighted]:text-zinc-300"}`}
+                        />
                         <div className="flex min-w-0 flex-col">
-                          <span className={`text-[13px] leading-tight ${isActive ? "text-emerald-400 font-bold" : "text-zinc-400 font-medium group-data-[highlighted]:text-zinc-200"}`}>
+                          <span
+                            className={`text-[13px] leading-tight ${isActive ? "text-emerald-400 font-bold" : "text-zinc-400 font-medium group-data-[highlighted]:text-zinc-200"}`}
+                          >
                             {typeDef.name}
                             {isActive ? " (Active)" : ""}
                           </span>
@@ -818,7 +822,9 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
                 </span>
               )}
               <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-600">
-                <div className={`h-1.5 w-1.5 rounded-full ${isGenerating ? "bg-emerald-500 animate-pulse" : "bg-emerald-500/30"}`} />
+                <div
+                  className={`h-1.5 w-1.5 rounded-full ${isGenerating ? "bg-emerald-500 animate-pulse" : "bg-emerald-500/30"}`}
+                />
                 SYSTEM {isGenerating ? "BUSY" : "READY"}
               </div>
             </div>
@@ -832,9 +838,15 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
             >
               <span className="relative z-10 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 group-hover:text-emerald-400 transition-colors">
                 {isRunningEntityDetection ? (
-                  <Loader2 size={12} className="animate-spin text-emerald-500" />
+                  <Loader2
+                    size={12}
+                    className="animate-spin text-emerald-500"
+                  />
                 ) : (
-                  <WandSparkles size={12} className="group-hover:text-emerald-500" />
+                  <WandSparkles
+                    size={12}
+                    className="group-hover:text-emerald-500"
+                  />
                 )}
                 Run Diagnostics
               </span>

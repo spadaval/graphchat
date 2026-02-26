@@ -30,7 +30,9 @@ function QuickToggleRow({
     <div className="flex items-start justify-between gap-4 rounded-lg border border-zinc-800/50 bg-zinc-900/20 p-4 transition-all hover:bg-zinc-900/40">
       <div className="space-y-1">
         <p className="text-[13px] font-bold text-zinc-200">{title}</p>
-        <p className="text-[11px] text-zinc-600 leading-relaxed">{description}</p>
+        <p className="text-[11px] text-zinc-600 leading-relaxed">
+          {description}
+        </p>
       </div>
       <button
         type="button"
@@ -96,9 +98,15 @@ export function SettingsPanelContent() {
                 onChange={(event) => handlePresetChange(event.target.value)}
                 className="h-9 w-full rounded-md border border-zinc-800 bg-zinc-900/50 px-3 text-[11px] font-bold uppercase tracking-wider text-emerald-400 focus:outline-none focus:border-emerald-500/40 transition-colors"
               >
-                <option value="" className="bg-[#0d0d0d]">Custom Profile</option>
+                <option value="" className="bg-[#0d0d0d]">
+                  Custom Profile
+                </option>
                 {SAMPLER_PRESETS.map((preset) => (
-                  <option key={preset.id} value={preset.id} className="bg-[#0d0d0d]">
+                  <option
+                    key={preset.id}
+                    value={preset.id}
+                    className="bg-[#0d0d0d]"
+                  >
                     {preset.name}
                   </option>
                 ))}
@@ -119,7 +127,8 @@ export function SettingsPanelContent() {
 
         <div className="rounded-lg border border-emerald-500/10 bg-emerald-500/5 p-5 text-[11px] font-medium text-zinc-500 leading-relaxed">
           <p className="italic">
-            Extended parameters and diagnostic utilities are restricted to the full system configuration.
+            Extended parameters and diagnostic utilities are restricted to the
+            full system configuration.
           </p>
         </div>
       </div>

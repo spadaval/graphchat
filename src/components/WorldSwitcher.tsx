@@ -83,8 +83,8 @@ export function WorldSwitcher() {
               key={world.id}
               onClick={() => setCurrentWorld(world.id)}
               className={`flex cursor-pointer items-center justify-between rounded px-3 py-2.5 text-[12px] font-medium transition-all focus:bg-emerald-500/5 ${
-                world.id === currentWorldId 
-                  ? "bg-emerald-500/5 text-emerald-400 font-bold" 
+                world.id === currentWorldId
+                  ? "bg-emerald-500/5 text-emerald-400 font-bold"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >

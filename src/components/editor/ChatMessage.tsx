@@ -149,7 +149,10 @@ const _MessageBubble = ({
                     </code>
                   </pre>
                 ) : (
-                  <code className="bg-white/5 border border-border/20 px-1.5 py-0.5 rounded text-primary/80 font-mono text-[0.9em]" {...props}>
+                  <code
+                    className="bg-white/5 border border-border/20 px-1.5 py-0.5 rounded text-primary/80 font-mono text-[0.9em]"
+                    {...props}
+                  >
                     {children}
                   </code>
                 );
@@ -162,7 +165,12 @@ const _MessageBubble = ({
                   {...props}
                 />
               ),
-              p: (props) => <p className="mb-4 text-foreground/80 leading-relaxed last:mb-0" {...props} />,
+              p: (props) => (
+                <p
+                  className="mb-4 text-foreground/80 leading-relaxed last:mb-0"
+                  {...props}
+                />
+              ),
               h1: (props) => (
                 <h1
                   className="wc-title text-xl font-bold mb-5 text-foreground tracking-tight"
@@ -182,7 +190,10 @@ const _MessageBubble = ({
                 />
               ),
               ul: (props) => (
-                <ul className="list-disc pl-5 mb-4 text-foreground/70 space-y-1.5" {...props} />
+                <ul
+                  className="list-disc pl-5 mb-4 text-foreground/70 space-y-1.5"
+                  {...props}
+                />
               ),
               ol: (props) => (
                 <ol
@@ -336,8 +347,12 @@ const _MessageAttribution = ({ llmRequests }: MessageAttributionProps) => {
 
             {latestRequest.error && (
               <div className="p-3 bg-destructive/5 border border-destructive/10 rounded">
-                <span className="text-destructive/60 text-[10px] font-bold">Error Details</span>
-                <p className="text-destructive/80 mt-1 whitespace-pre-wrap leading-relaxed">{latestRequest.error}</p>
+                <span className="text-destructive/60 text-[10px] font-bold">
+                  Error Details
+                </span>
+                <p className="text-destructive/80 mt-1 whitespace-pre-wrap leading-relaxed">
+                  {latestRequest.error}
+                </p>
               </div>
             )}
           </div>

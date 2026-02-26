@@ -132,6 +132,7 @@ Status: Core implementation complete. Remaining work is targeted stabilization a
 
 ### Entity UX Enhancements
 - [ ] Make entity highlights more visible.
+- [ ] Differentiate linked vs unlinked entity candidates visually (clear styling/state distinction when `href` exists).
 - [ ] Auto-load entity model.
 - [ ] Add mention syntax (`@Ardelia`) with dropdown for existing documents.
 - [ ] Evaluate optional sidecar persistence for editor-only candidate state (not required for current overhaul).
@@ -146,6 +147,21 @@ Status: Core implementation complete. Remaining work is targeted stabilization a
 - [x] Remove separate Server tab, fold into settings
 - [x] Collapse sidebar model picker to dropdown with quick preset switching
 - [ ] Add individual feature toggles (global AI master switch removed)
+
+### Settings/UI Follow-ups
+- [ ] Fix OpenRouter/local model selector UX: control appears cut off and page scrolling is difficult while configuring models.
+- [ ] Fully redesign or remove the quick settings sidebar (current UX is really bad).
+- [ ] Make the OpenRouter model picker better - combobox, filters, better defaults, load limit?
+- [ ] Add profiles (`model + preset`) so model-specific settings can be switched as cohesive bundles.
+- [ ] Explore higher-order setting hierarchies beyond profiles for complex model/runtime configuration sets.
+
+### AI Authoring Features
+- [ ] Fix `Generate Next` inserting an unexpected `<callout>` tag at the start of generated output.
+- [ ] Add advanced regenerate flow: modal to edit history + generation settings before regenerating a block.
+- [ ] Add text-selection context menu actions, including AI regenerate for selected text via fill-in-the-middle.
+- [ ] Add "Generate document from entity candidate" flow.
+- [ ] Add "Chat with your document" feature.
+- [ ] Add advanced semantic search across documents, potentially with LLM augmentation.
 
 ### General Improvements
 - Refresh overall UI visual design
