@@ -27,17 +27,26 @@ function QuickToggleRow({
   title: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-slate-900/45 p-3">
+    <div className="flex items-start justify-between gap-4 rounded-lg border border-zinc-800/50 bg-zinc-900/20 p-4 transition-all hover:bg-zinc-900/40">
       <div className="space-y-1">
-        <p className="text-sm font-medium text-slate-100">{title}</p>
-        <p className="text-xs text-slate-500">{description}</p>
+        <p className="text-[13px] font-bold text-zinc-200">{title}</p>
+        <p className="text-[11px] text-zinc-600 leading-relaxed">{description}</p>
       </div>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-950 text-teal-400"
-      />
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none ${
+          checked ? "bg-emerald-500/40" : "bg-zinc-800"
+        }`}
+      >
+        <span
+          className={`pointer-events-none block h-3.5 w-3.5 rounded-full bg-zinc-100 shadow-lg ring-0 transition-transform duration-200 ${
+            checked ? "translate-x-4.5" : "translate-x-1"
+          }`}
+        />
+      </button>
     </div>
   );
 }
@@ -59,72 +68,70 @@ export function SettingsPanelContent() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-transparent">
-      <div className="flex-1 space-y-5 overflow-y-auto p-4">
+    <div className="flex min-h-0 flex-1 flex-col bg-[#0d0d0d]">
+      <div className="flex-1 space-y-10 overflow-y-auto p-6 scrollbar-hide">
         <div>
-          <h3 className="wc-title mb-2 flex items-center gap-2 text-base font-semibold text-slate-100">
-            <Sparkles size={16} className="text-teal-300" />
-            Quick Controls
+          <h3 className="mb-5 flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
+            <Sparkles size={14} className="text-emerald-500/60" />
+            Quick Access
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-4">
             <QuickToggleRow
               checked={apiBackendEnabled}
               onChange={setAPIBackendEnabled}
-              title="Enable API Backend"
-              description="When disabled, all requests run through the browser model."
+              title="Remote Mesh"
+              description="Offload inference to high-performance host mesh."
             />
 
-            <div className="rounded-xl border border-white/10 bg-slate-900/45 p-3">
+            <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/20 p-4">
               <label
                 htmlFor="preset-select"
-                className="mb-1 block text-sm font-medium text-slate-100"
+                className="mb-3 block text-[10px] font-bold text-zinc-500 uppercase tracking-widest"
               >
-                Sampler Preset
+                Cognitive Profile
               </label>
               <select
                 id="preset-select"
                 value={activeSamplerPreset || ""}
                 onChange={(event) => handlePresetChange(event.target.value)}
-                className="h-9 w-full rounded-md border border-slate-700 bg-slate-950 px-2 text-xs text-slate-100"
+                className="h-9 w-full rounded-md border border-zinc-800 bg-zinc-900/50 px-3 text-[11px] font-bold uppercase tracking-wider text-emerald-400 focus:outline-none focus:border-emerald-500/40 transition-colors"
               >
-                <option value="">None</option>
+                <option value="" className="bg-[#0d0d0d]">Custom Profile</option>
                 {SAMPLER_PRESETS.map((preset) => (
-                  <option key={preset.id} value={preset.id}>
+                  <option key={preset.id} value={preset.id} className="bg-[#0d0d0d]">
                     {preset.name}
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-[11px] text-slate-500">
-                Quickly switch generation behavior.
-              </p>
             </div>
           </div>
         </div>
 
         <div>
-          <h3 className="wc-title mb-2 flex items-center gap-2 text-base font-semibold text-slate-100">
-            <Cable size={16} className="text-teal-300" />
-            Server
+          <h3 className="mb-5 flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
+            <Cable size={14} className="text-emerald-500/60" />
+            Host Status
           </h3>
-          <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-900/45">
+          <div className="overflow-hidden rounded-lg border border-zinc-800/50 bg-zinc-900/10">
             <ServerInfoComponent mode="sidebar" />
           </div>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-slate-900/45 p-3 text-xs text-slate-500">
-          Advanced sampler, tokenizer, debug, and backend testing tools are in
-          full settings.
+        <div className="rounded-lg border border-emerald-500/10 bg-emerald-500/5 p-5 text-[11px] font-medium text-zinc-500 leading-relaxed">
+          <p className="italic">
+            Extended parameters and diagnostic utilities are restricted to the full system configuration.
+          </p>
         </div>
       </div>
 
-      <div className="border-t border-white/10 p-4">
+      <div className="border-t border-zinc-800/50 p-6 bg-[#0a0a0a]">
         <Button
           variant="outline"
           onClick={() => setShowModal(true)}
-          className="w-full border-slate-700 bg-slate-900/55 text-slate-200 transition-colors hover:bg-slate-800/75"
+          className="w-full h-10 border-zinc-800 bg-zinc-900/50 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 hover:bg-emerald-500/5 hover:text-emerald-400 hover:border-emerald-500/30 transition-all shadow-lg"
         >
-          <Settings size={16} />
-          Open Full Settings
+          <Settings size={14} />
+          Terminal Config
         </Button>
       </div>
 

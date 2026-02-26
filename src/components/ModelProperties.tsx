@@ -24,20 +24,22 @@ export function ModelProperties() {
     label: string;
     content: string;
   }) => (
-    <div className="flex items-center gap-1.5 mb-1.5">
-      <span className="text-sm font-medium text-zinc-300">{label}</span>
+    <div className="flex items-center gap-2 mb-1">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+        {label}
+      </span>
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             type="button"
-            className="text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="text-zinc-700 hover:text-emerald-500/80 transition-colors"
           >
-            <Info size={12} />
+            <Info size={10} />
           </button>
         </TooltipTrigger>
         <TooltipContent
           side="right"
-          className="max-w-[200px] bg-zinc-800 border-zinc-700 text-zinc-200"
+          className="max-w-[220px] bg-zinc-900 border-zinc-800 text-[10px] leading-relaxed text-zinc-400 p-3 shadow-2xl"
         >
           {content}
         </TooltipContent>
@@ -46,192 +48,161 @@ export function ModelProperties() {
   );
 
   return (
-    <div className="space-y-4">
-      <div className="text-sm text-zinc-500">
-        Configure model sampling parameters
-      </div>
-
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
       {/* Temperature */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <TooltipWrapper
-          label="Temperature"
-          content="Higher values make the output more random, while lower values make it more focused and deterministic."
+          label="Entropy (Temp)"
+          content="Higher values increase variance/creativity; lower values force deterministic precision."
         />
-        <input
-          type="range"
-          min="0"
-          max="2"
-          step="0.1"
-          value={modelProperties.temperature}
-          onChange={(e) =>
-            updateModelProperties({ temperature: parseFloat(e.target.value) })
-          }
-          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-zinc-300"
-        />
-        <div className="flex justify-between text-xs text-zinc-500">
-          <span>0.0</span>
-          <span className="text-zinc-300">{modelProperties.temperature}</span>
-          <span>2.0</span>
+        <div className="flex items-center gap-4">
+          <input
+            type="range"
+            min="0"
+            max="2"
+            step="0.1"
+            value={modelProperties.temperature}
+            onChange={(e) =>
+              updateModelProperties({ temperature: parseFloat(e.target.value) })
+            }
+            className="flex-1 h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-emerald-500"
+          />
+          <span className="min-w-[40px] text-right font-mono text-xs text-emerald-400/90 bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/10">
+            {modelProperties.temperature.toFixed(1)}
+          </span>
         </div>
       </div>
 
       {/* Top K */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <TooltipWrapper
-          label="Top K"
-          content="Limits the next token selection to the K most likely tokens. Reduces the risk of long-tail low-probability tokens."
+          label="Top-K Filter"
+          content="Constrains generation to the top K most probable tokens. Nullifies the long-tail."
         />
-        <input
-          type="range"
-          min="1"
-          max="100"
-          step="1"
-          value={modelProperties.top_k}
-          onChange={(e) =>
-            updateModelProperties({ top_k: parseInt(e.target.value, 10) })
-          }
-          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-zinc-300"
-        />
-        <div className="flex justify-between text-xs text-zinc-500">
-          <span>1</span>
-          <span className="text-zinc-300">{modelProperties.top_k}</span>
-          <span>100</span>
+        <div className="flex items-center gap-4">
+          <input
+            type="range"
+            min="1"
+            max="100"
+            step="1"
+            value={modelProperties.top_k}
+            onChange={(e) =>
+              updateModelProperties({ top_k: parseInt(e.target.value, 10) })
+            }
+            className="flex-1 h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-emerald-500"
+          />
+          <span className="min-w-[40px] text-right font-mono text-xs text-emerald-400/90 bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/10">
+            {modelProperties.top_k}
+          </span>
         </div>
       </div>
 
       {/* Top P */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <TooltipWrapper
-          label="Top P"
-          content="Nucleus sampling: only considers tokens with a cumulative probability above P. Balances diversity and quality."
+          label="Nucleus (Top-P)"
+          content="Dynamic vocabulary cutoff based on cumulative probability mass P."
         />
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.05"
-          value={modelProperties.top_p}
-          onChange={(e) =>
-            updateModelProperties({ top_p: parseFloat(e.target.value) })
-          }
-          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
-        />
-        <div className="flex justify-between text-xs text-zinc-500">
-          <span>0.0</span>
-          <span className="text-zinc-300">{modelProperties.top_p}</span>
-          <span>1.0</span>
+        <div className="flex items-center gap-4">
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={modelProperties.top_p}
+            onChange={(e) =>
+              updateModelProperties({ top_p: parseFloat(e.target.value) })
+            }
+            className="flex-1 h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-emerald-500"
+          />
+          <span className="min-w-[40px] text-right font-mono text-xs text-emerald-400/90 bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/10">
+            {modelProperties.top_p.toFixed(2)}
+          </span>
         </div>
       </div>
 
       {/* Max Tokens */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <TooltipWrapper
-          label="Max Tokens"
-          content="The maximum number of tokens to generate in one go. Useful for preventing runaway generation."
+          label="Sequence Limit"
+          content="Maximum token count per generation event. Safeguard against infinite loops."
         />
-        <input
-          type="number"
-          min="1"
-          max="4096"
-          value={modelProperties.n_predict}
-          onChange={(e) =>
-            updateModelProperties({
-              n_predict: parseInt(e.target.value, 10) || 128,
-            })
-          }
-          className="w-full p-2 bg-gradient-to-br from-zinc-800 to-zinc-850 border border-zinc-700 rounded-lg text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-600 text-sm"
-        />
+        <div className="relative group">
+          <input
+            type="number"
+            min="1"
+            max="8192"
+            value={modelProperties.n_predict}
+            onChange={(e) =>
+              updateModelProperties({
+                n_predict: parseInt(e.target.value, 10) || 128,
+              })
+            }
+            className="w-full h-8 bg-zinc-900/50 border border-zinc-800 rounded px-3 font-mono text-xs text-emerald-400 focus:outline-none focus:border-emerald-500/40 transition-colors"
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase tracking-widest text-zinc-700 pointer-events-none group-hover:text-zinc-600 transition-colors">
+            TOKENS
+          </span>
+        </div>
       </div>
 
       {/* Repeat Penalty */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <TooltipWrapper
-          label="Repeat Penalty"
-          content="Applies a penalty to tokens that have already appeared. Higher values strongly discourage repetition."
+          label="Repetition Bias"
+          content="Mathematical penalty applied to already-generated tokens to encourage variety."
         />
-        <input
-          type="range"
-          min="1.0"
-          max="2.0"
-          step="0.1"
-          value={modelProperties.repeat_penalty}
-          onChange={(e) =>
-            updateModelProperties({
-              repeat_penalty: parseFloat(e.target.value),
-            })
-          }
-          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
-        />
-        <div className="flex justify-between text-xs text-zinc-500">
-          <span>1.0</span>
-          <span className="text-zinc-300">
-            {modelProperties.repeat_penalty}
+        <div className="flex items-center gap-4">
+          <input
+            type="range"
+            min="1.0"
+            max="2.0"
+            step="0.1"
+            value={modelProperties.repeat_penalty}
+            onChange={(e) =>
+              updateModelProperties({
+                repeat_penalty: parseFloat(e.target.value),
+              })
+            }
+            className="flex-1 h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-emerald-500"
+          />
+          <span className="min-w-[40px] text-right font-mono text-xs text-emerald-400/90 bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/10">
+            {modelProperties.repeat_penalty.toFixed(1)}
           </span>
-          <span>2.0</span>
         </div>
       </div>
 
       {/* Presence Penalty */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <TooltipWrapper
-          label="Presence Penalty"
-          content="Penalizes tokens based on whether they have appeared so far. Encourages the model to talk about new topics."
+          label="Presence Bias"
+          content="Penalizes tokens that have appeared at least once. Forces topical shift."
         />
-        <input
-          type="range"
-          min="-2.0"
-          max="2.0"
-          step="0.1"
-          value={modelProperties.presence_penalty}
-          onChange={(e) =>
-            updateModelProperties({
-              presence_penalty: parseFloat(e.target.value),
-            })
-          }
-          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
-        />
-        <div className="flex justify-between text-xs text-zinc-500">
-          <span>-2.0</span>
-          <span className="text-zinc-300">
-            {modelProperties.presence_penalty}
+        <div className="flex items-center gap-4">
+          <input
+            type="range"
+            min="-2.0"
+            max="2.0"
+            step="0.1"
+            value={modelProperties.presence_penalty}
+            onChange={(e) =>
+              updateModelProperties({
+                presence_penalty: parseFloat(e.target.value),
+              })
+            }
+            className="flex-1 h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-emerald-500"
+          />
+          <span className="min-w-[40px] text-right font-mono text-xs text-emerald-400/90 bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/10">
+            {modelProperties.presence_penalty.toFixed(1)}
           </span>
-          <span>2.0</span>
-        </div>
-      </div>
-
-      {/* Frequency Penalty */}
-      <div className="space-y-2">
-        <TooltipWrapper
-          label="Frequency Penalty"
-          content="Penalizes tokens based on how many times they've appeared. Further discourages overused words."
-        />
-        <input
-          type="range"
-          min="-2.0"
-          max="2.0"
-          step="0.1"
-          value={modelProperties.frequency_penalty}
-          onChange={(e) =>
-            updateModelProperties({
-              frequency_penalty: parseFloat(e.target.value),
-            })
-          }
-          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
-        />
-        <div className="flex justify-between text-xs text-zinc-500">
-          <span>-2.0</span>
-          <span className="text-zinc-300">
-            {modelProperties.frequency_penalty}
-          </span>
-          <span>2.0</span>
         </div>
       </div>
 
       {/* Mirostat Mode */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <TooltipWrapper
-          label="Mirostat Mode"
-          content="An algorithm that controls the perplexity of the generated text, keeping it within a target range."
+          label="Mirostat Controller"
+          content="Dynamic perplexity control algorithm. Automatically adjusts sampling to maintain quality."
         />
         <select
           value={modelProperties.mirostat}
@@ -240,127 +211,59 @@ export function ModelProperties() {
               mirostat: parseInt(e.target.value, 10) as 0 | 1 | 2,
             })
           }
-          className="w-full p-2 bg-gradient-to-br from-zinc-800 to-zinc-850 border border-zinc-700 rounded-lg text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-600 text-sm"
+          className="w-full h-8 bg-zinc-900/50 border border-zinc-800 rounded px-2 font-mono text-[11px] text-emerald-400/80 focus:outline-none focus:border-emerald-500/40 transition-colors uppercase tracking-wider"
         >
           <option value={0}>Disabled</option>
-          <option value={1}>Mirostat 1.0</option>
-          <option value={2}>Mirostat 2.0</option>
+          <option value={1}>Mirostat v1</option>
+          <option value={2}>Mirostat v2</option>
         </select>
       </div>
 
-      {/* Mirostat Tau */}
-      {modelProperties.mirostat > 0 && (
-        <div className="space-y-2">
-          <TooltipWrapper
-            label="Mirostat Tau"
-            content="The target perplexity (bit per token) for the Mirostat algorithm. Typical values are 3.0 to 5.0."
-          />
-          <input
-            type="range"
-            min="0"
-            max="10"
-            step="0.1"
-            value={modelProperties.mirostat_tau}
-            onChange={(e) =>
+      {/* Boolean Controls */}
+      <div className="space-y-4 pt-2">
+        <div className="flex items-center justify-between group">
+          <label
+            htmlFor="streaming"
+            className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 group-hover:text-zinc-400 transition-colors cursor-pointer"
+          >
+            Live Streaming
+          </label>
+          <button
+            type="button"
+            id="streaming"
+            onClick={() =>
+              updateModelProperties({ stream: !modelProperties.stream })
+            }
+            className={`w-8 h-4 rounded-full transition-colors relative ${modelProperties.stream ? "bg-emerald-500/40" : "bg-zinc-800"}`}
+          >
+            <div
+              className={`absolute top-1 w-2 h-2 rounded-full bg-zinc-100 transition-all ${modelProperties.stream ? "right-1" : "left-1"}`}
+            />
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between group">
+          <label
+            htmlFor="cache-prompt"
+            className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 group-hover:text-zinc-400 transition-colors cursor-pointer"
+          >
+            Context Caching
+          </label>
+          <button
+            type="button"
+            id="cache-prompt"
+            onClick={() =>
               updateModelProperties({
-                mirostat_tau: parseFloat(e.target.value),
+                cache_prompt: !modelProperties.cache_prompt,
               })
             }
-            className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
-          />
-          <div className="flex justify-between text-xs text-zinc-500">
-            <span>0.0</span>
-            <span className="text-zinc-300">
-              {modelProperties.mirostat_tau}
-            </span>
-            <span>10.0</span>
-          </div>
+            className={`w-8 h-4 rounded-full transition-colors relative ${modelProperties.cache_prompt ? "bg-emerald-500/40" : "bg-zinc-800"}`}
+          >
+            <div
+              className={`absolute top-1 w-2 h-2 rounded-full bg-zinc-100 transition-all ${modelProperties.cache_prompt ? "right-1" : "left-1"}`}
+            />
+          </button>
         </div>
-      )}
-
-      {/* Mirostat Eta */}
-      {modelProperties.mirostat > 0 && (
-        <div className="space-y-2">
-          <TooltipWrapper
-            label="Mirostat Eta"
-            content="The learning rate for the Mirostat algorithm. Controls how quickly it adjusts to maintain target perplexity."
-          />
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={modelProperties.mirostat_eta}
-            onChange={(e) =>
-              updateModelProperties({
-                mirostat_eta: parseFloat(e.target.value),
-              })
-            }
-            className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
-          />
-          <div className="flex justify-between text-xs text-zinc-500">
-            <span>0.00</span>
-            <span className="text-zinc-300">
-              {modelProperties.mirostat_eta}
-            </span>
-            <span>1.00</span>
-          </div>
-        </div>
-      )}
-
-      {/* Streaming */}
-      <div className="flex items-center space-x-2">
-        <input
-          type="checkbox"
-          id="streaming"
-          checked={modelProperties.stream}
-          onChange={(e) => updateModelProperties({ stream: e.target.checked })}
-          className="w-4 h-4 text-zinc-600 bg-zinc-700 border-zinc-600 rounded focus:ring-zinc-500"
-        />
-        <label
-          htmlFor="streaming"
-          className="text-sm font-medium text-zinc-300"
-        >
-          Enable Streaming
-        </label>
-      </div>
-
-      {/* Cache Prompt */}
-      <div className="flex items-center space-x-2">
-        <input
-          type="checkbox"
-          id="cache-prompt"
-          checked={modelProperties.cache_prompt}
-          onChange={(e) =>
-            updateModelProperties({ cache_prompt: e.target.checked })
-          }
-          className="w-4 h-4 text-zinc-600 bg-zinc-700 border-zinc-600 rounded focus:ring-zinc-500"
-        />
-        <label
-          htmlFor="cache-prompt"
-          className="text-sm font-medium text-zinc-300"
-        >
-          Cache Prompt
-        </label>
-      </div>
-
-      {/* Return Tokens */}
-      <div className="flex items-center space-x-2">
-        <input
-          type="checkbox"
-          id="return-tokens"
-          checked={modelProperties.return_tokens}
-          onChange={(e) =>
-            updateModelProperties({ return_tokens: e.target.checked })
-          }
-          className="w-4 h-4 text-zinc-600 bg-zinc-700 border-zinc-600 rounded focus:ring-zinc-500"
-        />
-        <label
-          htmlFor="return-tokens"
-          className="text-sm font-medium text-zinc-300"
-        >
-          Return Tokens
-        </label>
       </div>
     </div>
   );

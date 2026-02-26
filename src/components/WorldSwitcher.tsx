@@ -55,38 +55,45 @@ export function WorldSwitcher() {
   };
 
   return (
-    <div className="mb-2 flex items-center gap-2 px-2 py-2">
+    <div className="mb-2 flex items-center gap-2 px-3 py-4">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="group flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-white/10 bg-slate-900/45 px-3 py-1.5 text-left transition hover:bg-slate-800/60"
+            className="group flex min-w-0 flex-1 items-center gap-3 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 text-left transition-all duration-300 hover:border-emerald-500/40 hover:bg-emerald-500/10 shadow-[0_0_15px_-5px_rgba(16,185,129,0.1)]"
           >
-            <div className="flex size-5 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-teal-400/20 to-amber-300/15">
-              <Globe className="size-3 text-teal-200/90" />
+            <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.2)]">
+              <Globe className="size-3 text-emerald-400" />
             </div>
-            <span className="flex-1 truncate text-sm font-medium text-slate-200">
-              {currentWorld?.name || "Select World"}
+            <span className="flex-1 truncate text-[11px] font-bold uppercase tracking-widest text-emerald-400">
+              {currentWorld?.name || "Select Mesh"}
             </span>
-            <ChevronDown className="size-3.5 text-slate-500 transition-colors group-hover:text-slate-300" />
+            <ChevronDown className="size-3.5 text-emerald-500/50 transition-colors group-hover:text-emerald-400" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="start"
-          className="w-56 border border-slate-700 bg-slate-950/95 text-slate-100 shadow-xl backdrop-blur"
+          className="w-64 border border-zinc-800 bg-[#0d0d0d] text-zinc-300 shadow-2xl p-1"
         >
-          <div className="wc-title px-2 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Worlds
+          <div className="px-3 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] border-b border-zinc-800/50 mb-1">
+            Active Meshes
           </div>
           {Object.values(worlds).map((world) => (
             <DropdownMenuItem
               key={world.id}
               onClick={() => setCurrentWorld(world.id)}
-              className={`flex cursor-pointer items-center justify-between rounded-md px-2 py-2 transition-colors focus:bg-slate-800 focus:text-slate-100 ${
-                world.id === currentWorldId ? "bg-slate-800/85" : ""
+              className={`flex cursor-pointer items-center justify-between rounded px-3 py-2.5 text-[12px] font-medium transition-all focus:bg-emerald-500/5 ${
+                world.id === currentWorldId 
+                  ? "bg-emerald-500/5 text-emerald-400 font-bold" 
+                  : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              <span className="truncate flex-1">{world.name}</span>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {world.id === currentWorldId && (
+                  <div className="h-1 w-1 shrink-0 animate-pulse rounded-full bg-emerald-500" />
+                )}
+                <span className="truncate">{world.name}</span>
+              </div>
               {world.id !== "world-default" && (
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
@@ -97,7 +104,7 @@ export function WorldSwitcher() {
                       setNewWorldName(world.name);
                       setIsRenameDialogOpen(true);
                     }}
-                    className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+                    className="rounded p-1 text-zinc-600 hover:text-emerald-400 transition-colors"
                   >
                     <Edit2 className="size-3" />
                   </button>
@@ -113,7 +120,7 @@ export function WorldSwitcher() {
                         deleteWorld(world.id);
                       }
                     }}
-                    className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-rose-300"
+                    className="rounded p-1 text-zinc-600 hover:text-rose-400 transition-colors"
                   >
                     <Trash2 className="size-3" />
                   </button>
@@ -121,78 +128,82 @@ export function WorldSwitcher() {
               )}
             </DropdownMenuItem>
           ))}
-          <DropdownMenuSeparator className="bg-slate-700/80" />
+          <DropdownMenuSeparator className="bg-zinc-800/50 mx-1 my-1" />
           <DropdownMenuItem
             onClick={() => setIsCreateDialogOpen(true)}
-            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 focus:bg-slate-800 focus:text-slate-100"
+            className="flex cursor-pointer items-center gap-2 rounded px-3 py-2.5 text-[11px] font-bold uppercase tracking-wider text-emerald-400 focus:bg-emerald-500/10 transition-colors"
           >
-            <Plus className="size-4 text-teal-300" />
-            <span className="font-medium text-teal-300">New World</span>
+            <Plus className="size-3.5" />
+            <span>New Mesh</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="border-slate-700 bg-slate-950 text-slate-100 sm:max-w-md">
+        <DialogContent className="border-zinc-800 bg-[#0a0a0a] text-zinc-300 sm:max-w-md shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="wc-title text-xl">
-              Create New World
+            <DialogTitle className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-500">
+              Initialize New Mesh
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-6">
             <Input
               autoFocus
-              placeholder="World Name"
+              placeholder="Designation..."
               value={newWorldName}
               onChange={(e) => setNewWorldName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCreateWorld()}
-              className="border-slate-700 bg-slate-900 focus-visible:ring-cyan-700/65"
+              className="h-9 border-zinc-800 bg-zinc-900/50 text-emerald-400 placeholder:text-zinc-800 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500/50 font-mono text-[11px]"
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               variant="ghost"
               onClick={() => setIsCreateDialogOpen(false)}
+              className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 hover:text-zinc-400"
             >
               Cancel
             </Button>
             <Button
               onClick={handleCreateWorld}
-              className="bg-gradient-to-r from-teal-500 to-cyan-500 text-slate-950 hover:brightness-110"
+              className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded px-6 hover:bg-emerald-500/30 transition-all"
             >
-              Create World
+              Initialize
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
-        <DialogContent className="border-slate-700 bg-slate-950 text-slate-100 sm:max-w-md">
+        <DialogContent className="border-zinc-800 bg-[#0a0a0a] text-zinc-300 sm:max-w-md shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="wc-title text-xl">Rename World</DialogTitle>
+            <DialogTitle className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-500">
+              Re-designate Mesh
+            </DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-6">
             <Input
               autoFocus
-              placeholder="World Name"
+              placeholder="New designation..."
               value={newWorldName}
               onChange={(e) => setNewWorldName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleRenameWorld()}
-              className="border-slate-700 bg-slate-900 focus-visible:ring-cyan-700/65"
+              className="h-9 border-zinc-800 bg-zinc-900/50 text-emerald-400 placeholder:text-zinc-800 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500/50 font-mono text-[11px]"
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               variant="ghost"
               onClick={() => setIsRenameDialogOpen(false)}
+              className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 hover:text-zinc-400"
             >
               Cancel
             </Button>
             <Button
               onClick={handleRenameWorld}
-              className="bg-gradient-to-r from-teal-500 to-cyan-500 text-slate-950 hover:brightness-110"
+              className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded px-6 hover:bg-emerald-500/30 transition-all"
             >
-              Rename World
+              Re-designate
             </Button>
           </DialogFooter>
         </DialogContent>

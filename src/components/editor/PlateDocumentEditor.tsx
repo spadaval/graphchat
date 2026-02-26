@@ -732,28 +732,31 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-transparent">
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
         <div
-          className="mx-auto w-full p-6 pb-32 transition-all duration-300 ease-in-out md:p-8"
+          className="mx-auto w-full p-6 pb-32 transition-all duration-300 ease-in-out md:p-12"
           style={{ maxWidth: `${documentWidth}px` }}
         >
-          <div className="rounded-[1.35rem] border border-white/10 bg-slate-950/45 px-6 py-6 shadow-[0_30px_70px_rgba(2,10,18,0.5)] backdrop-blur md:px-8">
-            <div className="mb-6 flex items-center gap-3">
+          <div className="rounded-3xl border border-zinc-800/50 bg-[#0a0a0a]/90 px-8 py-10 shadow-[0_40px_100px_rgba(0,0,0,0.8)] backdrop-blur-xl md:px-12">
+            <div className="mb-10 flex items-center gap-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 bg-slate-900/70 text-slate-300 transition hover:border-white/25 hover:bg-slate-800/75 hover:text-slate-100"
-                    title="Change document type"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:text-emerald-400"
+                    title="Re-designate Archive Type"
                     aria-label="Change document type"
                   >
-                    <CurrentTypeIcon className="size-4" />
+                    <CurrentTypeIcon className="size-5" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="start"
-                  className="w-60 border-slate-700 bg-slate-900 text-slate-100"
+                  className="w-64 border border-zinc-800 bg-[#0d0d0d] text-zinc-300 shadow-2xl p-1"
                 >
+                  <div className="px-3 py-2 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] border-b border-zinc-800/50 mb-1">
+                    Designation Registry
+                  </div>
                   {availableTypes.map((typeDef) => {
                     const TypeIcon =
                       iconMap[documentTypes[typeDef.id]?.icon] || FileText;
@@ -764,13 +767,13 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
                         onClick={() =>
                           updateDocument(docId, { baseTypeId: typeDef.id })
                         }
-                        className="group flex items-start gap-2"
+                        className="group flex items-start gap-3 rounded-md py-2.5 transition-all focus:bg-emerald-500/5"
                       >
-                        <TypeIcon className="mt-0.5 size-4 text-slate-400 group-data-[highlighted]:text-slate-100" />
+                        <TypeIcon className={`mt-0.5 size-4 ${isActive ? "text-emerald-500" : "text-zinc-600 group-data-[highlighted]:text-zinc-300"}`} />
                         <div className="flex min-w-0 flex-col">
-                          <span className="text-sm leading-tight">
+                          <span className={`text-[13px] leading-tight ${isActive ? "text-emerald-400 font-bold" : "text-zinc-400 font-medium group-data-[highlighted]:text-zinc-200"}`}>
                             {typeDef.name}
-                            {isActive ? " (current)" : ""}
+                            {isActive ? " (Active)" : ""}
                           </span>
                         </div>
                       </DropdownMenuItem>
@@ -785,15 +788,15 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
                 onChange={(e) =>
                   updateDocument(docId, { title: e.target.value })
                 }
-                className="wc-title w-full border-none bg-transparent text-xl font-medium text-slate-200 outline-none placeholder:text-slate-500 md:text-2xl"
-                placeholder="Untitled Document"
+                className="w-full border-none bg-transparent text-3xl font-bold text-zinc-100 outline-none placeholder:text-zinc-800 md:text-4xl tracking-tight"
+                placeholder="Initialize Designation..."
               />
             </div>
 
             <Plate editor={editor} onChange={handleContentChange}>
               <PlateContent
-                className="min-h-[420px] px-1 text-slate-200 outline-none"
-                placeholder="Start writing..."
+                className="min-h-[600px] px-1 text-zinc-200 outline-none text-lg leading-relaxed selection:bg-emerald-500/30 selection:text-emerald-200"
+                placeholder="Awaiting input..."
                 onKeyDownCapture={preventBackspaceNavigation}
               />
             </Plate>
@@ -801,32 +804,39 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-white/10 bg-slate-950/55 backdrop-blur supports-[backdrop-filter]:bg-slate-950/45">
+      <div className="shrink-0 border-t border-zinc-800/50 bg-[#0a0a0a]/80 backdrop-blur-md">
         <div
-          className="mx-auto w-full px-6 py-3 md:px-8"
+          className="mx-auto w-full px-8 py-4"
           style={{ maxWidth: `${documentWidth}px` }}
         >
-          <div className="flex flex-wrap items-center gap-2">
-            {isGenerating && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-teal-200/25 px-2 py-1 text-xs text-teal-100">
-                <Loader2 size={12} className="animate-spin" />
-                Generating...
-              </span>
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              {isGenerating && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-400">
+                  <Loader2 size={12} className="animate-spin" />
+                  Stream Active
+                </span>
+              )}
+              <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-600">
+                <div className={`h-1.5 w-1.5 rounded-full ${isGenerating ? "bg-emerald-500 animate-pulse" : "bg-emerald-500/30"}`} />
+                SYSTEM {isGenerating ? "BUSY" : "READY"}
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={() => void runDocumentEntityDetection()}
               disabled={isGenerating || isRunningEntityDetection}
-              className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-slate-200 transition hover:bg-slate-800/65 disabled:opacity-50"
+              className="group relative overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/50 px-4 py-2 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/5 disabled:opacity-50"
               title="Re-run entity detection for the whole document"
             >
-              <span className="inline-flex items-center gap-1">
+              <span className="relative z-10 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 group-hover:text-emerald-400 transition-colors">
                 {isRunningEntityDetection ? (
-                  <Loader2 size={12} className="animate-spin" />
+                  <Loader2 size={12} className="animate-spin text-emerald-500" />
                 ) : (
-                  <WandSparkles size={12} />
+                  <WandSparkles size={12} className="group-hover:text-emerald-500" />
                 )}
-                Entity
+                Run Diagnostics
               </span>
             </button>
           </div>

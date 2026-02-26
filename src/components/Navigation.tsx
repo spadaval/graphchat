@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { MessageSquare, FileText } from "lucide-react";
 import { cn } from "~/lib/utils";
 
 export function Navigation() {
@@ -12,29 +13,48 @@ export function Navigation() {
   };
 
   return (
-    <div className="flex border-b border-zinc-800 bg-zinc-900">
+    <div className="flex border-b border-zinc-800/50 px-4 bg-[#0a0a0a]/80 backdrop-blur-md">
       <Link
         to="/"
         className={cn(
-          "px-4 py-3 text-sm font-medium transition-colors",
-          isActive("/")
-            ? "text-zinc-100 border-b-2 border-zinc-400"
-            : "text-zinc-500 hover:text-zinc-300",
+          "wc-nav-item group relative h-12 gap-3 px-4",
+          isActive("/") 
+            ? "text-emerald-400 font-bold" 
+            : "text-zinc-500 hover:text-zinc-300"
         )}
       >
-        Chat
+        {isActive("/") && (
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+        )}
+        <MessageSquare 
+          size={16} 
+          className={isActive("/") ? "text-emerald-500" : "transition-colors group-hover:text-zinc-400"} 
+        />
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+          Terminal
+        </span>
       </Link>
       <Link
         to="/documents"
         className={cn(
-          "px-4 py-3 text-sm font-medium transition-colors",
-          isActive("/documents")
-            ? "text-zinc-100 border-b-2 border-zinc-400"
-            : "text-zinc-500 hover:text-zinc-300",
+          "wc-nav-item group relative h-12 gap-3 px-4",
+          isActive("/documents") 
+            ? "text-emerald-400 font-bold" 
+            : "text-zinc-500 hover:text-zinc-300"
         )}
       >
-        Documents
+        {isActive("/documents") && (
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+        )}
+        <FileText 
+          size={16} 
+          className={isActive("/documents") ? "text-emerald-500" : "transition-colors group-hover:text-zinc-400"} 
+        />
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+          Archives
+        </span>
       </Link>
     </div>
   );
 }
+

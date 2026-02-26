@@ -12,8 +12,11 @@ import type { ChatId } from "~/lib/state/types";
 // Sidebar Header Component
 export function SidebarHeader() {
   return (
-    <div className="p-4 border-b border-zinc-700">
-      <h2 className="text-base font-semibold text-zinc-100">Chat Threads</h2>
+    <div className="p-5 border-b border-zinc-800/50">
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
+        Recent Comms
+      </div>
     </div>
   );
 }
@@ -43,22 +46,28 @@ function ThreadItem({
   return (
     <div
       key={thread.id}
-      className={`relative mb-1 rounded-md p-2 transition-all duration-200 flex items-center group ${
+      className={`relative mb-1 rounded-md px-3 py-2.5 transition-all duration-200 flex items-center group ${
         isActive
-          ? "bg-gradient-to-br from-zinc-700 to-zinc-800 text-zinc-100 ring-2 ring-zinc-600"
-          : "text-zinc-300 hover:bg-zinc-800"
+          ? "bg-emerald-500/5 text-emerald-400"
+          : "text-zinc-500 hover:bg-zinc-800/40 hover:text-zinc-300"
       }`}
     >
+      {isActive && (
+        <div className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+      )}
       <button
         type="button"
         onClick={() => onSwitch(thread.id)}
-        className="flex-1 text-left font-medium focus:outline-none min-w-0 text-sm truncate"
+        className={`flex-1 text-left focus:outline-none min-w-0 text-[13px] truncate flex items-center gap-2 ${isActive ? "font-bold" : "font-medium"}`}
       >
+        {isActive && (
+          <div className="h-1 w-1 shrink-0 animate-pulse rounded-full bg-emerald-500" />
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="truncate pr-6">{thread.title}</div>
           </TooltipTrigger>
-          <TooltipContent side="right" className="max-w-xs break-words">
+          <TooltipContent side="right" className="max-w-xs break-words bg-[#0d0d0d] border-zinc-800 text-zinc-300">
             {thread.title}
           </TooltipContent>
         </Tooltip>
@@ -70,12 +79,14 @@ function ThreadItem({
             e.stopPropagation();
             onToggleMenu(thread.id);
           }}
-          className="p-1 rounded hover:bg-zinc-700 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-zinc-600 opacity-0 group-hover:opacity-100"
+          className={`p-1 rounded transition-colors duration-200 focus:outline-none opacity-0 group-hover:opacity-100 ${
+            isActive ? "hover:bg-white/5" : "hover:bg-white/10"
+          }`}
           title="More options"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-4 w-4"
+            className="h-3.5 w-3.5"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -145,7 +156,7 @@ function OverflowMenu({
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 top-6 mt-1 w-48 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-10"
+      className="absolute right-0 top-6 mt-1 w-44 bg-popover border border-border rounded shadow-xl z-20 p-1"
     >
       <button
         type="button"
@@ -153,9 +164,9 @@ function OverflowMenu({
           onEdit();
           onClose();
         }}
-        className="block w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
+        className="block w-full text-left px-3 py-1.5 text-xs font-medium text-foreground/70 hover:bg-white/5 hover:text-foreground rounded"
       >
-        Edit Name
+        Rename
       </button>
       <button
         type="button"
@@ -163,7 +174,7 @@ function OverflowMenu({
           onDuplicate(threadId);
           onClose();
         }}
-        className="block w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
+        className="block w-full text-left px-3 py-1.5 text-xs font-medium text-foreground/70 hover:bg-white/5 hover:text-foreground rounded"
       >
         Duplicate
       </button>
@@ -173,7 +184,7 @@ function OverflowMenu({
           onDelete(threadId);
           onClose();
         }}
-        className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/30 hover:text-red-300"
+        className="block w-full text-left px-3 py-1.5 text-xs font-medium text-destructive/80 hover:bg-destructive/10 hover:text-destructive rounded"
       >
         Delete
       </button>
@@ -218,32 +229,33 @@ function EditNameModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-zinc-800 rounded-lg p-6 w-full max-w-md border border-zinc-700">
-        <h3 className="text-lg font-semibold text-zinc-100 mb-4">
-          Rename Thread
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-[#0a0a0a] rounded-xl p-6 w-full max-w-sm border border-zinc-800 shadow-2xl transition-all animate-in fade-in zoom-in-95 duration-200">
+        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-500 mb-6">
+          Re-designate Session
         </h3>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-6">
           <input
             type="text"
+            autoFocus
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            className="w-full p-2 border border-zinc-600 rounded bg-zinc-700 text-zinc-100 mb-4 focus:outline-none focus:ring-2 focus:ring-zinc-600"
-            placeholder="Enter new title"
+            className="w-full h-10 px-3 border border-zinc-800 rounded-md bg-zinc-900/50 text-[13px] text-emerald-400 placeholder:text-zinc-800 focus:outline-none focus:border-emerald-500/50 transition-colors font-medium"
+            placeholder="New designation..."
           />
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-zinc-300 hover:text-zinc-100 bg-zinc-700 hover:bg-zinc-600 rounded transition-colors duration-200"
+              className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-600 hover:text-zinc-400 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors duration-200"
+              className="px-6 py-2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded-md hover:bg-emerald-500/30 transition-all"
             >
-              Save
+              Commit
             </button>
           </div>
         </form>
@@ -265,21 +277,21 @@ function DeleteAllButton({
   onBlur,
 }: DeleteAllButtonProps) {
   return (
-    <div className="flex items-center">
+    <div className="flex items-center px-1">
       <button
         type="button"
         onClick={onClick}
         onBlur={onBlur}
-        className={`w-full p-2 text-sm rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 ${
+        className={`w-full py-2.5 text-[10px] font-bold uppercase tracking-[0.2em] rounded-md transition-all duration-300 focus:outline-none border ${
           confirmation
-            ? "bg-gradient-to-br from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-zinc-100"
-            : "bg-gradient-to-br from-zinc-800 to-zinc-850 hover:from-zinc-700 hover:to-zinc-800 text-zinc-300"
+            ? "bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-[0_0_15px_-5px_rgba(244,63,94,0.2)]"
+            : "text-zinc-700 hover:text-rose-400/60 border-transparent"
         }`}
         title={
-          confirmation ? "Confirm deletion of all chats" : "Delete all chats"
+          confirmation ? "Confirm destruction of all sessions" : "Purge session history"
         }
       >
-        {confirmation ? "Confirm Delete All" : "Delete All Chats"}
+        {confirmation ? "Confirm Purge" : "Purge History"}
       </button>
     </div>
   );
@@ -322,23 +334,30 @@ export function SidebarContent({
 
   return (
     <TooltipProvider>
-      <div className="flex-1 overflow-y-auto flex flex-col">
-        <div className="p-2">
+      <div className="flex-1 overflow-y-auto flex flex-col bg-[#0d0d0d]">
+        <div className="p-4">
           <button
             type="button"
             onClick={() => createNewThread()}
-            className="w-full p-3 mb-2 bg-gradient-to-br from-zinc-700 to-zinc-800 hover:from-zinc-600 hover:to-zinc-700 text-zinc-100 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:ring-offset-2 text-sm"
+            className="group relative w-full overflow-hidden rounded-md border border-emerald-500/30 bg-emerald-500/5 px-4 py-2.5 text-left transition-all duration-300 hover:border-emerald-500/50 hover:bg-emerald-500/10"
           >
-            + New Chat
+            <div className="flex items-center gap-3">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+                <Plus size={12} strokeWidth={3} />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
+                New Session
+              </span>
+            </div>
           </button>
         </div>
 
         {threads.length === 0 ? (
-          <div className="p-4 text-zinc-500 text-center text-sm">
-            Start a new chat to begin
+          <div className="p-6 text-muted-foreground/40 text-center text-xs font-medium">
+            No history
           </div>
         ) : (
-          <div className="px-2 flex-1">
+          <div className="px-2 flex-1 scrollbar-hide">
             {threads.map((thread) => (
               <ThreadItem
                 key={thread.id}
@@ -357,8 +376,7 @@ export function SidebarContent({
           </div>
         )}
 
-        {/* Delete All Button */}
-        <div className="p-2 mt-auto">
+        <div className="p-3 mt-auto border-t border-border/40">
           <DeleteAllButton
             confirmation={deleteAllConfirmation}
             onClick={() => {
@@ -372,6 +390,7 @@ export function SidebarContent({
             onBlur={() => setDeleteAllConfirmation(false)}
           />
         </div>
+
 
         {/* Edit Name Modal */}
         {editingThread && (

@@ -25,8 +25,13 @@ interface ChatHeaderProps {
 
 export function ChatHeader({ title }: ChatHeaderProps) {
   return (
-    <div className="p-4 border-b border-zinc-800 bg-zinc-900">
-      <h1 className="text-lg font-semibold text-zinc-100">{title}</h1>
+    <div className="p-4 border-b border-zinc-800/50 bg-[#0a0a0a]/80 backdrop-blur-md">
+      <div className="flex items-center gap-3">
+        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
+        <h1 className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500/80">
+          {title}
+        </h1>
+      </div>
     </div>
   );
 }
@@ -38,11 +43,17 @@ interface EmptyStateProps {
 
 export function EmptyState({ sendMessage }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center h-full px-4 py-12 text-center">
-      <h2 className="text-xl font-semibold text-zinc-100 mb-6">
-        How can I help you today?
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-3xl">
+    <div className="flex flex-col items-center justify-center h-full px-6 py-12 text-center bg-[#0a0a0a]">
+      <div className="mb-12 space-y-3">
+        <div className="mx-auto h-1 w-8 rounded-full bg-emerald-500/20 mb-6" />
+        <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-zinc-500">
+          Terminal Interface Active
+        </h2>
+        <p className="text-[11px] font-medium text-zinc-600 uppercase tracking-widest">
+          Select entry point or initialize stream
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
         {SAMPLE_PROMPTS.map((prompt) => (
           <button
             type="button"
@@ -51,9 +62,11 @@ export function EmptyState({ sendMessage }: EmptyStateProps) {
               e.preventDefault();
               sendMessage(prompt.text);
             }}
-            className="p-3 text-left rounded-lg border border-zinc-700 hover:border-zinc-600 hover:bg-gradient-to-br from-zinc-800 to-zinc-850 transition-all duration-200 text-zinc-200 text-sm"
+            className="p-5 text-left rounded-lg border border-zinc-800/50 bg-zinc-900/20 hover:bg-emerald-500/5 hover:border-emerald-500/30 transition-all duration-300 group shadow-lg"
           >
-            {prompt.text}
+            <p className="text-zinc-500 group-hover:text-emerald-400 text-xs font-medium transition-colors leading-relaxed">
+              {prompt.text}
+            </p>
           </button>
         ))}
       </div>
@@ -73,9 +86,9 @@ export function MessagesList({ threadId }: MessagesListProps) {
   // If no thread, render empty state
   if (!thread) {
     return (
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-        <div className="text-center text-zinc-500 py-8 text-sm">
-          No messages yet. Start a conversation!
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 bg-background">
+        <div className="text-center text-muted-foreground/30 py-12 text-xs font-medium">
+          No history for this chat
         </div>
       </div>
     );
@@ -93,7 +106,7 @@ export function MessagesList({ threadId }: MessagesListProps) {
     });
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+    <div className="flex-1 overflow-y-auto p-6 space-y-8 min-h-0 bg-[#0a0a0a] scrollbar-hide">
       {blockIds.map((blockId, index) => (
         <React.Fragment key={blockId}>
           <ChatMessage
@@ -101,13 +114,13 @@ export function MessagesList({ threadId }: MessagesListProps) {
             isStreaming={blockId === streamingBlockId}
           />
           {index < blockIds.length - 1 && (
-            <div className="border-t border-zinc-700 my-2" />
+            <div className="h-px w-full bg-zinc-800/30 my-10" />
           )}
         </React.Fragment>
       ))}
       {blockIds.length === 0 && (
-        <div className="text-center text-zinc-500 py-8 text-sm">
-          No messages yet. Start a conversation!
+        <div className="text-center text-zinc-700 py-12 text-[10px] font-bold uppercase tracking-widest">
+          Awaiting link established...
         </div>
       )}
     </div>

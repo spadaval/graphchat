@@ -37,10 +37,10 @@ interface MessageAvatarProps {
 
 const _MessageAvatar = ({ role }: MessageAvatarProps) => (
   <span
-    className={`w-7 h-7 rounded-full flex items-center justify-center text-zinc-300 text-xs font-medium flex-shrink-0 ${
+    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 transition-all duration-300 ${
       role === "user"
-        ? "bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600"
-        : "bg-gradient-to-br from-zinc-800 to-zinc-850 border border-zinc-700"
+        ? "bg-white/[0.04] border border-border/40 text-muted-foreground"
+        : "bg-primary/10 border border-primary/20 text-primary/80"
     }`}
   >
     {role === "user" ? <User size={14} /> : <Bot size={14} />}
@@ -77,7 +77,7 @@ const _MessageBubble = ({
           onSave={onSave}
           onCancel={onCancel}
           config={{
-            placeholder: "Edit your message...",
+            placeholder: "Type a message...",
             showActions: true,
             toolbar: false,
             aiEnabled: false,
@@ -88,23 +88,23 @@ const _MessageBubble = ({
   }
 
   if (role === "user") {
-    // User messages: smaller, gray bubble on the left
+    // User messages: subtle, soft bubble
     return (
-      <div className="px-3 py-2 rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-850 border border-zinc-700 max-w-[85%]">
+      <div className="px-4 py-2.5 rounded-lg bg-white/[0.02] border border-border/40 max-w-[85%] shadow-sm">
         <ReactMarkdown
           rehypePlugins={[rehypeRaw, rehypeHighlight]}
           components={{
             code({ className, children, ...props }: CodeProps) {
               const isInline = !className?.includes("language-");
               return !isInline ? (
-                <pre className="bg-gradient-to-br from-zinc-900 to-zinc-850 p-3 rounded overflow-x-auto text-xs">
+                <pre className="bg-background/40 p-3 rounded border border-border/20 overflow-x-auto text-[13px] font-mono my-2 leading-relaxed">
                   <code className={className} {...props}>
                     {children}
                   </code>
                 </pre>
               ) : (
                 <code
-                  className="bg-zinc-700 px-1 py-0.5 rounded text-xs"
+                  className="bg-white/5 px-1.5 py-0.5 rounded text-[12px] font-mono text-primary/70"
                   {...props}
                 >
                   {children}
@@ -113,7 +113,7 @@ const _MessageBubble = ({
             },
             a: (props: AnchorProps) => (
               <a
-                className="text-blue-400 hover:text-blue-300 underline text-sm"
+                className="text-primary/90 hover:text-primary underline underline-offset-4 text-sm transition-colors"
                 target="_blank"
                 rel="noopener noreferrer"
                 {...props}
@@ -124,17 +124,16 @@ const _MessageBubble = ({
           {text}
         </ReactMarkdown>
         {isStreaming && (
-          <span className="inline-block w-2 h-4 bg-zinc-400 ml-1 animate-pulse"></span>
+          <span className="inline-block w-1 h-3.5 bg-primary/40 ml-1 animate-pulse" />
         )}
       </div>
     );
   } else {
-    // Assistant messages: no bubble, just text
+    // Assistant messages: focus-oriented typography
     return (
-      <div className="w-full max-w-none prose prose-invert">
+      <div className="w-full max-w-none prose prose-invert prose-primary/80">
         {isStreaming ? (
-          // During streaming, render plain text to avoid expensive markdown parsing
-          <pre className="whitespace-pre-wrap text-zinc-200 font-sans">
+          <pre className="whitespace-pre-wrap text-foreground/90 font-sans text-sm leading-relaxed">
             {text}
           </pre>
         ) : (
@@ -144,50 +143,50 @@ const _MessageBubble = ({
               code({ className, children, ...props }: CodeProps) {
                 const isInline = !className?.includes("language-");
                 return !isInline ? (
-                  <pre className="bg-gradient-to-br from-zinc-900 to-zinc-850 p-4 rounded overflow-x-auto">
+                  <pre className="bg-background/60 p-4 rounded border border-border/40 overflow-x-auto my-4 text-[13px] leading-relaxed">
                     <code className={className} {...props}>
                       {children}
                     </code>
                   </pre>
                 ) : (
-                  <code className="bg-zinc-800 px-1 py-0.5 rounded" {...props}>
+                  <code className="bg-white/5 border border-border/20 px-1.5 py-0.5 rounded text-primary/80 font-mono text-[0.9em]" {...props}>
                     {children}
                   </code>
                 );
               },
               a: (props: AnchorProps) => (
                 <a
-                  className="text-blue-400 hover:text-blue-300 underline"
+                  className="text-primary/90 hover:text-primary underline underline-offset-4 transition-colors"
                   target="_blank"
                   rel="noopener noreferrer"
                   {...props}
                 />
               ),
-              p: (props) => <p className="mb-3 text-zinc-200" {...props} />,
+              p: (props) => <p className="mb-4 text-foreground/80 leading-relaxed last:mb-0" {...props} />,
               h1: (props) => (
                 <h1
-                  className="text-xl font-bold mb-3 text-zinc-100"
+                  className="wc-title text-xl font-bold mb-5 text-foreground tracking-tight"
                   {...props}
                 />
               ),
               h2: (props) => (
                 <h2
-                  className="text-lg font-bold mb-3 text-zinc-100"
+                  className="wc-title text-lg font-bold mb-4 text-foreground tracking-tight"
                   {...props}
                 />
               ),
               h3: (props) => (
                 <h3
-                  className="text-md font-bold mb-3 text-zinc-100"
+                  className="text-sm font-bold tracking-wide mb-4 text-foreground/90"
                   {...props}
                 />
               ),
               ul: (props) => (
-                <ul className="list-disc pl-5 mb-3 text-zinc-200" {...props} />
+                <ul className="list-disc pl-5 mb-4 text-foreground/70 space-y-1.5" {...props} />
               ),
               ol: (props) => (
                 <ol
-                  className="list-decimal pl-5 mb-3 text-zinc-200"
+                  className="list-decimal pl-5 mb-4 text-foreground/70 space-y-1.5"
                   {...props}
                 />
               ),
@@ -197,7 +196,7 @@ const _MessageBubble = ({
           </ReactMarkdown>
         )}
         {isStreaming && (
-          <span className="inline-block w-2 h-4 bg-zinc-500 ml-1 animate-pulse"></span>
+          <span className="inline-block w-1.5 h-4 bg-primary/30 ml-1 animate-pulse" />
         )}
       </div>
     );
@@ -215,37 +214,37 @@ const _MessageActions = ({
   onDelete,
   onEdit,
 }: MessageActionsProps) => (
-  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1 ml-auto">
+  <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col gap-1 ml-auto">
     {onEdit && (
       <button
         type="button"
         onClick={onEdit}
-        className="p-1 text-xs text-zinc-500 hover:text-zinc-300 hover:bg-gradient-to-br hover:from-zinc-700 hover:to-zinc-800 rounded-sm"
+        className="p-1.5 text-muted-foreground/40 hover:text-primary/70 hover:bg-primary/5 rounded transition-colors"
         title="Edit message"
         aria-label="Edit message"
       >
-        <Edit size={12} />
+        <Edit size={14} />
       </button>
     )}
     {onRegenerate && (
       <button
         type="button"
         onClick={onRegenerate}
-        className="p-1 text-xs text-zinc-500 hover:text-zinc-300 hover:bg-gradient-to-br hover:from-zinc-700 hover:to-zinc-800 rounded-sm"
+        className="p-1.5 text-muted-foreground/40 hover:text-primary/70 hover:bg-primary/5 rounded transition-colors"
         title="Regenerate response"
         aria-label="Regenerate message"
       >
-        <RefreshCw size={12} />
+        <RefreshCw size={14} />
       </button>
     )}
     <button
       type="button"
       onClick={onDelete}
-      className="p-1 text-xs text-zinc-500 hover:text-red-400 hover:bg-gradient-to-br hover:from-zinc-700 hover:to-zinc-800 rounded-sm"
+      className="p-1.5 text-muted-foreground/40 hover:text-destructive/70 hover:bg-destructive/5 rounded transition-colors"
       title="Delete message"
       aria-label="Delete message"
     >
-      <Trash size={12} />
+      <Trash size={14} />
     </button>
   </div>
 );
@@ -262,88 +261,83 @@ const _MessageAttribution = ({ llmRequests }: MessageAttributionProps) => {
   const latestRequest = llmRequests[llmRequests.length - 1];
 
   return (
-    <div className="mt-2 border-t border-zinc-700 pt-2">
+    <div className="mt-4 border-t border-border/20 pt-3">
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+        className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground/60 hover:text-muted-foreground transition-colors"
       >
-        <Settings size={12} />
-        <span>LLM Request Details</span>
-        {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        <Settings size={12} className={isExpanded ? "text-primary/60" : ""} />
+        <span>Generation Details</span>
+        {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
       </button>
 
       {isExpanded && (
-        <div className="mt-2 p-3 bg-gradient-to-br from-zinc-800 to-zinc-850 rounded border border-zinc-700">
-          <div className="space-y-2 text-xs">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="text-zinc-400">Model:</span>
-                <span className="ml-2 text-zinc-200">
+        <div className="mt-3 p-4 bg-background/40 rounded border border-border/40 shadow-inner">
+          <div className="space-y-4 text-[11px] font-medium">
+            <div className="grid grid-cols-2 gap-8">
+              <div className="space-y-1">
+                <span className="text-muted-foreground/50">Model</span>
+                <p className="text-foreground/80 truncate">
                   {latestRequest.model}
-                </span>
+                </p>
               </div>
-              <div>
-                <span className="text-zinc-400">Success:</span>
-                <span
-                  className={`ml-2 ${latestRequest.success ? "text-green-400" : "text-red-400"}`}
+              <div className="space-y-1">
+                <span className="text-muted-foreground/50">Status</span>
+                <p
+                  className={`${latestRequest.success ? "text-primary/80" : "text-destructive/80"}`}
                 >
-                  {latestRequest.success ? "Yes" : "No"}
-                </span>
+                  {latestRequest.success ? "Success" : "Failure"}
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="text-zinc-400">Temperature:</span>
-                <span className="ml-2 text-zinc-200">
+            <div className="grid grid-cols-2 gap-8">
+              <div className="space-y-1">
+                <span className="text-muted-foreground/50">Temperature</span>
+                <p className="text-foreground/70">
                   {latestRequest.parameters.temperature}
-                </span>
+                </p>
               </div>
-              <div>
-                <span className="text-zinc-400">Max Tokens:</span>
-                <span className="ml-2 text-zinc-200">
+              <div className="space-y-1">
+                <span className="text-muted-foreground/50">Max Tokens</span>
+                <p className="text-foreground/70">
                   {latestRequest.parameters.n_predict}
-                </span>
+                </p>
               </div>
             </div>
 
-            {latestRequest.duration && (
-              <div>
-                <span className="text-zinc-400">Duration:</span>
-                <span className="ml-2 text-zinc-200">
-                  {latestRequest.duration}ms
-                </span>
-              </div>
-            )}
+            <div className="flex gap-10">
+              {latestRequest.duration && (
+                <div className="space-y-1">
+                  <span className="text-muted-foreground/50">Latency</span>
+                  <p className="text-foreground/70">
+                    {latestRequest.duration}ms
+                  </p>
+                </div>
+              )}
 
-            {latestRequest.tokensGenerated && (
-              <div>
-                <span className="text-zinc-400">Tokens Generated:</span>
-                <span className="ml-2 text-zinc-200">
-                  {latestRequest.tokensGenerated}
-                </span>
-              </div>
-            )}
+              {latestRequest.tokensGenerated && (
+                <div className="space-y-1">
+                  <span className="text-muted-foreground/50">Throughput</span>
+                  <p className="text-foreground/70">
+                    {latestRequest.tokensGenerated} tokens
+                  </p>
+                </div>
+              )}
+            </div>
 
-            <div>
-              <span className="text-zinc-400">Timestamp:</span>
-              <span className="ml-2 text-zinc-200">
+            <div className="pt-3 border-t border-border/20">
+              <span className="text-muted-foreground/40">Timestamp</span>
+              <p className="text-muted-foreground/60 mt-0.5">
                 {latestRequest.timestamp.toLocaleString()}
-              </span>
+              </p>
             </div>
 
             {latestRequest.error && (
-              <div>
-                <span className="text-zinc-400">Error:</span>
-                <span className="ml-2 text-red-400">{latestRequest.error}</span>
-              </div>
-            )}
-
-            {llmRequests.length > 1 && (
-              <div className="pt-2 border-t border-zinc-600">
-                <span className="text-zinc-400">Total Requests:</span>
-                <span className="ml-2 text-zinc-200">{llmRequests.length}</span>
+              <div className="p-3 bg-destructive/5 border border-destructive/10 rounded">
+                <span className="text-destructive/60 text-[10px] font-bold">Error Details</span>
+                <p className="text-destructive/80 mt-1 whitespace-pre-wrap leading-relaxed">{latestRequest.error}</p>
               </div>
             )}
           </div>

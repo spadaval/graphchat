@@ -18,6 +18,7 @@ import { Button } from "~/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
@@ -139,16 +140,16 @@ function CompactModelCardPicker({
 }) {
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 rounded-md border border-zinc-700/80 bg-zinc-950/70 px-3 py-2 text-xs text-zinc-400">
+      <div className="flex items-center gap-2 rounded-md border border-zinc-800/50 bg-zinc-900/30 px-3 py-2 text-xs text-zinc-500">
         <RefreshCw size={12} className="animate-spin" />
-        Loading models...
+        Searching registry...
       </div>
     );
   }
 
   if (errorMessage) {
     return (
-      <div className="rounded-md border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+      <div className="rounded-md border border-rose-900/30 bg-rose-950/20 px-3 py-2 text-[11px] text-rose-400/80">
         {errorMessage}
       </div>
     );
@@ -156,14 +157,14 @@ function CompactModelCardPicker({
 
   if (options.length === 0) {
     return (
-      <div className="rounded-md border border-zinc-700/80 bg-zinc-950/70 px-3 py-2 text-xs text-zinc-500">
+      <div className="rounded-md border border-zinc-800/50 bg-zinc-900/30 px-3 py-2 text-[11px] text-zinc-600">
         {emptyMessage}
       </div>
     );
   }
 
   return (
-    <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+    <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1 scrollbar-hide">
       {options.map((option) => {
         const isSelected = selectedId === option.id;
         return (
@@ -171,34 +172,49 @@ function CompactModelCardPicker({
             key={option.id}
             type="button"
             onClick={() => onSelect(option.id)}
-            className={`w-full rounded-md border px-3 py-2 text-left transition-colors ${
+            className={`group w-full rounded-md border px-3 py-2.5 text-left transition-all duration-200 ${
               isSelected
-                ? "border-blue-600/60 bg-blue-500/10"
-                : "border-zinc-700 bg-zinc-950 hover:bg-zinc-900"
+                ? "border-emerald-500/40 bg-emerald-500/5 shadow-[0_0_15px_-5px_rgba(16,185,129,0.1)]"
+                : "border-zinc-800/50 bg-zinc-900/20 hover:border-zinc-700 hover:bg-zinc-800/40"
             }`}
           >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-xs font-medium text-zinc-100">
-                  {option.title || option.id}
-                </p>
-                <p className="mt-0.5 break-all text-[11px] text-zinc-400">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p
+                    className={`truncate text-xs font-medium transition-colors ${isSelected ? "text-emerald-400" : "text-zinc-200 group-hover:text-zinc-100"}`}
+                  >
+                    {option.title || option.id}
+                  </p>
+                  {isSelected && (
+                    <div className="h-1 w-1 animate-pulse rounded-full bg-emerald-500" />
+                  )}
+                </div>
+                <p className="mt-0.5 truncate font-mono text-[10px] text-zinc-500">
                   {option.id}
                 </p>
-                {option.description ? (
-                  <p className="mt-1 text-[11px] text-zinc-500">
-                    {option.description}
-                  </p>
-                ) : null}
-                {option.meta ? (
-                  <p className="mt-1 text-[11px] text-zinc-500">
-                    {option.meta}
-                  </p>
-                ) : null}
+                {(option.description || option.meta) && (
+                  <div className="mt-1.5 space-y-0.5">
+                    {option.description && (
+                      <p className="text-[10px] leading-relaxed text-zinc-500">
+                        {option.description}
+                      </p>
+                    )}
+                    {option.meta && (
+                      <p className="font-mono text-[9px] uppercase tracking-wider text-zinc-600">
+                        {option.meta}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               {isSelected ? (
-                <Check size={14} className="mt-0.5 shrink-0 text-blue-400" />
-              ) : null}
+                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+                  <Check size={10} strokeWidth={3} />
+                </div>
+              ) : (
+                <div className="h-4 w-4 rounded-full border border-zinc-800 group-hover:border-zinc-700" />
+              )}
             </div>
           </button>
         );
@@ -215,7 +231,7 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
     title: "General",
   },
   {
-    description: "Browser + API backend behavior",
+    description: "Backend engines and model selection",
     icon: Cable,
     id: "backends",
     title: "Backends",
@@ -224,13 +240,13 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
     description: "Sampling controls and tokenizer tools",
     icon: SlidersHorizontal,
     id: "models",
-    title: "Model Settings",
+    title: "Models",
   },
   {
     description: "Runtime logging and diagnostics",
     icon: Bug,
     id: "debug",
-    title: "Debug Tools",
+    title: "Debug",
   },
 ];
 
@@ -246,17 +262,48 @@ function ToggleRow({
   title: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-3">
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-zinc-100">{title}</p>
-        <p className="text-xs text-zinc-500">{description}</p>
+    <div className="group flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+      <div className="space-y-0.5">
+        <p className="text-sm font-medium text-zinc-200 transition-colors group-hover:text-zinc-100">
+          {title}
+        </p>
+        <p className="text-[11px] text-zinc-500 leading-relaxed">
+          {description}
+        </p>
       </div>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="mt-1 h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-blue-500"
-      />
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/20 ${
+          checked ? "bg-emerald-500/60" : "bg-zinc-800"
+        }`}
+      >
+        <span
+          className={`pointer-events-none block h-3.5 w-3.5 rounded-full bg-zinc-100 shadow-lg ring-0 transition-transform duration-200 ${
+            checked ? "translate-x-4.5" : "translate-x-1"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
+function SectionHeader({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="mb-6 space-y-1">
+      <h2 className="text-xs font-bold uppercase tracking-widest text-emerald-500/80">
+        {title}
+      </h2>
+      <p className="text-[11px] text-zinc-500">{description}</p>
+      <div className="mt-4 h-px w-full bg-gradient-to-r from-zinc-800 via-zinc-800 to-transparent" />
     </div>
   );
 }
@@ -266,11 +313,22 @@ function TestResult({ status }: { status: TestStatus }) {
 
   return (
     <div
-      className={`mt-3 rounded border p-2 text-xs ${status.success ? "border-green-800/70 bg-green-950/20 text-green-300" : "border-red-900/70 bg-red-950/20 text-red-300"}`}
+      className={`mt-3 overflow-hidden rounded border px-3 py-2 text-[11px] transition-all animate-in fade-in slide-in-from-top-1 ${
+        status.success
+          ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-400/90"
+          : "border-rose-500/20 bg-rose-500/5 text-rose-400/90"
+      }`}
     >
-      <p>{status.message}</p>
+      <div className="flex items-center gap-2 mb-1">
+        <div
+          className={`h-1.5 w-1.5 rounded-full ${status.success ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
+        />
+        <p className="font-medium">{status.message}</p>
+      </div>
       {status.output ? (
-        <p className="mt-1 line-clamp-3 text-zinc-300">{status.output}</p>
+        <p className="font-mono leading-relaxed opacity-70 line-clamp-2 select-all">
+          {status.output}
+        </p>
       ) : null}
     </div>
   );
@@ -279,7 +337,6 @@ function TestResult({ status }: { status: TestStatus }) {
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const {
     activeSamplerPreset,
-    apiBackendEnabled,
     browserModelId,
     debugMode,
     documentWidth = 800,
@@ -312,10 +369,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     loading: false,
   });
 
-  const sectionMeta = useMemo(
-    () => SETTINGS_SECTIONS.find((section) => section.id === activeSection),
-    [activeSection],
-  );
   const trimmedOpenRouterKey = (openRouterApiKey || "").trim();
   const hasValidServerUrl = isValidHttpUrl(serverUrl.trim());
 
@@ -324,7 +377,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     isLoading: isLocalModelsLoading,
     isFetching: isLocalModelsFetching,
     isError: isLocalModelsError,
-    error: localModelsError,
     refetch: refetchLocalModels,
   } = useQuery({
     queryKey: ["settings-local-models", serverUrl],
@@ -356,7 +408,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     isLoading: isOpenRouterModelsLoading,
     isFetching: isOpenRouterModelsFetching,
     isError: isOpenRouterModelsError,
-    error: openRouterModelsError,
     refetch: refetchOpenRouterModels,
   } = useQuery({
     queryKey: ["settings-openrouter-models", trimmedOpenRouterKey],
@@ -400,7 +451,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         id: model.id,
         title: model.name,
         meta: model.contextLength
-          ? `Context: ${model.contextLength.toLocaleString()}`
+          ? `CTX: ${model.contextLength.toLocaleString()}`
           : undefined,
       })),
     [openRouterModels],
@@ -512,10 +563,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         loading: false,
         message:
           backend === "browser"
-            ? "In-browser backend did not return a usable response."
+            ? "Backend did not return a usable response."
             : backend === "server"
-              ? "Server backend did not return a usable response."
-              : "OpenRouter backend did not return a usable response.",
+              ? "Backend did not return a usable response."
+              : "Backend did not return a usable response.",
         output: output || "No output received.",
         success: false,
       });
@@ -524,12 +575,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
     setStatus({
       loading: false,
-      message:
-        backend === "browser"
-          ? "In-browser backend responded successfully."
-          : backend === "server"
-            ? "Server backend responded successfully."
-            : "OpenRouter backend responded successfully.",
+      message: "Backend responded successfully.",
       output: output.slice(0, 180),
       success: true,
     });
@@ -537,17 +583,25 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[85vh] max-h-[85vh] overflow-hidden border-zinc-800 bg-zinc-950 p-0 text-zinc-100 sm:max-w-[980px]">
-        <DialogHeader className="border-b border-zinc-800 px-6 py-4">
-          <DialogTitle className="flex items-center gap-2 text-xl font-semibold">
-            <Settings className="h-5 w-5" />
-            Settings
-          </DialogTitle>
+      <DialogContent className="h-[80vh] max-h-[80vh] overflow-hidden border-zinc-800 bg-[#0a0a0a] p-0 text-zinc-300 sm:max-w-[900px]">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Terminal Configuration</DialogTitle>
+          <DialogDescription>
+            Adjust editor preferences, inference backends, and model sampling
+            parameters.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="grid h-[calc(85vh-73px)] grid-cols-[240px_1fr]">
-          <aside className="border-r border-zinc-800 bg-zinc-950/90 p-3">
-            <div className="space-y-1">
+        <div className="grid h-full min-h-0 grid-cols-[200px_1fr]">
+          <aside className="flex min-h-0 flex-col border-r border-zinc-800 bg-[#0d0d0d] p-4">
+            <div className="mb-8 px-2">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+                <Settings size={12} className="text-emerald-500" />
+                Terminal Config
+              </div>
+            </div>
+
+            <nav className="flex-1 space-y-1">
               {SETTINGS_SECTIONS.map((section) => {
                 const Icon = section.icon;
                 const isActive = activeSection === section.id;
@@ -557,147 +611,158 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     key={section.id}
                     type="button"
                     onClick={() => setActiveSection(section.id)}
-                    className={`w-full rounded-md border px-3 py-2 text-left transition-colors ${
+                    className={`group relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-all duration-200 ${
                       isActive
-                        ? "border-blue-600/50 bg-blue-500/10"
-                        : "border-transparent hover:border-zinc-700 hover:bg-zinc-900"
+                        ? "bg-emerald-500/5 text-emerald-400"
+                        : "text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300"
                     }`}
                   >
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Icon className="h-4 w-4" />
+                    {isActive && (
+                      <div className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                    )}
+                    <Icon
+                      size={16}
+                      className={
+                        isActive
+                          ? "text-emerald-500"
+                          : "transition-colors group-hover:text-zinc-400"
+                      }
+                    />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">
                       {section.title}
-                    </div>
-                    <p className="mt-1 text-[11px] text-zinc-500">
-                      {section.description}
-                    </p>
+                    </span>
                   </button>
                 );
               })}
+            </nav>
+
+            <div className="mt-auto border-t border-zinc-800 pt-4 px-2">
+              <div className="flex items-center gap-2 text-[9px] font-mono text-zinc-600">
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50" />
+                SYSTEM READY
+              </div>
             </div>
           </aside>
 
-          <div className="overflow-y-auto p-6">
-            <div className="mb-5">
-              <h3 className="text-base font-semibold text-zinc-100">
-                {sectionMeta?.title}
-              </h3>
-              <p className="text-xs text-zinc-500">
-                {sectionMeta?.description}
-              </p>
-            </div>
-
-            {activeSection === "general" ? (
-              <div className="space-y-3">
-                <ToggleRow
-                  checked={inlineCompletion}
-                  onChange={setInlineCompletionEnabled}
-                  title="Inline completion"
-                  description="Show ghost-text suggestions while you type."
-                />
-                <ToggleRow
-                  checked={entityAutoRunOnIdle}
-                  onChange={setEntityAutoRunOnIdle}
-                  title="Entity auto-run on idle"
-                  description="Auto-run entity detection on edited paragraphs after typing pauses."
-                />
-                <div className="flex items-center justify-between gap-4 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-3">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-zinc-100">
-                      Entity full-pass interval (seconds)
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      Run full-document entity detection periodically while
-                      auto-run is enabled.
-                    </p>
-                  </div>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={300}
-                    value={entityFullPassIntervalSeconds}
-                    onChange={(event) =>
-                      setEntityFullPassIntervalSeconds(
-                        Number(event.target.value),
-                      )
-                    }
-                    className="h-8 w-24 border-zinc-700 bg-zinc-950 text-right text-zinc-200"
+          <main className="flex min-h-0 flex-col overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-y-auto p-8 scrollbar-hide">
+              {activeSection === "general" ? (
+                <div className="space-y-8 max-w-2xl">
+                  <SectionHeader
+                    title="Interface Preferences"
+                    description="Tailor the editor behavior and layout to your workflow."
                   />
-                </div>
-                <ToggleRow
-                  checked={entityAutoLinkStrictMatches}
-                  onChange={setEntityAutoLinkStrictMatches}
-                  title="Entity strict auto-link"
-                  description="Convert strict entity matches to canonical document links."
-                />
-                <ToggleRow
-                  checked={entityPreloadModel}
-                  onChange={setEntityPreloadModel}
-                  title="Preload entity model"
-                  description="Warm up the browser entity model when the editor is idle."
-                />
 
-                <div className="rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-zinc-100">
-                        Document editor width
-                      </p>
-                      <p className="text-xs text-zinc-500">
-                        Adjust the max width of document content.
-                      </p>
+                  <div className="divide-y divide-zinc-800/50">
+                    <ToggleRow
+                      checked={inlineCompletion}
+                      onChange={setInlineCompletionEnabled}
+                      title="Ghost-Text Predictions"
+                      description="Display subtle, inline suggestions as you compose text."
+                    />
+                    <ToggleRow
+                      checked={entityAutoRunOnIdle}
+                      onChange={setEntityAutoRunOnIdle}
+                      title="Passive Entity Scanning"
+                      description="Analyze document context for entities during natural typing pauses."
+                    />
+                    <div className="group flex items-center justify-between gap-4 py-3">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100">
+                          Scanning Interval
+                        </p>
+                        <p className="text-[11px] text-zinc-500">
+                          Wait duration before a full document pass occurs.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={300}
+                          value={entityFullPassIntervalSeconds}
+                          onChange={(event) =>
+                            setEntityFullPassIntervalSeconds(
+                              Number(event.target.value),
+                            )
+                          }
+                          className="h-7 w-16 border-zinc-800 bg-zinc-900/50 text-right font-mono text-[11px] text-emerald-400 focus:border-emerald-500/50 focus:ring-0"
+                        />
+                        <span className="text-[10px] font-mono text-zinc-600 uppercase">
+                          sec
+                        </span>
+                      </div>
                     </div>
-                    <span className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 font-mono text-xs text-zinc-300">
-                      {documentWidth}px
-                    </span>
+                    <ToggleRow
+                      checked={entityAutoLinkStrictMatches}
+                      onChange={setEntityAutoLinkStrictMatches}
+                      title="Strict Link Synthesis"
+                      description="Automatically transform high-confidence entity matches into document links."
+                    />
+                    <ToggleRow
+                      checked={entityPreloadModel}
+                      onChange={setEntityPreloadModel}
+                      title="Model Warm-up"
+                      description="Keep the entity extraction model active in memory for instant responses."
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="400"
-                    max="1600"
-                    step="50"
-                    value={documentWidth}
-                    onChange={(event) =>
-                      setDocumentWidth(Number(event.target.value))
-                    }
-                    className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-zinc-700 accent-blue-500"
-                  />
+
+                  <div className="space-y-4 pt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium text-zinc-200">
+                          Viewport Constraint
+                        </p>
+                        <p className="text-[11px] text-zinc-500">
+                          Maximum horizontal span of the primary editor surface.
+                        </p>
+                      </div>
+                      <span className="font-mono text-[11px] text-emerald-500 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/20">
+                        {documentWidth}PX
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="400"
+                      max="1600"
+                      step="50"
+                      value={documentWidth}
+                      onChange={(event) =>
+                        setDocumentWidth(Number(event.target.value))
+                      }
+                      className="h-1 w-full cursor-pointer appearance-none rounded-full bg-zinc-800 accent-emerald-500 transition-all hover:accent-emerald-400"
+                    />
+                  </div>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeSection === "backends" ? (
-              <div className="space-y-6">
-                <div className="space-y-3 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
-                  <div>
-                    <p className="text-sm font-medium text-zinc-100">
-                      Active backend
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      Choose which backend handles primary chat and generation
-                      requests.
-                    </p>
-                  </div>
+              {activeSection === "backends" ? (
+                <div className="space-y-10 max-w-3xl">
+                  <SectionHeader
+                    title="Inference Engines"
+                    description="Configure the underlying models powering your creative session."
+                  />
 
-                  <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                     {(
                       [
                         {
                           id: "browser",
-                          title: "In-browser",
+                          title: "Local/Edge",
                           description:
-                            "Runs locally in your browser with no external API key.",
+                            "Zero-latency. Runs entirely in your browser memory.",
                         },
                         {
                           id: "server",
-                          title: "Local Server API",
+                          title: "Remote Host",
                           description:
-                            "Uses your configured server URL and model endpoint.",
+                            "Professional grade. Connects to your dedicated server.",
                         },
                         {
                           id: "openrouter",
                           title: "OpenRouter",
                           description:
-                            "Routes requests through OpenRouter using an API key.",
+                            "Global mesh. Access 100+ state-of-the-art models.",
                         },
                       ] as const
                     ).map((option) => {
@@ -707,16 +772,23 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           key={option.id}
                           type="button"
                           onClick={() => handleBackendChange(option.id)}
-                          className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                          className={`group relative overflow-hidden rounded-lg border p-4 text-left transition-all duration-300 ${
                             isActive
-                              ? "border-blue-600/60 bg-blue-500/10"
-                              : "border-zinc-700 bg-zinc-900 hover:bg-zinc-850"
+                              ? "border-emerald-500/40 bg-emerald-500/5 shadow-[0_0_20px_-10px_rgba(16,185,129,0.2)]"
+                              : "border-zinc-800/80 bg-zinc-900/30 hover:border-zinc-700 hover:bg-zinc-800/40"
                           }`}
                         >
-                          <p className="text-sm font-medium text-zinc-100">
+                          {isActive && (
+                            <div className="absolute top-0 right-0 p-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                            </div>
+                          )}
+                          <p
+                            className={`text-xs font-bold uppercase tracking-widest ${isActive ? "text-emerald-400" : "text-zinc-400 group-hover:text-zinc-200"}`}
+                          >
                             {option.title}
                           </p>
-                          <p className="mt-1 text-[11px] text-zinc-500">
+                          <p className="mt-2 text-[10px] leading-relaxed text-zinc-500 group-hover:text-zinc-400">
                             {option.description}
                           </p>
                         </button>
@@ -724,425 +796,345 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     })}
                   </div>
 
-                  <div className="rounded-lg border border-zinc-700/80 bg-zinc-950/70 p-3 text-xs text-zinc-400">
-                    <p>
-                      Routing status:{" "}
-                      <span className="font-medium text-zinc-200">
-                        {apiBackendEnabled
-                          ? llmBackend === "openrouter"
-                            ? "OpenRouter active"
-                            : llmBackend === "server"
-                              ? "Server API active"
-                              : "In-browser active"
-                          : "In-browser active (API disabled)"}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                <section className="space-y-3 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-zinc-100">
-                        In-browser backend
-                      </p>
-                      <p className="text-xs text-zinc-500">
-                        Local generation that runs entirely in-browser.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant={llmBackend === "browser" ? "default" : "outline"}
-                      onClick={() => handleBackendChange("browser")}
-                      className={
-                        llmBackend === "browser"
-                          ? "bg-blue-600 text-white hover:bg-blue-500"
-                          : "border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
-                      }
-                    >
-                      {llmBackend === "browser" ? "Active" : "Set Active"}
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <Label className="text-xs text-zinc-400">
-                        In-browser model picker
-                      </Label>
-                    </div>
-                    <CompactModelCardPicker
-                      options={BROWSER_MODEL_OPTIONS}
-                      selectedId={browserModelId}
-                      onSelect={setBrowserModelId}
-                      isLoading={false}
-                      emptyMessage="No in-browser models available."
-                    />
-                  </div>
-
-                  <div className="rounded-md border border-zinc-700/80 bg-zinc-950/70 p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-zinc-100">
-                          Backend test
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          Runs a minimal completion through the browser model
-                          pipeline.
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void runBackendTest("browser")}
-                        disabled={browserTestStatus.loading}
-                        className="border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
-                      >
-                        {browserTestStatus.loading ? "Running..." : "Run Test"}
-                      </Button>
-                    </div>
-                    <TestResult status={browserTestStatus} />
-                  </div>
-                </section>
-
-                <section className="space-y-3 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-zinc-100">
-                        Local server backend
-                      </p>
-                      <p className="text-xs text-zinc-500">
-                        Uses your configured server URL and selected server
-                        model.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant={llmBackend === "server" ? "default" : "outline"}
-                      onClick={() => handleBackendChange("server")}
-                      className={
-                        llmBackend === "server"
-                          ? "bg-blue-600 text-white hover:bg-blue-500"
-                          : "border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
-                      }
-                    >
-                      {llmBackend === "server" ? "Active" : "Set Active"}
-                    </Button>
-                  </div>
-
-                  <ToggleRow
-                    checked={enableTokenProbabilities}
-                    onChange={setEnableTokenProbabilities}
-                    title="Token probabilities"
-                    description="Request token probability metadata from server responses when available."
-                  />
-
-                  <div className="overflow-hidden rounded-md border border-zinc-700/80 bg-zinc-950/70 p-3">
-                    <ServerInfoComponent mode="backends" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <Label className="text-xs text-zinc-400">
-                        Local server model picker
-                      </Label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void refetchLocalModels()}
-                        disabled={!hasValidServerUrl || isLocalModelsFetching}
-                        className="h-7 border-zinc-700 bg-zinc-900 text-[11px] hover:bg-zinc-800"
-                      >
-                        {isLocalModelsFetching ? "Loading..." : "Refresh"}
-                      </Button>
-                    </div>
-                    <CompactModelCardPicker
-                      options={localModelOptions}
-                      selectedId={serverModelId || ""}
-                      onSelect={setServerModelId}
-                      isLoading={isLocalModelsLoading}
-                      errorMessage={
-                        !hasValidServerUrl
-                          ? "Configure a valid server URL to load models."
-                          : isLocalModelsError
-                            ? localModelsError instanceof Error
-                              ? localModelsError.message
-                              : "Failed to load local models."
-                            : undefined
-                      }
-                      emptyMessage="No models returned by /v1/models."
-                    />
-                  </div>
-
-                  <div className="rounded-md border border-zinc-700/80 bg-zinc-950/70 p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-zinc-100">
-                          Backend test
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          Runs a minimal completion directly against the
-                          configured local server backend.
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void runBackendTest("server")}
-                        disabled={apiTestStatus.loading}
-                        className="border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
-                      >
-                        {apiTestStatus.loading ? "Running..." : "Run Test"}
-                      </Button>
-                    </div>
-                    <TestResult status={apiTestStatus} />
-                  </div>
-                </section>
-
-                <section className="space-y-3 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-zinc-100">
-                        OpenRouter backend
-                      </p>
-                      <p className="text-xs text-zinc-500">
-                        Routes requests through OpenRouter with your API key and
-                        chosen model.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant={
-                        llmBackend === "openrouter" ? "default" : "outline"
-                      }
-                      onClick={() => handleBackendChange("openrouter")}
-                      className={
-                        llmBackend === "openrouter"
-                          ? "bg-blue-600 text-white hover:bg-blue-500"
-                          : "border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
-                      }
-                    >
-                      {llmBackend === "openrouter" ? "Active" : "Set Active"}
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="openrouter-key"
-                      className="text-xs text-zinc-400"
-                    >
-                      OpenRouter API key
-                    </Label>
-                    <Input
-                      id="openrouter-key"
-                      type="password"
-                      value={openRouterApiKey || ""}
-                      onChange={(event) =>
-                        setOpenRouterApiKey(event.target.value)
-                      }
-                      placeholder="sk-or-v1-..."
-                      className="h-8 border-zinc-700 bg-zinc-950 text-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <Label className="text-xs text-zinc-400">
-                        OpenRouter model picker
-                      </Label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void refetchOpenRouterModels()}
-                        disabled={
-                          trimmedOpenRouterKey.length === 0 ||
-                          isOpenRouterModelsFetching
-                        }
-                        className="h-7 border-zinc-700 bg-zinc-900 text-[11px] hover:bg-zinc-800"
-                      >
-                        {isOpenRouterModelsFetching ? "Loading..." : "Refresh"}
-                      </Button>
-                    </div>
-                    <CompactModelCardPicker
-                      options={openRouterModelOptions}
-                      selectedId={openRouterModelId}
-                      onSelect={setOpenRouterModelId}
-                      isLoading={isOpenRouterModelsLoading}
-                      errorMessage={
-                        trimmedOpenRouterKey.length === 0
-                          ? "Set an OpenRouter API key to load available models."
-                          : isOpenRouterModelsError
-                            ? openRouterModelsError instanceof Error
-                              ? openRouterModelsError.message
-                              : "Failed to load OpenRouter models."
-                            : undefined
-                      }
-                      emptyMessage="No OpenRouter models available for this key."
-                    />
-                  </div>
-
-                  <div className="rounded-md border border-zinc-700/80 bg-zinc-950/70 p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-zinc-100">
-                          Backend test
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          Runs a minimal completion through OpenRouter with your
-                          configured key.
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void runBackendTest("openrouter")}
-                        disabled={
-                          openRouterTestStatus.loading || !openRouterApiKey
-                        }
-                        className="border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
-                      >
-                        {openRouterTestStatus.loading
-                          ? "Running..."
-                          : "Run Test"}
-                      </Button>
-                    </div>
-                    <TestResult status={openRouterTestStatus} />
-                  </div>
-                </section>
-              </div>
-            ) : null}
-
-            {activeSection === "models" ? (
-              <div className="space-y-6">
-                <div className="space-y-3 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
-                  <div>
-                    <p className="text-sm font-medium text-zinc-100">
-                      Reusable presets
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      Apply and re-apply baseline sampler configurations.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
-                    {SAMPLER_PRESETS.map((preset) => {
-                      const isActive = activeSamplerPreset === preset.id;
-                      return (
-                        <button
-                          key={preset.id}
+                  <div className="space-y-8">
+                    {/* Browser Backend Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-zinc-800/50 pb-2">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                          Edge Registry
+                        </h3>
+                        <Button
                           type="button"
-                          onClick={() => handleApplyPreset(preset.id)}
-                          className={`rounded-md border px-3 py-2 text-left transition-colors ${
-                            isActive
-                              ? "border-blue-600/60 bg-blue-500/10"
-                              : "border-zinc-700 bg-zinc-900 hover:bg-zinc-850"
-                          }`}
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => void runBackendTest("browser")}
+                          disabled={browserTestStatus.loading}
+                          className="h-6 gap-1.5 px-2 text-[10px] uppercase tracking-wider text-zinc-400 hover:text-emerald-400"
                         >
-                          <p className="text-sm font-medium text-zinc-100">
-                            {preset.name}
-                          </p>
-                          <p className="mt-1 text-[11px] text-zinc-500">
-                            {preset.description}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setActiveSamplerPreset(undefined)}
-                    className="w-fit border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
-                  >
-                    Clear active preset label
-                  </Button>
-                </div>
+                          <RefreshCw
+                            size={10}
+                            className={
+                              browserTestStatus.loading ? "animate-spin" : ""
+                            }
+                          />
+                          {browserTestStatus.loading
+                            ? "Testing..."
+                            : "Diagnostic Test"}
+                        </Button>
+                      </div>
 
-                <div className="rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
-                  <ModelProperties />
-                </div>
-
-                <div className="space-y-3 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
-                  <p className="text-sm font-medium text-zinc-100">Tokenizer</p>
-
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="tokenizer-model"
-                      className="text-xs text-zinc-400"
-                    >
-                      HuggingFace model ID
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="tokenizer-model"
-                        value={tokenizerModelId}
-                        onChange={(event) => {
-                          setTokenizerModelId(event.target.value);
-                          if (tokenizerTestStatus.message) {
-                            setTokenizerTestStatus({ loading: false });
-                          }
-                        }}
-                        placeholder="e.g. HuggingFaceTB/SmolLM3-3B"
-                        className="h-8 border-zinc-700 bg-zinc-950 text-sm"
+                      <CompactModelCardPicker
+                        options={BROWSER_MODEL_OPTIONS}
+                        selectedId={browserModelId}
+                        onSelect={setBrowserModelId}
+                        isLoading={false}
+                        emptyMessage="No edge models discovered."
                       />
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={handleTokenizerTest}
-                        disabled={
-                          tokenizerTestStatus.loading || !tokenizerModelId
-                        }
-                        className="h-8 border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
-                      >
-                        {tokenizerTestStatus.loading ? "Testing..." : "Test"}
-                      </Button>
+                      <TestResult status={browserTestStatus} />
                     </div>
-                    <TestResult status={tokenizerTestStatus} />
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="huggingface-token"
-                      className="text-xs text-zinc-400"
-                    >
-                      HuggingFace token (optional)
-                    </Label>
-                    <Input
-                      id="huggingface-token"
-                      type="password"
-                      value={huggingfaceToken || ""}
-                      onChange={(event) =>
-                        setHuggingfaceToken(event.target.value)
-                      }
-                      placeholder="hf_..."
-                      className="h-8 border-zinc-700 bg-zinc-950 text-sm"
+                    {/* Server Backend Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-zinc-800/50 pb-2">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                          Host Endpoint
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => void refetchLocalModels()}
+                            disabled={
+                              !hasValidServerUrl || isLocalModelsFetching
+                            }
+                            className="h-6 gap-1.5 px-2 text-[10px] uppercase tracking-wider text-zinc-400 hover:text-emerald-400"
+                          >
+                            <RefreshCw
+                              size={10}
+                              className={
+                                isLocalModelsFetching ? "animate-spin" : ""
+                              }
+                            />
+                            Re-scan
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => void runBackendTest("server")}
+                            disabled={apiTestStatus.loading}
+                            className="h-6 gap-1.5 px-2 text-[10px] uppercase tracking-wider text-zinc-400 hover:text-emerald-400"
+                          >
+                            Test Connection
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="rounded-lg bg-zinc-900/40 p-1 border border-zinc-800/50">
+                          <ServerInfoComponent mode="backends" />
+                        </div>
+                        <CompactModelCardPicker
+                          options={localModelOptions}
+                          selectedId={serverModelId || ""}
+                          onSelect={setServerModelId}
+                          isLoading={isLocalModelsLoading}
+                          errorMessage={
+                            !hasValidServerUrl
+                              ? "Valid host address required."
+                              : isLocalModelsError
+                                ? "Host connection failed."
+                                : undefined
+                          }
+                          emptyMessage="No available models on host."
+                        />
+                        <div className="px-1">
+                          <ToggleRow
+                            checked={enableTokenProbabilities}
+                            onChange={setEnableTokenProbabilities}
+                            title="Probability Metadata"
+                            description="Stream confidence scores for each generated token."
+                          />
+                        </div>
+                      </div>
+                      <TestResult status={apiTestStatus} />
+                    </div>
+
+                    {/* OpenRouter Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-zinc-800/50 pb-2">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                          Cloud Mesh (OpenRouter)
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => void refetchOpenRouterModels()}
+                            disabled={
+                              trimmedOpenRouterKey.length === 0 ||
+                              isOpenRouterModelsFetching
+                            }
+                            className="h-6 gap-1.5 px-2 text-[10px] uppercase tracking-wider text-zinc-400 hover:text-emerald-400"
+                          >
+                            <RefreshCw
+                              size={10}
+                              className={
+                                isOpenRouterModelsFetching ? "animate-spin" : ""
+                              }
+                            />
+                            Sync Registry
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => void runBackendTest("openrouter")}
+                            disabled={
+                              openRouterTestStatus.loading || !openRouterApiKey
+                            }
+                            className="h-6 gap-1.5 px-2 text-[10px] uppercase tracking-wider text-zinc-400 hover:text-emerald-400"
+                          >
+                            Auth Test
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="space-y-1.5 px-1">
+                          <Label
+                            htmlFor="openrouter-key"
+                            className="font-mono text-[10px] uppercase tracking-wider text-zinc-600"
+                          >
+                            Access Token
+                          </Label>
+                          <Input
+                            id="openrouter-key"
+                            type="password"
+                            value={openRouterApiKey || ""}
+                            onChange={(event) =>
+                              setOpenRouterApiKey(event.target.value)
+                            }
+                            placeholder="sk-or-v1-..."
+                            className="h-8 border-zinc-800 bg-zinc-900/50 px-3 font-mono text-[11px] text-emerald-400 focus:border-emerald-500/50 focus:ring-0 placeholder:text-zinc-800"
+                          />
+                        </div>
+                        <CompactModelCardPicker
+                          options={openRouterModelOptions}
+                          selectedId={openRouterModelId}
+                          onSelect={setOpenRouterModelId}
+                          isLoading={isOpenRouterModelsLoading}
+                          errorMessage={
+                            trimmedOpenRouterKey.length === 0
+                              ? "API token required for cloud mesh."
+                              : isOpenRouterModelsError
+                                ? "Mesh synchronization failed."
+                                : undefined
+                          }
+                          emptyMessage="No remote models discovered."
+                        />
+                      </div>
+                      <TestResult status={openRouterTestStatus} />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {activeSection === "models" ? (
+                <div className="space-y-10 max-w-2xl">
+                  <SectionHeader
+                    title="Sampling & Tokenization"
+                    description="Fine-tune the mathematical behavior of the generative process."
+                  />
+
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 border-b border-zinc-800/50 pb-2">
+                        Behavioral Profiles
+                      </h3>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        {SAMPLER_PRESETS.map((preset) => {
+                          const isActive = activeSamplerPreset === preset.id;
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => handleApplyPreset(preset.id)}
+                              className={`group relative overflow-hidden rounded-lg border px-3 py-3 text-left transition-all duration-300 ${
+                                isActive
+                                  ? "border-emerald-500/40 bg-emerald-500/5"
+                                  : "border-zinc-800/80 bg-zinc-900/30 hover:border-zinc-700 hover:bg-zinc-800/40"
+                              }`}
+                            >
+                              <p
+                                className={`text-[11px] font-bold uppercase tracking-wider ${isActive ? "text-emerald-400" : "text-zinc-400 group-hover:text-zinc-200"}`}
+                              >
+                                {preset.name}
+                              </p>
+                              <p className="mt-1 text-[10px] leading-snug text-zinc-600 group-hover:text-zinc-500">
+                                {preset.description}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {activeSamplerPreset && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setActiveSamplerPreset(undefined)}
+                          className="h-6 px-2 text-[9px] uppercase tracking-widest text-zinc-600 hover:text-rose-400 transition-colors"
+                        >
+                          Reset to custom profile
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border border-zinc-800/50 bg-zinc-900/10 p-6 backdrop-blur-sm">
+                      <ModelProperties />
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 border-b border-zinc-800/50 pb-2">
+                        Lexicon Mapping
+                      </h3>
+                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <Label
+                            htmlFor="tokenizer-model"
+                            className="font-mono text-[10px] uppercase tracking-wider text-zinc-600"
+                          >
+                            Vocabulary ID
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="tokenizer-model"
+                              value={tokenizerModelId}
+                              onChange={(event) => {
+                                setTokenizerModelId(event.target.value);
+                                if (tokenizerTestStatus.message) {
+                                  setTokenizerTestStatus({ loading: false });
+                                }
+                              }}
+                              placeholder="HuggingFace repository path..."
+                              className="h-8 flex-1 border-zinc-800 bg-zinc-900/50 px-3 font-mono text-[11px] text-emerald-400 focus:border-emerald-500/50 focus:ring-0 placeholder:text-zinc-800"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={handleTokenizerTest}
+                              disabled={
+                                tokenizerTestStatus.loading || !tokenizerModelId
+                              }
+                              className="h-8 border border-zinc-800 px-3 text-[10px] uppercase tracking-wider hover:bg-zinc-800"
+                            >
+                              Test
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label
+                            htmlFor="huggingface-token"
+                            className="font-mono text-[10px] uppercase tracking-wider text-zinc-600"
+                          >
+                            HF Token (Optional)
+                          </Label>
+                          <Input
+                            id="huggingface-token"
+                            type="password"
+                            value={huggingfaceToken || ""}
+                            onChange={(event) =>
+                              setHuggingfaceToken(event.target.value)
+                            }
+                            placeholder="hf_..."
+                            className="h-8 border-zinc-800 bg-zinc-900/50 px-3 font-mono text-[11px] text-emerald-400 focus:border-emerald-500/50 focus:ring-0 placeholder:text-zinc-800"
+                          />
+                        </div>
+                      </div>
+                      <TestResult status={tokenizerTestStatus} />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {activeSection === "debug" ? (
+                <div className="space-y-8 max-w-2xl">
+                  <SectionHeader
+                    title="Diagnostic Tools"
+                    description="Monitor internal engine states and verbose execution logs."
+                  />
+
+                  <div className="divide-y divide-zinc-800/50">
+                    <ToggleRow
+                      checked={debugMode}
+                      onChange={setDebugMode}
+                      title="Verbose Stream Analysis"
+                      description="Expose detailed runtime logs for LLM operations and entity resolution in the system console."
                     />
                   </div>
-                </div>
-              </div>
-            ) : null}
 
-            {activeSection === "debug" ? (
-              <div className="space-y-4">
-                <div className="rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
-                  <ToggleRow
-                    checked={debugMode}
-                    onChange={setDebugMode}
-                    title="Debug mode"
-                    description="Enable verbose runtime logs for LLM and entity internals."
-                  />
+                  <div className="rounded-lg border border-zinc-800/50 bg-emerald-500/5 p-4">
+                    <div className="flex gap-3">
+                      <Bug size={14} className="mt-0.5 text-emerald-500" />
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-medium text-emerald-400/80 uppercase tracking-wider">
+                          System Advisory
+                        </p>
+                        <p className="text-[11px] leading-relaxed text-zinc-500">
+                          Enabling verbose logging may impact performance during
+                          high-frequency text generation. Logs are routed
+                          directly to the browser's developer environment.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
-                <div className="rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4 text-xs text-zinc-400">
-                  <p>
-                    With debug mode enabled, verbose stream and entity
-                    instrumentation are printed to the browser console.
-                  </p>
-                </div>
-              </div>
-            ) : null}
-          </div>
+              ) : null}
+            </div>
+          </main>
         </div>
       </DialogContent>
     </Dialog>

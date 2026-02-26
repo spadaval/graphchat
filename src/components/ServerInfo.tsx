@@ -1,6 +1,6 @@
 import { use$ } from "@legendapp/state/react";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Link2, RefreshCw, XCircle } from "lucide-react";
+import { RefreshCw, XCircle } from "lucide-react";
 import { useEffect } from "react";
 import { serverStore$, setServerUrl } from "~/lib/state/server";
 import { setServerModelId, uiPreferences$ } from "~/lib/state/ui";
@@ -49,7 +49,6 @@ export function ServerInfoComponent({
 
   const {
     data: models,
-    isLoading,
     isFetching,
     isError,
     error,
@@ -106,15 +105,15 @@ export function ServerInfoComponent({
 
   return (
     <div
-      className={`space-y-4 overflow-y-auto ${mode === "sidebar" ? "h-auto bg-transparent p-3" : "h-auto bg-transparent p-0"}`}
+      className={`space-y-4 ${mode === "sidebar" ? "p-3 bg-white/[0.02]" : "p-0 bg-transparent"}`}
     >
       {showBaseUrl ? (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <label
             htmlFor="server-url"
-            className="text-[10px] font-bold uppercase tracking-wider text-slate-500"
+            className="text-[11px] font-semibold text-muted-foreground/50"
           >
-            Base URL
+            Endpoint URL
           </label>
           <div className="flex gap-2">
             <input
@@ -123,18 +122,19 @@ export function ServerInfoComponent({
               value={serverUrl}
               onChange={(e) => setServerUrl(e.target.value)}
               placeholder="http://localhost:8080"
-              className="flex-1 rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-700"
+              className="flex-1 rounded border border-border/60 bg-background/50 px-3 py-1.5 text-sm text-foreground/80 focus:outline-none focus:border-primary/40 placeholder:text-muted-foreground/30 transition-colors"
             />
             <Button
               size="sm"
+              variant="ghost"
               onClick={handleLoadModels}
               disabled={!hasValidServerUrl || isFetching}
-              className="h-8 px-3"
+              className="h-8.5 border border-border/60 text-xs font-semibold hover:bg-white/5"
             >
               {isFetching ? (
-                <RefreshCw size={14} className="animate-spin" />
+                <RefreshCw size={12} className="animate-spin" />
               ) : (
-                "Load Models"
+                "Sync"
               )}
             </Button>
           </div>
@@ -142,117 +142,113 @@ export function ServerInfoComponent({
       ) : null}
 
       {showStatus ? (
-        <div className="flex items-center gap-2 rounded-md border border-white/10 bg-slate-900/45 p-2">
-          {!hasValidServerUrl || isError ? (
-            <XCircle size={14} className="text-rose-500" />
-          ) : models && models.length > 0 ? (
-            <CheckCircle2 size={14} className="text-emerald-400" />
-          ) : (
-            <RefreshCw size={14} className="text-slate-500" />
-          )}
+        <div className="flex items-center justify-between rounded border border-border/40 bg-white/[0.02] px-3 py-2">
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`h-1.5 w-1.5 rounded-full transition-all duration-500 ${
+                !hasValidServerUrl || isError
+                  ? "bg-destructive/60"
+                  : models && models.length > 0
+                    ? "bg-primary/60 shadow-[0_0_8px_rgba(var(--primary),0.3)]"
+                    : "bg-muted-foreground/30 animate-pulse"
+              }`}
+            />
+            <span className="text-[11px] font-semibold text-muted-foreground/50">
+              Connection
+            </span>
+          </div>
           <span
-            className={`text-[11px] font-medium ${!hasValidServerUrl || isError ? "text-rose-300" : "text-slate-400"}`}
+            className={`text-[11px] font-bold uppercase tracking-wider ${
+              !hasValidServerUrl || isError
+                ? "text-destructive/70"
+                : "text-primary/70"
+            }`}
           >
             {!hasValidServerUrl
-              ? "Invalid URL"
+              ? "Invalid"
               : isError
-                ? "Connection Failed"
+                ? "Failed"
                 : models && models.length > 0
-                  ? "Models Loaded"
-                  : "No Models Loaded"}
+                  ? "Active"
+                  : "Idle"}
           </span>
         </div>
       ) : null}
 
       {!hasValidServerUrl && mode !== "sidebar" ? (
-        <div className="rounded border border-rose-900/30 bg-rose-950/20 p-2 text-[10px] text-rose-300/85">
-          Enter a valid http(s) URL.
+        <div className="flex gap-2 rounded border border-destructive/10 bg-destructive/5 p-2.5 text-xs text-destructive/70 leading-relaxed">
+          <XCircle size={14} className="shrink-0 mt-0.5" />
+          <p>Protocol Mismatch: A valid HTTP/HTTPS endpoint is required.</p>
         </div>
       ) : null}
 
       {isError ? (
-        <div className="rounded border border-rose-900/30 bg-rose-950/20 p-2 text-[10px] text-rose-300/85">
-          {error instanceof Error
-            ? error.message
-            : "Failed to connect to server"}
+        <div className="flex gap-2 rounded border border-destructive/10 bg-destructive/5 p-2.5 text-xs text-destructive/70 leading-relaxed">
+          <XCircle size={14} className="shrink-0 mt-0.5" />
+          <p>{error instanceof Error ? error.message : "Handshake failure."}</p>
         </div>
       ) : null}
 
       {showModelDropdown ? (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
-              <Link2 size={16} className="text-teal-300" />
-              Model Picker
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between border-b border-border/20 pb-1.5">
+            <h3 className="text-[11px] font-semibold text-muted-foreground/50">
+              Model Selection
             </h3>
             {!showBaseUrl ? (
-              <Button
+              <button
                 type="button"
-                size="sm"
-                variant="outline"
                 onClick={handleLoadModels}
                 disabled={!hasValidServerUrl || isFetching}
-                className="h-7 border-slate-700 bg-slate-900 text-[11px] hover:bg-slate-800"
+                className="text-[11px] font-semibold text-primary/60 hover:text-primary disabled:opacity-30 transition-colors"
               >
-                {isFetching ? "Loading..." : "Load Models"}
-              </Button>
+                {isFetching ? "Syncing..." : "Sync List"}
+              </button>
             ) : null}
           </div>
 
-          {isLoading ? (
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <RefreshCw size={14} className="animate-spin" />
-              Loading models from /v1/models...
+          <div className="relative group">
+            <select
+              value={selectedModelId}
+              onChange={(event) => setServerModelId(event.target.value)}
+              disabled={!models || models.length === 0}
+              className="h-8.5 w-full appearance-none rounded border border-border/60 bg-background/50 px-3 text-xs font-medium text-foreground/80 focus:outline-none focus:border-primary/40 disabled:opacity-40 transition-all"
+            >
+              <option value="">Select a model...</option>
+              {(models || []).map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.id}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground/40 group-hover:text-primary/40 transition-colors">
+              ▼
             </div>
-          ) : null}
-
-          {!isLoading && hasValidServerUrl && models && models.length === 0 ? (
-            <div className="text-xs text-slate-500">
-              No models returned by /v1/models.
-            </div>
-          ) : null}
-
-          {!hasValidServerUrl ? (
-            <div className="text-xs text-slate-500">
-              {mode === "sidebar"
-                ? "Configure a valid server URL in Full Settings to load models."
-                : "Configure a valid server URL to load available models."}
-            </div>
-          ) : null}
-
-          <select
-            value={selectedModelId}
-            onChange={(event) => setServerModelId(event.target.value)}
-            disabled={!models || models.length === 0}
-            className="h-9 w-full rounded-md border border-slate-700 bg-slate-950 px-2 text-xs text-slate-100 disabled:opacity-50"
-          >
-            <option value="">Select a model</option>
-            {(models || []).map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.id}
-              </option>
-            ))}
-          </select>
+          </div>
         </div>
       ) : null}
 
       {showReadonlyList ? (
-        <div className="space-y-2 rounded-md border border-white/10 bg-slate-900/50 p-3">
-          <p className="text-xs font-medium text-slate-300">Fetched Models</p>
+        <div className="space-y-3 rounded border border-border/40 bg-white/[0.01] p-3.5">
+          <p className="text-[11px] font-semibold text-muted-foreground/40 uppercase tracking-wider">
+            Available Nodes
+          </p>
           {!models || models.length === 0 ? (
-            <p className="text-xs text-slate-500">No fetched models.</p>
+            <p className="text-xs text-muted-foreground/30 font-medium italic">
+              Registry empty.
+            </p>
           ) : (
-            <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
+            <div className="max-h-52 space-y-1.5 overflow-y-auto pr-1 scrollbar-hide">
               {models.map((model) => (
                 <div
                   key={model.id}
-                  className="rounded border border-slate-700 px-2 py-1.5"
+                  className="group flex flex-col rounded border border-border/20 bg-background/20 px-2.5 py-2 transition-colors hover:border-primary/20 hover:bg-primary/5"
                 >
-                  <div className="text-xs break-all text-slate-100">
+                  <div className="text-xs font-medium text-foreground/60 group-hover:text-primary/80 transition-colors">
                     {model.id}
                   </div>
                   {formatModelMeta(model) ? (
-                    <div className="text-[10px] text-slate-500">
+                    <div className="mt-1 text-[10px] text-muted-foreground/40 font-medium transition-colors">
                       {formatModelMeta(model)}
                     </div>
                   ) : null}
