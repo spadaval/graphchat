@@ -15,6 +15,8 @@ import {
   ContextMenuContent,
   ContextMenuGroup,
   ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
@@ -23,6 +25,13 @@ import {
 import { useIsTouchDevice } from "~/hooks/use-is-touch-device";
 
 type Value = "askAI" | null;
+
+const menuItemClass =
+  "min-h-10 rounded-lg px-2.5 py-2 font-medium text-slate-100 data-[highlighted]:bg-cyan-500/18 data-[highlighted]:text-cyan-100 data-[highlighted]:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.35)]";
+const menuSubTriggerClass =
+  "min-h-10 rounded-lg px-2.5 py-2 font-medium text-slate-100 data-[state=open]:bg-cyan-500/18 data-[state=open]:text-cyan-100 data-[state=open]:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.35)] data-[highlighted]:bg-cyan-500/18 data-[highlighted]:text-cyan-100 data-[highlighted]:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.35)]";
+const menuSubContentClass =
+  "w-52 overflow-hidden rounded-xl border border-cyan-200/20 bg-slate-950/95 p-1.5 text-slate-100 shadow-[0_20px_70px_-24px_rgba(8,145,178,0.62)] backdrop-blur-xl";
 
 export function BlockContextMenu({ children }: { children: React.ReactNode }) {
   const { api, editor } = useEditorPlugin(BlockMenuPlugin);
@@ -95,7 +104,7 @@ export function BlockContextMenu({ children }: { children: React.ReactNode }) {
       </ContextMenuTrigger>
       {isOpen && (
         <ContextMenuContent
-          className="w-64"
+          className="w-72 overflow-hidden rounded-xl border border-cyan-200/20 bg-slate-950/95 p-1.5 text-slate-100 shadow-[0_20px_70px_-24px_rgba(8,145,178,0.62)] backdrop-blur-xl"
           onCloseAutoFocus={(e) => {
             e.preventDefault();
             editor.getApi(BlockSelectionPlugin).blockSelection.focus();
@@ -107,8 +116,12 @@ export function BlockContextMenu({ children }: { children: React.ReactNode }) {
             setValue(null);
           }}
         >
-          <ContextMenuGroup>
+          <ContextMenuLabel className="mb-1 px-2.5 pt-1 font-semibold text-[11px] text-cyan-100/75 tracking-[0.14em] uppercase">
+            Actions
+          </ContextMenuLabel>
+          <ContextMenuGroup className="space-y-0.5">
             <ContextMenuItem
+              className={menuItemClass}
               onClick={() => {
                 setValue("askAI");
               }}
@@ -116,6 +129,7 @@ export function BlockContextMenu({ children }: { children: React.ReactNode }) {
               Ask AI
             </ContextMenuItem>
             <ContextMenuItem
+              className={menuItemClass}
               onClick={() => {
                 editor
                   .getTransforms(BlockSelectionPlugin)
@@ -126,6 +140,7 @@ export function BlockContextMenu({ children }: { children: React.ReactNode }) {
               Delete
             </ContextMenuItem>
             <ContextMenuItem
+              className={menuItemClass}
               onClick={() => {
                 editor
                   .getTransforms(BlockSelectionPlugin)
@@ -136,27 +151,43 @@ export function BlockContextMenu({ children }: { children: React.ReactNode }) {
               {/* <ContextMenuShortcut>⌘ + D</ContextMenuShortcut> */}
             </ContextMenuItem>
             <ContextMenuSub>
-              <ContextMenuSubTrigger>Turn into</ContextMenuSubTrigger>
-              <ContextMenuSubContent className="w-48">
-                <ContextMenuItem onClick={() => handleTurnInto(KEYS.p)}>
+              <ContextMenuSubTrigger className={menuSubTriggerClass}>
+                Turn into
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className={menuSubContentClass}>
+                <ContextMenuItem
+                  className={menuItemClass}
+                  onClick={() => handleTurnInto(KEYS.p)}
+                >
                   Paragraph
                 </ContextMenuItem>
 
-                <ContextMenuItem onClick={() => handleTurnInto(KEYS.h1)}>
+                <ContextMenuItem
+                  className={menuItemClass}
+                  onClick={() => handleTurnInto(KEYS.h1)}
+                >
                   Heading 1
                 </ContextMenuItem>
-                <ContextMenuItem onClick={() => handleTurnInto(KEYS.h2)}>
+                <ContextMenuItem
+                  className={menuItemClass}
+                  onClick={() => handleTurnInto(KEYS.h2)}
+                >
                   Heading 2
                 </ContextMenuItem>
-                <ContextMenuItem onClick={() => handleTurnInto(KEYS.h3)}>
+                <ContextMenuItem
+                  className={menuItemClass}
+                  onClick={() => handleTurnInto(KEYS.h3)}
+                >
                   Heading 3
                 </ContextMenuItem>
                 <ContextMenuItem
+                  className={menuItemClass}
                   onClick={() => handleTurnInto(KEYS.blockquote)}
                 >
                   Blockquote
                 </ContextMenuItem>
                 <ContextMenuItem
+                  className={menuItemClass}
                   onClick={() => handleTurnInto(KEYS.codeDrawing)}
                 >
                   Code Drawing
@@ -165,8 +196,13 @@ export function BlockContextMenu({ children }: { children: React.ReactNode }) {
             </ContextMenuSub>
           </ContextMenuGroup>
 
-          <ContextMenuGroup>
+          <ContextMenuSeparator className="my-1.5 bg-white/10" />
+          <ContextMenuLabel className="mb-1 px-2.5 pt-0.5 font-semibold text-[11px] text-cyan-100/75 tracking-[0.14em] uppercase">
+            Layout
+          </ContextMenuLabel>
+          <ContextMenuGroup className="space-y-0.5">
             <ContextMenuItem
+              className={menuItemClass}
               onClick={() =>
                 editor
                   .getTransforms(BlockSelectionPlugin)
@@ -176,6 +212,7 @@ export function BlockContextMenu({ children }: { children: React.ReactNode }) {
               Indent
             </ContextMenuItem>
             <ContextMenuItem
+              className={menuItemClass}
               onClick={() =>
                 editor
                   .getTransforms(BlockSelectionPlugin)
@@ -185,15 +222,26 @@ export function BlockContextMenu({ children }: { children: React.ReactNode }) {
               Outdent
             </ContextMenuItem>
             <ContextMenuSub>
-              <ContextMenuSubTrigger>Align</ContextMenuSubTrigger>
-              <ContextMenuSubContent className="w-48">
-                <ContextMenuItem onClick={() => handleAlign("left")}>
+              <ContextMenuSubTrigger className={menuSubTriggerClass}>
+                Align
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className={menuSubContentClass}>
+                <ContextMenuItem
+                  className={menuItemClass}
+                  onClick={() => handleAlign("left")}
+                >
                   Left
                 </ContextMenuItem>
-                <ContextMenuItem onClick={() => handleAlign("center")}>
+                <ContextMenuItem
+                  className={menuItemClass}
+                  onClick={() => handleAlign("center")}
+                >
                   Center
                 </ContextMenuItem>
-                <ContextMenuItem onClick={() => handleAlign("right")}>
+                <ContextMenuItem
+                  className={menuItemClass}
+                  onClick={() => handleAlign("right")}
+                >
                   Right
                 </ContextMenuItem>
               </ContextMenuSubContent>

@@ -5,7 +5,6 @@ export type ChatId = `chat-${string}`;
 export type MessageId = `msg-${string}`;
 export type BlockId = `blk-${string}`;
 export type DocumentId = string;
-export type FolderId = `folder-${string}`;
 export type WorldId = `world-${string}`;
 
 export interface World {
@@ -40,21 +39,26 @@ export interface ServerInfo {
   timestamp: number;
 }
 
-export type LLMBackend = "browser" | "server";
+export type LLMBackend = "browser" | "server" | "openrouter";
 
 export interface UIPreferences {
   apiBackendEnabled: boolean;
+  llmBackend: LLMBackend;
   debugMode: boolean;
   inlineCompletion: boolean;
   activeSamplerPreset?: string;
   documentWidth?: number;
+  browserModelId: string;
   tokenizerModelId: string;
   huggingfaceToken?: string;
+  openRouterApiKey?: string;
+  openRouterModelId: string;
   enableTokenProbabilities: boolean;
   serverModelId?: string;
   entityAutoRunOnIdle: boolean;
   entityAutoLinkStrictMatches: boolean;
   entityPreloadModel: boolean;
+  entityFullPassIntervalSeconds: number;
 }
 
 // Document linking state

@@ -2,11 +2,7 @@ import { use$ } from "@legendapp/state/react";
 import {
   Book,
   Building,
-  ChevronDown,
-  ChevronRight,
   FileText,
-  Folder as FolderIcon,
-  FolderOpen,
   Ghost,
   Map as MapIcon,
   Scroll,
@@ -38,21 +34,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import type { Document, Folder } from "~/lib/state/documents";
+import type { Document } from "~/lib/state/documents";
 import {
   createDocument,
-  createFolder,
   DocumentIcon,
   deleteDocument,
-  deleteFolder,
   documentStore$,
   getDocumentTypeDisplayId,
-  moveDocument,
-  moveFolder,
   updateDocument,
-  updateFolder,
 } from "~/lib/state/documents";
-import type { DocumentId, FolderId } from "~/lib/state/types";
+import type { DocumentId } from "~/lib/state/types";
 import { worldStore$ } from "~/lib/state/worlds";
 import { WorldSwitcher } from "./WorldSwitcher";
 
@@ -80,7 +71,6 @@ export function StorybookSidebar({
   onSelectDocument,
 }: StorybookSidebarProps) {
   const documents = use$(documentStore$.documents);
-  const folders = use$(documentStore$.folders);
   const documentTypes = use$(documentStore$.documentTypes);
   const currentWorldId = use$(worldStore$.currentWorldId);
 
@@ -88,18 +78,11 @@ export function StorybookSidebar({
     null,
   );
 
-  const handleCreateDocument = (
-    typeId: string,
-    parentId: FolderId | "root" = "root",
-  ) => {
+  const handleCreateDocument = (typeId: string) => {
     const typeDef = documentTypes[typeId];
     const title = typeDef ? `Untitled ${typeDef.name}` : "Untitled";
-    const id = createDocument(title, "", typeId, [], parentId);
+    const id = createDocument(title, "", typeId, []);
     onSelectDocument(id);
-  };
-
-  const handleCreateFolder = (parentId: FolderId | "root" = "root") => {
-    createFolder("New Folder", parentId);
   };
 
   const handleChangeType = (typeId: string) => {
@@ -109,15 +92,8 @@ export function StorybookSidebar({
     }
   };
 
-  // Get root items for current world
-  const rootDocuments = Object.values(documents).filter(
-    (doc) =>
-      (!doc.parentId || doc.parentId === "root") &&
-      doc.worldId === currentWorldId,
-  );
-  const rootFolders = Object.values(folders).filter(
-    (f) =>
-      (!f.parentId || f.parentId === "root") && f.worldId === currentWorldId,
+  const documentsInWorld = Object.values(documents).filter(
+    (doc) => doc.worldId === currentWorldId,
   );
 
   return (
@@ -129,37 +105,8 @@ export function StorybookSidebar({
             <section
               className="h-full space-y-1 rounded-lg"
               aria-label="Document list"
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.currentTarget.classList.add("bg-zinc-800/20");
-              }}
-              onDragLeave={(e) => {
-                e.currentTarget.classList.remove("bg-zinc-800/20");
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.currentTarget.classList.remove("bg-zinc-800/20");
-                const data = e.dataTransfer.getData(
-                  "application/worldcrafter-item",
-                );
-                if (!data) return;
-                const { type, id } = JSON.parse(data);
-                if (type === "document") moveDocument(id as DocumentId, "root");
-                else if (type === "folder") moveFolder(id as FolderId, "root");
-              }}
             >
-              {rootFolders.map((folder) => (
-                <FolderItem
-                  key={folder.id}
-                  folder={folder}
-                  activeDocumentId={activeDocumentId}
-                  onSelectDocument={onSelectDocument}
-                  setChangeTypeDocId={setChangeTypeDocId}
-                  onCreateDocument={handleCreateDocument}
-                  onCreateFolder={handleCreateFolder}
-                />
-              ))}
-              {rootDocuments.map((doc) => (
+              {documentsInWorld.map((doc) => (
                 <DocumentItem
                   key={doc.id}
                   document={doc}
@@ -168,9 +115,9 @@ export function StorybookSidebar({
                   onChangeTypeRequest={() => setChangeTypeDocId(doc.id)}
                 />
               ))}
-              {rootFolders.length === 0 && rootDocuments.length === 0 && (
+              {documentsInWorld.length === 0 && (
                 <div className="mt-4 text-center text-sm text-slate-500">
-                  Right-click to create a document or folder.
+                  Right-click to create a document.
                 </div>
               )}
             </section>
@@ -196,12 +143,6 @@ export function StorybookSidebar({
                 })}
               </ContextMenuSubContent>
             </ContextMenuSub>
-            <ContextMenuItem
-              onClick={() => handleCreateFolder("root")}
-              className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100"
-            >
-              New Folder
-            </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
       </div>
@@ -238,211 +179,6 @@ export function StorybookSidebar({
   );
 }
 
-interface FolderItemProps {
-  folder: Folder;
-  activeDocumentId: DocumentId | undefined;
-  onSelectDocument: (id: DocumentId) => void;
-  setChangeTypeDocId: (id: DocumentId) => void;
-  onCreateDocument: (typeId: string, parentId: FolderId | "root") => void;
-  onCreateFolder: (parentId: FolderId | "root") => void;
-  depth?: number;
-}
-
-function FolderItem({
-  folder,
-  activeDocumentId,
-  onSelectDocument,
-  setChangeTypeDocId,
-  onCreateDocument,
-  onCreateFolder,
-  depth = 0,
-}: FolderItemProps) {
-  const documents = use$(documentStore$.documents);
-  const folders = use$(documentStore$.folders);
-  const documentTypes = use$(documentStore$.documentTypes);
-
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
-
-  const childDocuments = Object.values(documents).filter(
-    (doc) => doc.parentId === folder.id && doc.worldId === folder.worldId,
-  );
-  const childFolders = Object.values(folders).filter(
-    (f) => f.parentId === folder.id && f.worldId === folder.worldId,
-  );
-
-  const handleRename = (newName: string) => {
-    if (newName.trim()) {
-      updateFolder(folder.id, { name: newName.trim() });
-    }
-    setIsRenaming(false);
-  };
-
-  const handleToggle = (e: React.MouseEvent | React.KeyboardEvent) => {
-    e.stopPropagation();
-    updateFolder(folder.id, { isOpen: !folder.isOpen });
-  };
-
-  const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData(
-      "application/worldcrafter-item",
-      JSON.stringify({ type: "folder", id: folder.id }),
-    );
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-    const data = e.dataTransfer.getData("application/worldcrafter-item");
-    if (!data) return;
-    const { type, id } = JSON.parse(data);
-    if (type === "document") moveDocument(id as DocumentId, folder.id);
-    else if (type === "folder") {
-      if (id !== folder.id) moveFolder(id as FolderId, folder.id);
-    }
-  };
-
-  return (
-    <div className="flex flex-col">
-      <ContextMenu>
-        <ContextMenuTrigger>
-          <button
-            type="button"
-            draggable
-            onDragStart={handleDragStart}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsDragOver(true);
-            }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={handleDrop}
-            className={`w-full flex items-center gap-1 p-2 rounded-md text-sm transition-colors cursor-pointer group text-left ${
-              isDragOver
-                ? "bg-cyan-950/30 outline-2 outline-dashed outline-cyan-700/70"
-                : "hover:bg-slate-800/45"
-            }`}
-            onClick={handleToggle}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                handleToggle(e);
-              }
-            }}
-          >
-            <div className="flex items-center gap-1 flex-1 min-w-0">
-              {folder.isOpen ? (
-                <ChevronDown className="size-3.5 text-slate-500" />
-              ) : (
-                <ChevronRight className="size-3.5 text-slate-500" />
-              )}
-              {folder.isOpen ? (
-                <FolderOpen className="size-4 shrink-0 text-teal-300" />
-              ) : (
-                <FolderIcon className="size-4 shrink-0 text-cyan-300" />
-              )}
-              {isRenaming ? (
-                <Input
-                  autoFocus
-                  defaultValue={folder.name}
-                  onBlur={(e) => handleRename(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleRename(e.currentTarget.value);
-                    if (e.key === "Escape") setIsRenaming(false);
-                  }}
-                  className="h-6 border-slate-700 bg-slate-900 text-xs text-slate-100 px-1 focus-visible:ring-cyan-700/60"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              ) : (
-                <span className="truncate text-slate-300 group-hover:text-slate-100">
-                  {folder.name || "Untitled Folder"}
-                </span>
-              )}
-            </div>
-          </button>
-        </ContextMenuTrigger>
-        <ContextMenuContent className="border-slate-700 bg-slate-950 text-slate-100">
-          <ContextMenuItem
-            onClick={() => onCreateFolder(folder.id)}
-            className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100"
-          >
-            New Subfolder
-          </ContextMenuItem>
-          <ContextMenuSub>
-            <ContextMenuSubTrigger className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100">
-              New Document
-            </ContextMenuSubTrigger>
-            <ContextMenuSubContent className="w-48 border-slate-700 bg-slate-950 text-slate-100">
-              {Object.values(documentTypes).map((type) => {
-                const IconComponent = iconMap[type.icon] || FileText;
-                return (
-                  <ContextMenuItem
-                    key={type.id}
-                    onClick={() => {
-                      onCreateDocument(type.id, folder.id);
-                      updateFolder(folder.id, { isOpen: true });
-                    }}
-                    className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100"
-                  >
-                    <IconComponent className="mr-2 size-4 opacity-80" />
-                    {type.name}
-                  </ContextMenuItem>
-                );
-              })}
-            </ContextMenuSubContent>
-          </ContextMenuSub>
-          <ContextMenuSeparator className="bg-slate-700/80" />
-          <ContextMenuItem
-            onClick={() => setIsRenaming(true)}
-            className="cursor-pointer focus:bg-slate-800/75 focus:text-slate-100"
-          >
-            Rename
-          </ContextMenuItem>
-          <ContextMenuItem
-            onClick={() => deleteFolder(folder.id)}
-            className="cursor-pointer text-rose-400 focus:bg-slate-800/75 focus:text-rose-300"
-          >
-            Delete
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
-
-      {folder.isOpen && (
-        <div className="mt-0.5 ml-4 space-y-0.5 border-l border-slate-700/70 pl-1">
-          {childFolders.map((f) => (
-            <FolderItem
-              key={f.id}
-              folder={f}
-              activeDocumentId={activeDocumentId}
-              onSelectDocument={onSelectDocument}
-              setChangeTypeDocId={setChangeTypeDocId}
-              onCreateDocument={onCreateDocument}
-              onCreateFolder={onCreateFolder}
-              depth={depth + 1}
-            />
-          ))}
-          {childDocuments.map((doc) => (
-            <DocumentItem
-              key={doc.id}
-              document={doc}
-              isActive={doc.id === activeDocumentId}
-              onClick={() => onSelectDocument(doc.id)}
-              onChangeTypeRequest={() => setChangeTypeDocId(doc.id)}
-            />
-          ))}
-          {childFolders.length === 0 && childDocuments.length === 0 && (
-            <div className="py-1 pl-6 text-[10px] italic text-slate-600">
-              Empty
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 interface DocumentItemProps {
   document: Document;
   isActive: boolean;
@@ -472,17 +208,9 @@ function DocumentItem({
     setIsRenaming(false);
   };
 
-  const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData(
-      "application/worldcrafter-item",
-      JSON.stringify({ type: "document", id: document.id }),
-    );
-    e.dataTransfer.effectAllowed = "move";
-  };
-
   if (isRenaming) {
     return (
-      <div className="px-2 py-1 ml-4">
+      <div className="px-2 py-1">
         <Input
           autoFocus
           defaultValue={document.title}
@@ -505,8 +233,6 @@ function DocumentItem({
             <TooltipTrigger asChild>
               <button
                 type="button"
-                draggable
-                onDragStart={handleDragStart}
                 onClick={onClick}
                 className={`w-full flex items-center gap-2 p-2 rounded-md text-sm transition-colors ${
                   isActive
@@ -514,7 +240,6 @@ function DocumentItem({
                     : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200"
                 }`}
               >
-                <div className="w-4 shrink-0" />
                 <span className="shrink-0 opacity-70">
                   <IconComponent className="size-4" />
                 </span>

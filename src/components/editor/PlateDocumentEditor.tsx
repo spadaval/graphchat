@@ -2,10 +2,27 @@
 
 import type { Observable } from "@legendapp/state";
 import { use$ } from "@legendapp/state/react";
-import { Loader2, Send, Sparkles, WandSparkles, X } from "lucide-react";
-import { type Path, type PathRef, TextApi } from "platejs";
+import {
+  Book,
+  Building,
+  FileText,
+  Ghost,
+  Loader2,
+  Map as MapIcon,
+  Scroll,
+  Sparkles,
+  User,
+  WandSparkles,
+} from "lucide-react";
+import { KEYS, type Path, PathApi, type PathRef, TextApi } from "platejs";
 import { Plate, PlateContent, usePlateEditor } from "platejs/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import { debugInfo, debugLog } from "~/lib/debug";
 import {
   deserializeMarkdownToModel,
@@ -13,10 +30,23 @@ import {
 } from "~/lib/document-content";
 import { warmupEntityDetectionPipeline } from "~/lib/entity-detection";
 import { updateDocument, updateDocumentContentModel } from "~/lib/state";
-import type { Document } from "~/lib/state/documents";
+import type { BaseTypeId } from "~/lib/state/document-model";
+import {
+  type Document,
+  DocumentIcon,
+  documentStore$,
+} from "~/lib/state/documents";
 import { callLLMStreaming, modelProps$ } from "~/lib/state/llm";
 import type { LLMMessage } from "~/lib/state/types";
 import { uiPreferences$ } from "~/lib/state/ui";
+import {
+  ACCEPT_AI_SEGMENT_EVENT,
+  type AcceptAISegmentEventDetail,
+  GENERATE_NEXT_SLASH_EVENT,
+  type GenerateNextSlashEventDetail,
+  RUN_AI_SEGMENT_EVENT,
+  type RunAISegmentEventDetail,
+} from "./generate-next-events";
 import type { MyEditor } from "./plate-types";
 import { AI_SEGMENT_TYPE } from "./plugins/ai-segment-kit";
 import { UnifiedEditorKitWithAI } from "./plugins/unified-editor-kit";
@@ -30,8 +60,24 @@ const PERSIST_DEBOUNCE_MS = 1000;
 
 interface AISegmentNodeData {
   aiSegmentId?: string;
+  aiPrompt?: string;
+  aiStatus?: "awaiting_prompt" | "generating" | "ready";
   type?: string;
 }
+
+const iconMap: Record<
+  DocumentIcon,
+  React.ComponentType<{ className?: string }>
+> = {
+  [DocumentIcon.FileText]: FileText,
+  [DocumentIcon.User]: User,
+  [DocumentIcon.Map]: MapIcon,
+  [DocumentIcon.Sparkles]: Sparkles,
+  [DocumentIcon.Ghost]: Ghost,
+  [DocumentIcon.Building]: Building,
+  [DocumentIcon.Book]: Book,
+  [DocumentIcon.Scroll]: Scroll,
+};
 
 const getAISegmentPathFromRef = (
   editor: MyEditor,
@@ -98,37 +144,74 @@ const replaceAISegmentNodeTextAtPath = (
   editor.tf.insertNodes({ text }, { at: textPath, select: false });
 };
 
-const insertAISegmentNodeAtEnd = (
+const getAISegmentEntryById = (editor: MyEditor, aiSegmentId: string) => {
+  const segmentEntry = editor.api.node({
+    at: [],
+    match: (node) =>
+      !TextApi.isText(node) &&
+      (node as AISegmentNodeData).type === AI_SEGMENT_TYPE &&
+      (node as AISegmentNodeData).aiSegmentId === aiSegmentId,
+  });
+
+  if (!segmentEntry) {
+    console.error("[GenerateNext] Could not find AI segment by id", {
+      aiSegmentId,
+    });
+    throw new Error(`Missing AI segment: ${aiSegmentId}`);
+  }
+
+  return segmentEntry as [AISegmentNodeData, Path];
+};
+
+const upsertAISegmentNode = (
   editor: MyEditor,
+  at: Path,
   text: string,
   aiSegmentId: string,
+  options: {
+    aiPrompt?: string;
+    aiStatus: "awaiting_prompt" | "generating" | "ready";
+  },
 ) => {
-  const path = [editor.children.length];
   editor.tf.insertNodes(
     {
       aiSegmentId,
+      aiPrompt: options.aiPrompt,
+      aiStatus: options.aiStatus,
       children: [{ text }],
       type: AI_SEGMENT_TYPE,
     },
-    { at: path, select: false },
+    { at, select: false },
   );
 };
 
 export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   const document = use$(document$);
-  const { documentWidth = 800, entityPreloadModel = true } =
-    use$(uiPreferences$);
-  const [showAiInput, setShowAiInput] = useState(false);
-  const [aiInstructions, setAiInstructions] = useState("");
+  const {
+    documentWidth = 800,
+    entityAutoRunOnIdle = false,
+    entityFullPassIntervalSeconds = 10,
+    entityPreloadModel = true,
+  } = use$(uiPreferences$);
+  const documentTypes = use$(documentStore$.documentTypes);
+  const documentTypeRegistry = use$(documentStore$.documentTypeRegistry);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingSegmentId, setGeneratingSegmentId] = useState<string | null>(
+    null,
+  );
   const [isRunningEntityDetection, setIsRunningEntityDetection] =
     useState(false);
-  const aiInputRef = useRef<HTMLInputElement>(null);
   const suppressOnChangeRef = useRef(false);
   const persistTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastPersistedContentRef = useRef<string>("");
 
   const docId = document$.id.peek();
+  const currentType = document.baseTypeId as BaseTypeId;
+  const currentTypeDef = documentTypes[currentType] || documentTypes.general;
+  const CurrentTypeIcon = currentTypeDef
+    ? iconMap[currentTypeDef.icon] || FileText
+    : FileText;
+  const availableTypes = Object.values(documentTypeRegistry);
   const contentModel = isValidModel(document.contentModel)
     ? document.contentModel
     : deserializeMarkdownToModel("");
@@ -148,12 +231,6 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
   useEffect(() => {
     lastPersistedContentRef.current = JSON.stringify(contentModel);
   }, [contentModel]);
-
-  useEffect(() => {
-    if (showAiInput && aiInputRef.current) {
-      aiInputRef.current.focus();
-    }
-  }, [showAiInput]);
 
   useEffect(() => {
     if (!entityPreloadModel) return;
@@ -211,11 +288,11 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
     }
   }, [contentModel, editor]);
 
-  const persistEditorState = () => {
+  const persistEditorState = useCallback(() => {
     const persistedModel = editor.children as unknown[];
     lastPersistedContentRef.current = JSON.stringify(persistedModel);
     updateDocumentContentModel(docId, persistedModel);
-  };
+  }, [docId, editor]);
 
   const handleContentChange = () => {
     if (suppressOnChangeRef.current) return;
@@ -232,200 +309,392 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
     };
   }, []);
 
-  const generateNextSegment = async () => {
+  const insertPromptAISegment = useCallback(() => {
     if (isGenerating) return;
-
-    const runId = `gen-next-${crypto.randomUUID()}`;
-    const runStart = performance.now();
-    debugInfo("[GenerateNext] Run started", {
-      docId,
-      hasInstructions: aiInstructions.trim().length > 0,
-      runId,
-    });
-
-    setIsGenerating(true);
-
-    const serialized = editorRef.current.api.markdown.serialize();
-    const messages: LLMMessage[] = [];
-    if (serialized.trim()) {
-      messages.push({ role: "user", content: serialized });
-    }
-    if (aiInstructions.trim()) {
-      messages.push({ role: "user", content: aiInstructions.trim() });
-    }
-    if (!messages.length) {
-      messages.push({ role: "user", content: "Please start writing a story." });
-    }
 
     const aiSegmentId = `ai-segment-${crypto.randomUUID()}`;
     const targetEditor = editorRef.current;
-    const insertedPath: Path = [targetEditor.children.length];
+
     suppressOnChangeRef.current = true;
     try {
-      insertAISegmentNodeAtEnd(targetEditor, "", aiSegmentId);
+      const currentBlock = targetEditor.api.block({ highest: true });
+
+      if (currentBlock && targetEditor.api.isEmpty(currentBlock[0])) {
+        targetEditor.tf.removeNodes({ at: currentBlock[1] });
+        upsertAISegmentNode(targetEditor, currentBlock[1], "", aiSegmentId, {
+          aiStatus: "awaiting_prompt",
+        });
+      } else if (currentBlock) {
+        upsertAISegmentNode(
+          targetEditor,
+          PathApi.next(currentBlock[1]),
+          "",
+          aiSegmentId,
+          {
+            aiStatus: "awaiting_prompt",
+          },
+        );
+      } else {
+        upsertAISegmentNode(
+          targetEditor,
+          [targetEditor.children.length],
+          "",
+          aiSegmentId,
+          {
+            aiStatus: "awaiting_prompt",
+          },
+        );
+      }
     } finally {
       suppressOnChangeRef.current = false;
     }
-    const segmentPathRef = targetEditor.api.pathRef(insertedPath);
 
-    try {
-      let fullText = "";
-      const stream = callLLMStreaming(messages, modelProps$.get());
-      const FLUSH_INTERVAL_MS = 50;
-      let chunkCount = 0;
-      let firstChunkAt: number | null = null;
-      let lastChunkAt: number | null = null;
-      let lastFlushAt = 0;
-      let appliedLength = 0;
-      let totalApplyMs = 0;
-      let slowApplyCount = 0;
+    persistEditorState();
+  }, [isGenerating, persistEditorState]);
 
-      const flushStreamedTextToEditor = () => {
-        if (fullText.length === appliedLength) return;
+  const runAISegmentGeneration = useCallback(
+    async (aiSegmentId: string, rawInstructions?: string) => {
+      if (isGenerating && generatingSegmentId !== aiSegmentId) return;
 
-        const applyStart = performance.now();
+      const targetEditor = editorRef.current;
+      let segmentEntry: [AISegmentNodeData, Path];
+
+      try {
+        segmentEntry = getAISegmentEntryById(targetEditor, aiSegmentId);
+      } catch (_error) {
+        return;
+      }
+
+      const [segmentNode, segmentPath] = segmentEntry;
+      const currentPrompt = segmentNode.aiPrompt?.trim() ?? "";
+      const instructions = rawInstructions?.trim() ?? currentPrompt;
+      const runId = `gen-next-${crypto.randomUUID()}`;
+      const runStart = performance.now();
+      debugInfo("[GenerateNext] Run started", {
+        aiSegmentId,
+        docId,
+        hasInstructions: Boolean(instructions),
+        runId,
+      });
+
+      setIsGenerating(true);
+      setGeneratingSegmentId(aiSegmentId);
+
+      suppressOnChangeRef.current = true;
+      try {
+        targetEditor.tf.setNodes(
+          {
+            aiPrompt: instructions || undefined,
+            aiStatus: "generating",
+          },
+          { at: segmentPath },
+        );
+        replaceAISegmentNodeTextAtPath(
+          targetEditor,
+          segmentPath,
+          aiSegmentId,
+          "",
+        );
+      } finally {
+        suppressOnChangeRef.current = false;
+      }
+
+      const segmentPathRef = targetEditor.api.pathRef(segmentPath);
+
+      try {
+        const serialized = targetEditor.api.markdown.serialize();
+        const messages: LLMMessage[] = [];
+        if (serialized.trim()) {
+          messages.push({ role: "user", content: serialized });
+        }
+
+        if (instructions) {
+          messages.push({
+            role: "user",
+            content: `Generate the next segment with these instructions: ${instructions}`,
+          });
+        } else if (!messages.length) {
+          messages.push({
+            role: "user",
+            content: "Please start writing a story.",
+          });
+        } else {
+          messages.push({
+            role: "user",
+            content: "Generate the next segment.",
+          });
+        }
+
+        let fullText = "";
+        const stream = callLLMStreaming(messages, modelProps$.get());
+        const FLUSH_INTERVAL_MS = 50;
+        let chunkCount = 0;
+        let firstChunkAt: number | null = null;
+        let lastChunkAt: number | null = null;
+        let lastFlushAt = 0;
+        let appliedLength = 0;
+        let totalApplyMs = 0;
+        let slowApplyCount = 0;
+
+        const flushStreamedTextToEditor = () => {
+          if (fullText.length === appliedLength) return;
+
+          const applyStart = performance.now();
+          suppressOnChangeRef.current = true;
+          try {
+            const currentEditor = editorRef.current;
+            const currentSegmentPath = getAISegmentPathFromRef(
+              currentEditor,
+              segmentPathRef,
+              aiSegmentId,
+            );
+            replaceAISegmentNodeTextAtPath(
+              currentEditor,
+              currentSegmentPath,
+              aiSegmentId,
+              fullText,
+            );
+          } finally {
+            suppressOnChangeRef.current = false;
+          }
+
+          const applyMs = performance.now() - applyStart;
+          appliedLength = fullText.length;
+          lastFlushAt = applyStart;
+          totalApplyMs += applyMs;
+          if (applyMs > 16) {
+            slowApplyCount += 1;
+          }
+
+          debugLog("[GenerateNext] Editor apply time", {
+            aiSegmentId,
+            applyMs: +applyMs.toFixed(3),
+            appliedLength,
+            chunkCount,
+            runId,
+            slowApplyCount,
+            totalApplyMs: +totalApplyMs.toFixed(3),
+          });
+        };
+
+        for await (const chunkResult of stream) {
+          chunkResult.match(
+            (chunk) => {
+              if (chunk.response.done) {
+                flushStreamedTextToEditor();
+                debugInfo("[GenerateNext] Stream completed", {
+                  aiSegmentId,
+                  chunkCount,
+                  durationMs: Math.round(performance.now() - runStart),
+                  finalLength: fullText.length,
+                  firstChunkLatencyMs:
+                    firstChunkAt === null
+                      ? null
+                      : Math.round(firstChunkAt - runStart),
+                  runId,
+                  slowApplyCount,
+                  totalApplyMs: Math.round(totalApplyMs),
+                  totalInterChunkGapMs:
+                    firstChunkAt === null || lastChunkAt === null
+                      ? 0
+                      : Math.round(lastChunkAt - firstChunkAt),
+                });
+                return;
+              }
+
+              const chunkNow = performance.now();
+              if (firstChunkAt === null) {
+                firstChunkAt = chunkNow;
+                debugInfo("[GenerateNext] First chunk received", {
+                  aiSegmentId,
+                  runId,
+                  timeToFirstChunkMs: Math.round(chunkNow - runStart),
+                });
+              }
+
+              const interChunkGapMs =
+                lastChunkAt === null ? 0 : Math.round(chunkNow - lastChunkAt);
+              lastChunkAt = chunkNow;
+              chunkCount += 1;
+              fullText += chunk.response.content;
+
+              debugLog("[GenerateNext] Stream chunk", {
+                aiSegmentId,
+                accumulatedLength: fullText.length,
+                chunkCount,
+                chunkLength: chunk.response.content.length,
+                interChunkGapMs,
+                runId,
+              });
+
+              const now = performance.now();
+              const shouldFlush =
+                chunk.response.content.length > 0 &&
+                (lastFlushAt === 0 || now - lastFlushAt >= FLUSH_INTERVAL_MS);
+
+              if (shouldFlush) {
+                flushStreamedTextToEditor();
+              }
+            },
+            (error) => {
+              console.error("[GenerateNext] Stream yielded error", {
+                aiSegmentId,
+                error,
+                runId,
+              });
+            },
+          );
+        }
+
+        flushStreamedTextToEditor();
         suppressOnChangeRef.current = true;
         try {
-          const currentEditor = editorRef.current;
-          const segmentPath = getAISegmentPathFromRef(
-            currentEditor,
+          const currentSegmentPath = getAISegmentPathFromRef(
+            editorRef.current,
             segmentPathRef,
             aiSegmentId,
           );
-          replaceAISegmentNodeTextAtPath(
-            currentEditor,
-            segmentPath,
-            aiSegmentId,
-            fullText,
+          editorRef.current.tf.setNodes(
+            { aiStatus: "ready", aiPrompt: instructions || undefined },
+            { at: currentSegmentPath },
           );
         } finally {
           suppressOnChangeRef.current = false;
         }
-
-        const applyMs = performance.now() - applyStart;
-        appliedLength = fullText.length;
-        lastFlushAt = applyStart;
-        totalApplyMs += applyMs;
-        if (applyMs > 16) {
-          slowApplyCount += 1;
-        }
-
-        debugLog("[GenerateNext] Editor apply time", {
-          applyMs: +applyMs.toFixed(3),
-          appliedLength,
-          chunkCount,
+        persistEditorState();
+        debugInfo("[GenerateNext] Run persisted successfully", {
+          aiSegmentId,
+          durationMs: Math.round(performance.now() - runStart),
           runId,
-          slowApplyCount,
-          totalApplyMs: +totalApplyMs.toFixed(3),
         });
-      };
+      } catch (error) {
+        console.error("[GenerateNext] Run failed", {
+          aiSegmentId,
+          durationMs: Math.round(performance.now() - runStart),
+          error,
+          runId,
+        });
 
-      for await (const chunkResult of stream) {
-        chunkResult.match(
-          (chunk) => {
-            if (chunk.response.done) {
-              flushStreamedTextToEditor();
-              debugInfo("[GenerateNext] Stream completed", {
-                chunkCount,
-                durationMs: Math.round(performance.now() - runStart),
-                finalLength: fullText.length,
-                firstChunkLatencyMs:
-                  firstChunkAt === null
-                    ? null
-                    : Math.round(firstChunkAt - runStart),
-                runId,
-                slowApplyCount,
-                totalApplyMs: Math.round(totalApplyMs),
-                totalInterChunkGapMs:
-                  firstChunkAt === null || lastChunkAt === null
-                    ? 0
-                    : Math.round(lastChunkAt - firstChunkAt),
-              });
-              return;
-            }
+        suppressOnChangeRef.current = true;
+        try {
+          const currentSegmentPath = getAISegmentPathFromRef(
+            editorRef.current,
+            segmentPathRef,
+            aiSegmentId,
+          );
+          editorRef.current.tf.setNodes(
+            { aiStatus: "ready", aiPrompt: instructions || undefined },
+            { at: currentSegmentPath },
+          );
+        } catch (_error) {
+          // no-op: segment may have been removed
+        } finally {
+          suppressOnChangeRef.current = false;
+        }
+      } finally {
+        segmentPathRef.unref();
+        setIsGenerating(false);
+        setGeneratingSegmentId(null);
+        debugInfo("[GenerateNext] Run finalized", {
+          aiSegmentId,
+          durationMs: Math.round(performance.now() - runStart),
+          runId,
+        });
+      }
+    },
+    [docId, generatingSegmentId, isGenerating, persistEditorState],
+  );
 
-            const chunkNow = performance.now();
-            if (firstChunkAt === null) {
-              firstChunkAt = chunkNow;
-              debugInfo("[GenerateNext] First chunk received", {
-                runId,
-                timeToFirstChunkMs: Math.round(chunkNow - runStart),
-              });
-            }
+  const acceptAISegment = useCallback(
+    (aiSegmentId: string) => {
+      if (generatingSegmentId === aiSegmentId) return;
 
-            const interChunkGapMs =
-              lastChunkAt === null ? 0 : Math.round(chunkNow - lastChunkAt);
-            lastChunkAt = chunkNow;
-            chunkCount += 1;
-            fullText += chunk.response.content;
+      const targetEditor = editorRef.current;
+      let segmentEntry: [AISegmentNodeData, Path];
 
-            debugLog("[GenerateNext] Stream chunk", {
-              accumulatedLength: fullText.length,
-              chunkCount,
-              chunkLength: chunk.response.content.length,
-              interChunkGapMs,
-              runId,
-            });
-
-            const now = performance.now();
-            const shouldFlush =
-              chunk.response.content.length > 0 &&
-              (lastFlushAt === 0 || now - lastFlushAt >= FLUSH_INTERVAL_MS);
-
-            if (shouldFlush) {
-              flushStreamedTextToEditor();
-            }
-          },
-          (error) => {
-            console.error("[GenerateNext] Stream yielded error", {
-              error,
-              runId,
-            });
-          },
-        );
+      try {
+        segmentEntry = getAISegmentEntryById(targetEditor, aiSegmentId);
+      } catch (_error) {
+        return;
       }
 
-      flushStreamedTextToEditor();
-      persistEditorState();
-      debugInfo("[GenerateNext] Run persisted successfully", {
-        durationMs: Math.round(performance.now() - runStart),
-        runId,
-      });
-    } catch (error) {
-      console.error("[GenerateNext] Run failed", {
-        aiSegmentId,
-        durationMs: Math.round(performance.now() - runStart),
-        error,
-        runId,
-      });
-    } finally {
-      segmentPathRef.unref();
-      setAiInstructions("");
-      setIsGenerating(false);
-      debugInfo("[GenerateNext] Run finalized", {
-        aiSegmentId,
-        durationMs: Math.round(performance.now() - runStart),
-        runId,
-      });
-    }
-  };
+      suppressOnChangeRef.current = true;
+      try {
+        targetEditor.tf.setNodes({ type: KEYS.p }, { at: segmentEntry[1] });
+        targetEditor.tf.unsetNodes(["aiSegmentId", "aiPrompt", "aiStatus"], {
+          at: segmentEntry[1],
+        });
+      } finally {
+        suppressOnChangeRef.current = false;
+      }
 
-  const runDocumentEntityDetection = async () => {
+      persistEditorState();
+    },
+    [generatingSegmentId, persistEditorState],
+  );
+
+  useEffect(() => {
+    const onGenerateNext = (event: Event) => {
+      const customEvent = event as CustomEvent<GenerateNextSlashEventDetail>;
+      if (customEvent.detail.editorId !== editor.id) return;
+      insertPromptAISegment();
+    };
+
+    const onRunAISegment = (event: Event) => {
+      const customEvent = event as CustomEvent<RunAISegmentEventDetail>;
+      if (customEvent.detail.editorId !== editor.id) return;
+      void runAISegmentGeneration(
+        customEvent.detail.aiSegmentId,
+        customEvent.detail.instructions,
+      );
+    };
+
+    const onAcceptAISegment = (event: Event) => {
+      const customEvent = event as CustomEvent<AcceptAISegmentEventDetail>;
+      if (customEvent.detail.editorId !== editor.id) return;
+      acceptAISegment(customEvent.detail.aiSegmentId);
+    };
+
+    window.addEventListener(GENERATE_NEXT_SLASH_EVENT, onGenerateNext);
+    window.addEventListener(RUN_AI_SEGMENT_EVENT, onRunAISegment);
+    window.addEventListener(ACCEPT_AI_SEGMENT_EVENT, onAcceptAISegment);
+
+    return () => {
+      window.removeEventListener(GENERATE_NEXT_SLASH_EVENT, onGenerateNext);
+      window.removeEventListener(RUN_AI_SEGMENT_EVENT, onRunAISegment);
+      window.removeEventListener(ACCEPT_AI_SEGMENT_EVENT, onAcceptAISegment);
+    };
+  }, [
+    acceptAISegment,
+    editor.id,
+    insertPromptAISegment,
+    runAISegmentGeneration,
+  ]);
+
+  const runDocumentEntityDetection = useCallback(async () => {
     if (isRunningEntityDetection || isGenerating) return;
     const entityApi = (
-      editor.api as { entity?: { runDocument?: () => Promise<void> } }
+      editor.api as {
+        entity?: {
+          runDocument?: () => Promise<void>;
+          runFullDocumentPass?: () => Promise<void>;
+        };
+      }
     ).entity;
-    if (!entityApi?.runDocument) {
-      console.warn("[Entity] Plugin API missing: entity.runDocument");
+    const runFullDocumentPass =
+      entityApi?.runFullDocumentPass ?? entityApi?.runDocument;
+    if (!runFullDocumentPass) {
+      console.warn(
+        "[Entity] Plugin API missing: entity.runFullDocumentPass/entity.runDocument",
+      );
       return;
     }
 
     setIsRunningEntityDetection(true);
-    setShowAiInput(false);
     suppressOnChangeRef.current = true;
 
     try {
-      await entityApi.runDocument();
+      await runFullDocumentPass();
     } catch (error) {
       console.error("[Entity] Document pass failed", { error });
     } finally {
@@ -433,7 +702,33 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
       persistEditorState();
       setIsRunningEntityDetection(false);
     }
-  };
+  }, [editor.api, isGenerating, isRunningEntityDetection, persistEditorState]);
+
+  useEffect(() => {
+    if (!entityAutoRunOnIdle) return;
+
+    const intervalSeconds = Number.isFinite(entityFullPassIntervalSeconds)
+      ? Math.max(1, entityFullPassIntervalSeconds)
+      : 10;
+    debugInfo("[Entity] Starting periodic full-document pass", {
+      intervalSeconds,
+    });
+
+    const intervalId = window.setInterval(() => {
+      void runDocumentEntityDetection();
+    }, intervalSeconds * 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+      debugInfo("[Entity] Stopped periodic full-document pass", {
+        intervalSeconds,
+      });
+    };
+  }, [
+    entityAutoRunOnIdle,
+    entityFullPassIntervalSeconds,
+    runDocumentEntityDetection,
+  ]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-transparent">
@@ -443,13 +738,57 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
           style={{ maxWidth: `${documentWidth}px` }}
         >
           <div className="rounded-[1.35rem] border border-white/10 bg-slate-950/45 px-6 py-6 shadow-[0_30px_70px_rgba(2,10,18,0.5)] backdrop-blur md:px-8">
-            <input
-              type="text"
-              value={document.title || ""}
-              onChange={(e) => updateDocument(docId, { title: e.target.value })}
-              className="wc-title mb-8 w-full border-none bg-transparent text-3xl font-semibold text-slate-100 outline-none placeholder:text-slate-600 md:text-4xl"
-              placeholder="Untitled Document"
-            />
+            <div className="mb-6 flex items-center gap-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 bg-slate-900/70 text-slate-300 transition hover:border-white/25 hover:bg-slate-800/75 hover:text-slate-100"
+                    title="Change document type"
+                    aria-label="Change document type"
+                  >
+                    <CurrentTypeIcon className="size-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="w-60 border-slate-700 bg-slate-900 text-slate-100"
+                >
+                  {availableTypes.map((typeDef) => {
+                    const TypeIcon =
+                      iconMap[documentTypes[typeDef.id]?.icon] || FileText;
+                    const isActive = typeDef.id === currentType;
+                    return (
+                      <DropdownMenuItem
+                        key={typeDef.id}
+                        onClick={() =>
+                          updateDocument(docId, { baseTypeId: typeDef.id })
+                        }
+                        className="group flex items-start gap-2"
+                      >
+                        <TypeIcon className="mt-0.5 size-4 text-slate-400 group-data-[highlighted]:text-slate-100" />
+                        <div className="flex min-w-0 flex-col">
+                          <span className="text-sm leading-tight">
+                            {typeDef.name}
+                            {isActive ? " (current)" : ""}
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <input
+                type="text"
+                value={document.title || ""}
+                onChange={(e) =>
+                  updateDocument(docId, { title: e.target.value })
+                }
+                className="wc-title w-full border-none bg-transparent text-xl font-medium text-slate-200 outline-none placeholder:text-slate-500 md:text-2xl"
+                placeholder="Untitled Document"
+              />
+            </div>
 
             <Plate editor={editor} onChange={handleContentChange}>
               <PlateContent
@@ -468,16 +807,6 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
           style={{ maxWidth: `${documentWidth}px` }}
         >
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowAiInput((v) => !v)}
-              disabled={isGenerating || isRunningEntityDetection}
-              className="rounded-full border border-teal-200/25 bg-teal-400/10 px-3 py-1.5 text-xs text-teal-100 transition hover:bg-teal-400/20 disabled:opacity-50"
-            >
-              <span className="inline-flex items-center gap-1">
-                <Sparkles size={12} /> Generate Next
-              </span>
-            </button>
             {isGenerating && (
               <span className="inline-flex items-center gap-1 rounded-full border border-teal-200/25 px-2 py-1 text-xs text-teal-100">
                 <Loader2 size={12} className="animate-spin" />
@@ -501,46 +830,6 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
               </span>
             </button>
           </div>
-
-          {showAiInput && (
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                ref={aiInputRef}
-                type="text"
-                value={aiInstructions}
-                onChange={(e) => setAiInstructions(e.target.value)}
-                placeholder="What should I generate?"
-                className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-cyan-800/70"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    void generateNextSegment();
-                  }
-                  if (e.key === "Escape") {
-                    setShowAiInput(false);
-                  }
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowAiInput(false)}
-                className="rounded-md p-2 text-slate-500 transition hover:bg-slate-800/60 hover:text-slate-200"
-              >
-                <X size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => void generateNextSegment()}
-                disabled={isGenerating || isRunningEntityDetection}
-                className="rounded-md p-2 text-teal-200 transition hover:bg-teal-500/15 hover:text-teal-100 disabled:opacity-50"
-              >
-                {isGenerating ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Send size={14} />
-                )}
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>

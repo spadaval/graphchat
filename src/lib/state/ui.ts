@@ -8,17 +8,23 @@ import type {
   UIPreferences,
 } from "./types";
 
+const DEFAULT_BROWSER_MODEL_ID = "onnx-community/Qwen3-0.6B-ONNX";
+
 const uiPreferences: UIPreferences = {
   apiBackendEnabled: true,
+  llmBackend: "server",
   debugMode: false,
   inlineCompletion: true,
   documentWidth: 800,
+  browserModelId: DEFAULT_BROWSER_MODEL_ID,
   tokenizerModelId: "default", // Assuming a default value for the new required property
+  openRouterModelId: "openai/gpt-4o-mini",
   enableTokenProbabilities: true,
   serverModelId: "",
   entityAutoRunOnIdle: false,
   entityAutoLinkStrictMatches: true,
   entityPreloadModel: true,
+  entityFullPassIntervalSeconds: 10,
 };
 
 export const uiPreferences$ = observable<UIPreferences>(uiPreferences);
@@ -36,6 +42,10 @@ export const documentLinking$ =
 
 export const setAPIBackendEnabled = (enabled: boolean) => {
   uiPreferences$.apiBackendEnabled.set(enabled);
+};
+
+export const setLLMBackend = (backend: UIPreferences["llmBackend"]) => {
+  uiPreferences$.llmBackend.set(backend);
 };
 
 export const setDebugMode = (enabled: boolean) => {
@@ -62,12 +72,24 @@ export const setDocumentWidth = (width: number) => {
   uiPreferences$.documentWidth.set(width);
 };
 
+export const setBrowserModelId = (modelId: string) => {
+  uiPreferences$.browserModelId.set(modelId);
+};
+
 export const setTokenizerModelId = (id: string) => {
   uiPreferences$.tokenizerModelId.set(id);
 };
 
 export const setHuggingfaceToken = (token: string) => {
   uiPreferences$.huggingfaceToken.set(token);
+};
+
+export const setOpenRouterApiKey = (token: string) => {
+  uiPreferences$.openRouterApiKey.set(token);
+};
+
+export const setOpenRouterModelId = (modelId: string) => {
+  uiPreferences$.openRouterModelId.set(modelId);
 };
 
 export const setEntityAutoRunOnIdle = (enabled: boolean) => {
@@ -80,6 +102,13 @@ export const setEntityAutoLinkStrictMatches = (enabled: boolean) => {
 
 export const setEntityPreloadModel = (enabled: boolean) => {
   uiPreferences$.entityPreloadModel.set(enabled);
+};
+
+export const setEntityFullPassIntervalSeconds = (seconds: number) => {
+  const normalized = Number.isFinite(seconds)
+    ? Math.max(1, Math.min(300, Math.round(seconds)))
+    : 10;
+  uiPreferences$.entityFullPassIntervalSeconds.set(normalized);
 };
 
 // Document linking actions

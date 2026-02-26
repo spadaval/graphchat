@@ -1,36 +1,16 @@
 "use client";
 
-import { AIChatPlugin } from "@platejs/ai/react";
-import {
-  CalendarIcon,
-  ChevronRightIcon,
-  Code2,
-  Columns3Icon,
-  Heading1Icon,
-  Heading2Icon,
-  Heading3Icon,
-  LightbulbIcon,
-  ListIcon,
-  ListOrdered,
-  PenToolIcon,
-  PilcrowIcon,
-  Quote,
-  RadicalIcon,
-  SparklesIcon,
-  Square,
-  Table,
-  TableOfContentsIcon,
-  TextCursorInput,
-} from "lucide-react";
-import { KEYS, type TComboboxInputElement } from "platejs";
+import { SparklesIcon, TextCursorInput } from "lucide-react";
+import type { TComboboxInputElement } from "platejs";
 import type { PlateEditor, PlateElementProps } from "platejs/react";
 import { PlateElement } from "platejs/react";
 import type * as React from "react";
-import { PLACEHOLDER_TYPE } from "~/components/editor/plugins/placeholder-kit";
 import {
-  insertBlock,
-  insertInlineElement,
-} from "~/components/editor/transforms";
+  GENERATE_NEXT_SLASH_EVENT,
+  type GenerateNextSlashEventDetail,
+} from "~/components/editor/generate-next-events";
+import { PLACEHOLDER_TYPE } from "~/components/editor/plugins/placeholder-kit";
+import { insertBlock } from "~/components/editor/transforms";
 
 import {
   InlineCombobox,
@@ -62,9 +42,19 @@ const groups: Group[] = [
       {
         focusEditor: false,
         icon: <SparklesIcon />,
-        value: "AI",
+        label: "Generate next",
+        value: "action_generate_next",
         onSelect: (editor) => {
-          editor.getApi(AIChatPlugin).aiChat.show();
+          window.dispatchEvent(
+            new CustomEvent<GenerateNextSlashEventDetail>(
+              GENERATE_NEXT_SLASH_EVENT,
+              {
+                detail: {
+                  editorId: editor.id,
+                },
+              },
+            ),
+          );
         },
       },
     ],
@@ -72,78 +62,6 @@ const groups: Group[] = [
   {
     group: "Basic blocks",
     items: [
-      {
-        icon: <PilcrowIcon />,
-        keywords: ["paragraph"],
-        label: "Text",
-        value: KEYS.p,
-      },
-      {
-        icon: <Heading1Icon />,
-        keywords: ["title", "h1"],
-        label: "Heading 1",
-        value: KEYS.h1,
-      },
-      {
-        icon: <Heading2Icon />,
-        keywords: ["subtitle", "h2"],
-        label: "Heading 2",
-        value: KEYS.h2,
-      },
-      {
-        icon: <Heading3Icon />,
-        keywords: ["subtitle", "h3"],
-        label: "Heading 3",
-        value: KEYS.h3,
-      },
-      {
-        icon: <ListIcon />,
-        keywords: ["unordered", "ul", "-"],
-        label: "Bulleted list",
-        value: KEYS.ul,
-      },
-      {
-        icon: <ListOrdered />,
-        keywords: ["ordered", "ol", "1"],
-        label: "Numbered list",
-        value: KEYS.ol,
-      },
-      {
-        icon: <Square />,
-        keywords: ["checklist", "task", "checkbox", "[]"],
-        label: "To-do list",
-        value: KEYS.listTodo,
-      },
-      {
-        icon: <ChevronRightIcon />,
-        keywords: ["collapsible", "expandable"],
-        label: "Toggle",
-        value: KEYS.toggle,
-      },
-      {
-        icon: <Code2 />,
-        keywords: ["```"],
-        label: "Code Block",
-        value: KEYS.codeBlock,
-      },
-      {
-        icon: <Table />,
-        label: "Table",
-        value: KEYS.table,
-      },
-      {
-        icon: <Quote />,
-        keywords: ["citation", "blockquote", "quote", ">"],
-        label: "Blockquote",
-        value: KEYS.blockquote,
-      },
-      {
-        description: "Insert a highlighted block.",
-        icon: <LightbulbIcon />,
-        keywords: ["note"],
-        label: "Callout",
-        value: KEYS.callout,
-      },
       {
         icon: <TextCursorInput />,
         keywords: ["template", "stub", "token"],
@@ -154,75 +72,6 @@ const groups: Group[] = [
       ...item,
       onSelect: (editor, value) => {
         insertBlock(editor, value, { upsert: true });
-      },
-    })),
-  },
-  {
-    group: "Advanced blocks",
-    items: [
-      {
-        icon: <TableOfContentsIcon />,
-        keywords: ["toc"],
-        label: "Table of contents",
-        value: KEYS.toc,
-      },
-      {
-        icon: <Columns3Icon />,
-        label: "3 columns",
-        value: "action_three_columns",
-      },
-      {
-        focusEditor: false,
-        icon: <RadicalIcon />,
-        label: "Equation",
-        value: KEYS.equation,
-      },
-      {
-        icon: <PenToolIcon />,
-        keywords: ["excalidraw"],
-        label: "Excalidraw",
-        value: KEYS.excalidraw,
-      },
-      {
-        icon: <Code2 />,
-        keywords: [
-          "code-drawing",
-          "diagram",
-          "plantuml",
-          "graphviz",
-          "flowchart",
-          "mermaid",
-        ],
-        label: "Code Drawing",
-        value: KEYS.codeDrawing,
-      },
-    ].map((item) => ({
-      ...item,
-      onSelect: (editor, value) => {
-        insertBlock(editor, value, { upsert: true });
-      },
-    })),
-  },
-  {
-    group: "Inline",
-    items: [
-      {
-        focusEditor: true,
-        icon: <CalendarIcon />,
-        keywords: ["time"],
-        label: "Date",
-        value: KEYS.date,
-      },
-      {
-        focusEditor: false,
-        icon: <RadicalIcon />,
-        label: "Inline Equation",
-        value: KEYS.inlineEquation,
-      },
-    ].map((item) => ({
-      ...item,
-      onSelect: (editor, value) => {
-        insertInlineElement(editor, value);
       },
     })),
   },
@@ -256,8 +105,12 @@ export function SlashInputElement(
                     group={group}
                     keywords={keywords}
                   >
-                    <div className="mr-2 text-muted-foreground">{icon}</div>
-                    {label ?? value}
+                    <div className="flex size-7 shrink-0 items-center justify-center rounded-md border border-cyan-200/25 bg-cyan-400/10 text-cyan-100">
+                      {icon}
+                    </div>
+                    <span className="font-medium text-sm text-slate-100 leading-none">
+                      {label ?? value}
+                    </span>
                   </InlineComboboxItem>
                 ),
               )}

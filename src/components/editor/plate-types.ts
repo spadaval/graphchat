@@ -127,6 +127,8 @@ export interface MyParagraphElement extends MyTextBlockElement {
 
 export interface MyAISegmentElement extends MyTextBlockElement {
   aiSegmentId?: string;
+  aiPrompt?: string;
+  aiStatus?: "awaiting_prompt" | "generating" | "ready";
   type: "ai_segment";
 }
 
@@ -192,7 +194,9 @@ export interface MyEditor extends PlateEditor {
       deserialize: (content: string) => MyValue;
     };
     entity?: {
+      runDirtyParagraphs: () => Promise<void>;
       runDocument: () => Promise<void>;
+      runFullDocumentPass: () => Promise<void>;
       runParagraph: (path: number[]) => Promise<void>;
     };
     aiChat: {

@@ -7,6 +7,7 @@ import { PLACEHOLDER_TYPE } from "./placeholder-kit";
 
 interface AISegmentPayload {
   aiSegmentId?: string;
+  aiPrompt?: string;
   nodeId?: string;
   text: string;
 }
@@ -75,6 +76,10 @@ const parseAISegmentPayload = (value?: string | null) => {
           : typeof parsed.nodeId === "string"
             ? parsed.nodeId
             : undefined,
+      aiPrompt:
+        typeof parsed.aiPrompt === "string"
+          ? decodeBase64(parsed.aiPrompt)
+          : undefined,
       text: decodeBase64(parsed.text),
     } satisfies AISegmentPayload;
   } catch (_error) {
@@ -116,10 +121,15 @@ export const MarkdownKit = [
           serialize: (node) => {
             const typedNode = node as {
               aiSegmentId?: string;
+              aiPrompt?: string;
               children?: unknown[];
             };
             const payload: AISegmentPayload = {
               aiSegmentId: typedNode.aiSegmentId,
+              aiPrompt:
+                typeof typedNode.aiPrompt === "string"
+                  ? encodeBase64(typedNode.aiPrompt)
+                  : undefined,
               text: encodeBase64(NodeApi.string(node)),
             };
 
@@ -144,6 +154,8 @@ export const MarkdownKit = [
             if (aiSegmentPayload) {
               return {
                 aiSegmentId: aiSegmentPayload.aiSegmentId,
+                aiPrompt: aiSegmentPayload.aiPrompt,
+                aiStatus: "ready",
                 children: [{ text: aiSegmentPayload.text }],
                 type: AI_SEGMENT_TYPE,
               };

@@ -20,7 +20,7 @@ import {
   TEMPLATE_DEFINITIONS,
   type TemplateDefinition,
 } from "./document-model";
-import type { BlockId, DocumentId, FolderId, WorldId } from "./types";
+import type { BlockId, DocumentId, WorldId } from "./types";
 import { worldStore$ } from "./worlds";
 
 export enum DocumentIcon {
@@ -41,14 +41,6 @@ export interface DocumentTypeDefinition {
   template: string;
 }
 
-export interface Folder {
-  id: FolderId;
-  name: string;
-  parentId: FolderId | "root";
-  isOpen: boolean;
-  worldId: WorldId;
-}
-
 export interface Document {
   id: DocumentId;
   canonicalName: string;
@@ -67,13 +59,11 @@ export interface Document {
   templateId?: string;
   frontmatter: Record<string, unknown>;
   type?: string;
-  parentId: FolderId | "root";
   worldId: WorldId;
 }
 
 interface DocumentStore {
   documents: Record<DocumentId, Document>;
-  folders: Record<FolderId, Folder>;
   documentTypes: Record<string, DocumentTypeDefinition>;
   documentTypeRegistry: Record<BaseTypeId, DocumentTypeDefinitionV2>;
   templateRegistry: Record<string, TemplateDefinition>;
@@ -136,7 +126,6 @@ const defaultDocumentTypes = buildDefaultDocumentTypes();
 
 const documentStore: DocumentStore = {
   documents: {} as Record<DocumentId, Document>,
-  folders: {} as Record<FolderId, Folder>,
   documentTypes: defaultDocumentTypes,
   documentTypeRegistry: DOCUMENT_TYPES_V2,
   templateRegistry: TEMPLATE_DEFINITIONS,
@@ -334,7 +323,6 @@ export const createDocument = (
   initialContent: string = "",
   type: string = "general",
   tags: string[] = [],
-  parentId: FolderId | "root" = "root",
   worldId?: WorldId,
 ): DocumentId => {
   const finalWorldId = resolveWorldId(worldId);
@@ -379,7 +367,6 @@ export const createDocument = (
     templateId,
     frontmatter: {},
     type: resolveLegacyType(baseTypeId),
-    parentId,
     worldId: finalWorldId,
   };
 
@@ -393,7 +380,6 @@ export const createDocumentForTemplate = (
   options?: {
     initialContent?: string;
     tags?: string[];
-    parentId?: FolderId | "root";
     worldId?: WorldId;
   },
 ): DocumentId => {
@@ -407,90 +393,8 @@ export const createDocumentForTemplate = (
     options?.initialContent,
     template.id,
     options?.tags,
-    options?.parentId,
     options?.worldId,
   );
-};
-
-export const createFolder = (
-  name: string,
-  parentId: FolderId | "root" = "root",
-  worldId?: WorldId,
-): FolderId => {
-  const id: FolderId = `folder-${crypto.randomUUID()}`;
-  const finalWorldId = resolveWorldId(worldId);
-
-  const folder: Folder = {
-    id,
-    name,
-    parentId,
-    isOpen: true,
-    worldId: finalWorldId,
-  };
-
-  documentStore$.folders[id].set(folder);
-  return id;
-};
-
-export const updateFolder = (
-  id: FolderId,
-  updates: Partial<Omit<Folder, "id">>,
-) => {
-  const folder = documentStore$.folders[id].get();
-  if (!folder) return;
-
-  documentStore$.folders[id].assign(updates);
-};
-
-export const deleteFolder = (id: FolderId) => {
-  // Move all documents and folders inside this folder to its parent
-  const folder = documentStore$.folders[id].get();
-  if (!folder) return;
-
-  const parentId = folder.parentId;
-
-  const docs = documentStore$.documents.get();
-  Object.values(docs).forEach((doc) => {
-    if (doc.parentId === id) {
-      documentStore$.documents[doc.id].parentId.set(parentId);
-    }
-  });
-
-  const folders = documentStore$.folders.get();
-  Object.values(folders).forEach((f) => {
-    if (f.parentId === id) {
-      documentStore$.folders[f.id].parentId.set(parentId);
-    }
-  });
-
-  documentStore$.folders[id].delete();
-};
-
-export const moveDocument = (
-  docId: DocumentId,
-  newParentId: FolderId | "root",
-) => {
-  const doc = documentStore$.documents[docId].get();
-  if (!doc) return;
-  documentStore$.documents[docId].parentId.set(newParentId);
-};
-
-export const moveFolder = (
-  folderId: FolderId,
-  newParentId: FolderId | "root",
-) => {
-  // Prevent moving a folder into itself or its descendants
-  if (newParentId !== "root") {
-    let current: FolderId | "root" = newParentId;
-    while (current !== "root") {
-      if (current === folderId) return;
-      current = documentStore$.folders[current].parentId.get();
-    }
-  }
-
-  const folder = documentStore$.folders[folderId].get();
-  if (!folder) return;
-  documentStore$.folders[folderId].parentId.set(newParentId);
 };
 
 export const updateDocumentContentModel = (
@@ -683,13 +587,6 @@ export const migrateToWorlds = () => {
       documentStore$.documents[doc.id].worldId.set(defaultWorldId);
     }
   });
-
-  const folders = documentStore$.folders.get();
-  Object.values(folders).forEach((f) => {
-    if (!f.worldId) {
-      documentStore$.folders[f.id].worldId.set(defaultWorldId);
-    }
-  });
 };
 
 export const migrateDocumentsToEditorV2 = () => {};
@@ -698,6 +595,9 @@ export const migrateDocumentsToModelV2 = () => {
   const docs = documentStore$.documents.get();
 
   for (const doc of Object.values(docs)) {
+    const { parentId: _parentId, ...docWithoutParent } = doc as Document & {
+      parentId?: unknown;
+    };
     const { baseTypeId, templateId } = mapTypeInputToModel(
       doc.templateId || doc.baseTypeId || doc.type,
     );
@@ -712,7 +612,8 @@ export const migrateDocumentsToModelV2 = () => {
       ? normalizeTags(doc.aliases)
       : [];
 
-    documentStore$.documents[doc.id].assign({
+    documentStore$.documents[doc.id].set({
+      ...docWithoutParent,
       canonicalName,
       aliases,
       baseTypeId,
@@ -819,7 +720,6 @@ const bootstrapFromLegacyLocalStorage = (): boolean => {
       documentTypeRegistry: candidate.documentTypeRegistry || DOCUMENT_TYPES_V2,
       documentTypes: candidate.documentTypes || defaultDocumentTypes,
       documents: candidate.documents as Record<DocumentId, Document>,
-      folders: candidate.folders || {},
       openDocumentIds: candidate.openDocumentIds || [],
       templateRegistry: candidate.templateRegistry || TEMPLATE_DEFINITIONS,
     });

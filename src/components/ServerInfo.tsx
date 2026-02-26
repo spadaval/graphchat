@@ -34,7 +34,7 @@ function formatModelMeta(model: ServerModel): string {
   return parts.join(" • ");
 }
 
-type ServerInfoMode = "sidebar" | "backends" | "models";
+type ServerInfoMode = "sidebar" | "backends" | "models" | "serverConfig";
 
 interface ServerInfoComponentProps {
   mode?: ServerInfoMode;
@@ -97,9 +97,11 @@ export function ServerInfoComponent({
     refetch();
   };
 
-  const showBaseUrl = mode === "backends";
-  const showStatus = mode === "sidebar" || mode === "backends";
-  const showModelDropdown = mode === "sidebar" || mode === "models";
+  const showBaseUrl = mode === "backends" || mode === "serverConfig";
+  const showStatus =
+    mode === "sidebar" || mode === "backends" || mode === "serverConfig";
+  const showModelDropdown =
+    mode === "sidebar" || mode === "models" || mode === "serverConfig";
   const showReadonlyList = mode === "models";
 
   return (

@@ -14,6 +14,7 @@ import { uiPreferences$ } from "~/lib/state/ui";
 export interface ApplyEntityOptions {
   entitySource?: PersistedEntityMark["entitySource"];
   normalizeToWordBoundaries?: boolean;
+  reservedRanges?: Array<{ end: number; start: number }>;
   shouldSkipCandidate?: (params: {
     paragraphPath: Path;
     paragraphText: string;
@@ -174,12 +175,20 @@ export function collectLinkOffsetRanges(
 export function collectExistingEntityRanges(
   editor: PlateEditor,
   paragraphPath: Path,
-): Array<{ start: number; end: number; entityId: string }> {
+): Array<{
+  end: number;
+  entityId: string;
+  entityType: string;
+  start: number;
+}> {
   const textNodes = [
     ...editor.api.nodes<TText>({ at: paragraphPath, match: TextApi.isText }),
   ];
 
-  const rangesById = new Map<string, { start: number; end: number }>();
+  const rangesById = new Map<
+    string,
+    { end: number; entityType: string; start: number }
+  >();
   let cursor = 0;
   for (const [node] of textNodes) {
     const leaf = node as {
@@ -198,7 +207,11 @@ export function collectExistingEntityRanges(
 
     const existing = rangesById.get(leaf.entityId);
     if (!existing) {
-      rangesById.set(leaf.entityId, { end, start });
+      rangesById.set(leaf.entityId, {
+        end,
+        entityType: leaf.entityType,
+        start,
+      });
     } else {
       existing.start = Math.min(existing.start, start);
       existing.end = Math.max(existing.end, end);
@@ -208,6 +221,7 @@ export function collectExistingEntityRanges(
   return [...rangesById.entries()].map(([entityId, range]) => ({
     end: range.end,
     entityId,
+    entityType: range.entityType,
     start: range.start,
   }));
 }
@@ -228,8 +242,17 @@ export async function applyEntitySpansToBlock(
   const autoLink = uiPreferences$.entityAutoLinkStrictMatches.get() !== false;
 
   const linkRanges = collectLinkOffsetRanges(editor, blockPath);
-  const reservedRanges = [...linkRanges];
+  const existingEntityRanges = collectExistingEntityRanges(editor, blockPath);
+  const reservedRanges = [
+    ...linkRanges,
+    ...existingEntityRanges.map((range) => ({
+      end: range.end,
+      start: range.start,
+    })),
+    ...(options.reservedRanges ?? []),
+  ];
   let appliedCount = 0;
+  let skippedDuplicateCount = 0;
   let skippedOverlapCount = 0;
   let skippedLinkCount = 0;
   let skippedDismissedCount = 0;
@@ -291,6 +314,23 @@ export async function applyEntitySpansToBlock(
       continue;
     }
 
+    const alreadyExists = existingEntityRanges.some(
+      (existingRange) =>
+        existingRange.entityType === normalizedSpan.type &&
+        existingRange.start === spanOffsets.start &&
+        existingRange.end === spanOffsets.end,
+    );
+    if (alreadyExists) {
+      skippedDuplicateCount += 1;
+      debugLog("[Entity] Skipping duplicate span", {
+        blockPath,
+        span: normalizedSpan,
+        spanOffsets,
+        spanText,
+      });
+      continue;
+    }
+
     if (
       reservedRanges.some((existing) => rangesOverlap(existing, spanOffsets))
     ) {
@@ -309,11 +349,6 @@ export async function applyEntitySpansToBlock(
       ? resolveStrictCanonicalMatch(spanText)
       : null;
     if (canonicalName) {
-      editor.tf.unsetNodes([...ALL_ENTITY_MARK_FIELDS], {
-        at: range,
-        match: TextApi.isText,
-        split: true,
-      });
       linkRangeToCanonical(editor, range, canonicalName);
       reservedRanges.push(spanOffsets);
       appliedCount += 1;
@@ -346,6 +381,7 @@ export async function applyEntitySpansToBlock(
     appliedCount,
     blockPath,
     skippedDismissedCount,
+    skippedDuplicateCount,
     skippedLinkCount,
     skippedOverlapCount,
     totalSpans: spans.length,
@@ -361,8 +397,6 @@ export async function runEntityDetectionOnParagraph(
   if (!nodeEntry) return;
 
   const text = NodeApi.string(nodeEntry[0]);
-  clearEntityMarksInBlock(editor, blockPath);
-
   if (!text.trim()) return;
 
   const spans = await detectEntitySpans(text);

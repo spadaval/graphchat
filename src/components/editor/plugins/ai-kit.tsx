@@ -94,7 +94,6 @@ export const AIKit = [
   ...CursorOverlayKit,
   ...MarkdownKit,
   AIPlugin.withComponent(AILeaf),
-  aiChatPlugin,
   CopilotPlugin.configure({
     options: {
       completeOptions: {

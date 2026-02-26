@@ -23,24 +23,22 @@ import {
   getEntityTextById,
   normalizeLegacyEntityMarksAndIds,
 } from "~/lib/entity-ops";
+import {
+  clearParagraphSuppressions,
+  createParagraphSuppressionKey,
+  createSuppressionSignature,
+  isSuppressed,
+  pruneSuppressionStore,
+  recordSuppression,
+} from "~/lib/entity-suppression";
 import type { EntityType } from "~/lib/entity-types";
 import { uiPreferences$ } from "~/lib/state/ui";
 import { AI_SEGMENT_TYPE } from "./ai-segment-kit";
 
 const ENTITY_IDLE_DEBOUNCE_MS = 700;
-
-type DismissedCandidate = {
-  end: number;
-  entityType: EntityType;
-  start: number;
-  text: string;
-};
+const DOCUMENT_EDITOR_ID_PREFIX = "document-editor-";
 
 type EntityRuntimeState = {
-  dismissedByParagraphRef: Array<{
-    items: DismissedCandidate[];
-    paragraphPathRef: PathRef;
-  }>;
   normalizing: boolean;
   pendingParagraphRefs: Set<PathRef>;
   running: boolean;
@@ -53,6 +51,18 @@ function pathRefFor(editor: PlateEditor, path: Path): PathRef {
   return Editor.pathRef(editor as unknown as Editor, path);
 }
 
+function getDocumentId(editor: PlateEditor): string {
+  const editorId = (editor as { id?: string }).id ?? "";
+  if (editorId.startsWith(DOCUMENT_EDITOR_ID_PREFIX)) {
+    return editorId.slice(DOCUMENT_EDITOR_ID_PREFIX.length);
+  }
+  return editorId || "unknown-document";
+}
+
+function toParagraphPath(path: Path): number[] {
+  return path.map((segment) => Number(segment));
+}
+
 function pruneStaleRuntimeRefs(runtime: EntityRuntimeState): void {
   const nextPendingRefs = new Set<PathRef>();
   for (const ref of runtime.pendingParagraphRefs) {
@@ -63,65 +73,11 @@ function pruneStaleRuntimeRefs(runtime: EntityRuntimeState): void {
     nextPendingRefs.add(ref);
   }
   runtime.pendingParagraphRefs = nextPendingRefs;
-
-  runtime.dismissedByParagraphRef = runtime.dismissedByParagraphRef.filter(
-    (entry) => {
-      if (entry.paragraphPathRef.current !== null) return true;
-      entry.paragraphPathRef.unref();
-      return false;
-    },
-  );
 }
 
 function matchesPath(pathRef: PathRef, path: Path): boolean {
   const current = pathRef.current;
   return !!current && SlatePath.equals(current, path);
-}
-
-function getDismissedForPath(
-  runtime: EntityRuntimeState,
-  paragraphPath: Path,
-): DismissedCandidate[] {
-  pruneStaleRuntimeRefs(runtime);
-  return (
-    runtime.dismissedByParagraphRef.find((entry) =>
-      matchesPath(entry.paragraphPathRef, paragraphPath),
-    )?.items ?? []
-  );
-}
-
-function setDismissedForPath(
-  editor: PlateEditor,
-  runtime: EntityRuntimeState,
-  paragraphPath: Path,
-  items: DismissedCandidate[],
-): void {
-  pruneStaleRuntimeRefs(runtime);
-  const existing = runtime.dismissedByParagraphRef.find((entry) =>
-    matchesPath(entry.paragraphPathRef, paragraphPath),
-  );
-  if (existing) {
-    existing.items = items;
-    return;
-  }
-  runtime.dismissedByParagraphRef.push({
-    items,
-    paragraphPathRef: pathRefFor(editor, paragraphPath),
-  });
-}
-
-function deleteDismissedForPath(
-  runtime: EntityRuntimeState,
-  paragraphPath: Path,
-): void {
-  pruneStaleRuntimeRefs(runtime);
-  runtime.dismissedByParagraphRef = runtime.dismissedByParagraphRef.filter(
-    (entry) => {
-      const keep = !matchesPath(entry.paragraphPathRef, paragraphPath);
-      if (!keep) entry.paragraphPathRef.unref();
-      return keep;
-    },
-  );
 }
 
 function getEntityOffsetsAndText(
@@ -148,8 +104,9 @@ function getRuntime(editor: PlateEditor): EntityRuntimeState {
   const existing = entityRuntime.get(editor);
   if (existing) return existing;
 
+  pruneSuppressionStore();
+
   const initial: EntityRuntimeState = {
-    dismissedByParagraphRef: [],
     normalizing: false,
     pendingParagraphRefs: new Set<PathRef>(),
     running: false,
@@ -176,32 +133,76 @@ function queueParagraphEntityDetection(
 
   if (runtime.timer) clearTimeout(runtime.timer);
   runtime.timer = setTimeout(() => {
-    void flushQueuedParagraphEntityDetection(editor);
+    void flushDirtyParagraphEntityDetection(editor);
   }, ENTITY_IDLE_DEBOUNCE_MS);
 }
 
-function shouldSkipDismissedCandidate(
-  _editor: PlateEditor,
-  runtime: EntityRuntimeState,
+function shouldSkipSuppressedCandidate(
+  editor: PlateEditor,
   options: Parameters<
     NonNullable<ApplyEntityOptions["shouldSkipCandidate"]>
   >[0],
 ): boolean {
-  const dismissed = getDismissedForPath(runtime, options.paragraphPath);
-  if (!dismissed.length) return false;
+  const docId = getDocumentId(editor);
+  const paragraphPath = toParagraphPath(options.paragraphPath);
+  const paragraphKey = createParagraphSuppressionKey(
+    docId,
+    paragraphPath,
+    options.paragraphText,
+  );
+  const signature = createSuppressionSignature({
+    end: options.span.end,
+    entityType: options.span.type,
+    spanText: options.spanText,
+    start: options.span.start,
+  });
 
-  for (const item of dismissed) {
-    if (item.entityType !== options.span.type) continue;
-    if (item.start !== options.span.start || item.end !== options.span.end)
-      continue;
-    if (item.text !== options.spanText) continue;
-    return true;
-  }
-
-  return false;
+  return isSuppressed(docId, paragraphKey, signature);
 }
 
-async function flushQueuedParagraphEntityDetection(
+function recordCandidateSuppression(
+  editor: PlateEditor,
+  entityId: string,
+): void {
+  const rangeRef = getEntityRangeRefById(editor, entityId);
+  const range = rangeRef?.current;
+  const mark = getEntityMarkById(editor, entityId);
+  if (!rangeRef || !range || !mark) return;
+
+  try {
+    const paragraphPath = [range.anchor.path[0] ?? 0];
+    const offsets = rangeToOffsets(editor, paragraphPath, range);
+    if (!offsets) return;
+
+    const paragraphText = editor.api.string(paragraphPath);
+    const spanText = paragraphText.slice(offsets.start, offsets.end);
+    const docId = getDocumentId(editor);
+    const paragraphKey = createParagraphSuppressionKey(
+      docId,
+      paragraphPath,
+      paragraphText,
+    );
+    const signature = createSuppressionSignature({
+      end: offsets.end,
+      entityType: mark.entityType,
+      spanText,
+      start: offsets.start,
+    });
+
+    recordSuppression(docId, paragraphKey, signature);
+    debugLog("[Entity] Recorded candidate suppression", {
+      docId,
+      entityId,
+      offsets,
+      paragraphKey,
+      signature,
+    });
+  } finally {
+    rangeRef.unref();
+  }
+}
+
+async function flushDirtyParagraphEntityDetection(
   editor: PlateEditor,
 ): Promise<void> {
   const runtime = getRuntime(editor);
@@ -217,21 +218,30 @@ async function flushQueuedParagraphEntityDetection(
   if (!queued.length) return;
 
   runtime.running = true;
+  let scannedParagraphs = 0;
+
   try {
     for (const paragraphPathRef of queued) {
       const path = paragraphPathRef.current;
       paragraphPathRef.unref();
       if (!path) continue;
+
       const blockEntry = editor.api.node(path);
       if (!blockEntry) continue;
       const [blockNode] = blockEntry;
       if ((blockNode as { type?: string }).type !== "p") continue;
 
+      scannedParagraphs += 1;
       await runEntityDetectionOnParagraph(editor, path, {
         shouldSkipCandidate: (params) =>
-          shouldSkipDismissedCandidate(editor, runtime, params),
+          shouldSkipSuppressedCandidate(editor, params),
       });
     }
+
+    debugInfo("[Entity] Dirty paragraph pass complete", {
+      queued: queued.length,
+      scannedParagraphs,
+    });
   } catch (error) {
     console.error("[Entity] Auto-idle paragraph pass failed", { error });
   } finally {
@@ -251,6 +261,39 @@ function normalizeEntityMarks(editor: PlateEditor): void {
     }
   } finally {
     runtime.normalizing = false;
+  }
+}
+
+async function runFullDocumentPass(editor: PlateEditor): Promise<void> {
+  normalizeEntityMarks(editor);
+  const runtime = getRuntime(editor);
+  if (runtime.running) return;
+
+  runtime.running = true;
+  let scannedParagraphs = 0;
+  try {
+    const paragraphEntries = [
+      ...editor.api.blocks({
+        match: (node) =>
+          !TextApi.isText(node) && (node as { type?: string }).type === "p",
+        mode: "lowest",
+      }),
+    ];
+
+    for (const [, paragraphPath] of paragraphEntries) {
+      scannedParagraphs += 1;
+      await runEntityDetectionOnParagraph(editor, paragraphPath, {
+        shouldSkipCandidate: (params) =>
+          shouldSkipSuppressedCandidate(editor, params),
+      });
+    }
+
+    debugInfo("[Entity] Full document pass complete", {
+      scannedParagraphs,
+      totalParagraphs: paragraphEntries.length,
+    });
+  } finally {
+    runtime.running = false;
   }
 }
 
@@ -279,8 +322,14 @@ export const entityPlugin = createPlatePlugin({
       const nodeType = (node as { type?: string }).type;
       if (nodeType !== "p" || nodeType === AI_SEGMENT_TYPE) return;
 
-      const runtime = getRuntime(editor);
-      deleteDismissedForPath(runtime, paragraphPath);
+      const docId = getDocumentId(editor);
+      const paragraphText = editor.api.string(paragraphPath);
+      const paragraphKey = createParagraphSuppressionKey(
+        docId,
+        toParagraphPath(paragraphPath),
+        paragraphText,
+      );
+      clearParagraphSuppressions(docId, paragraphKey);
       queueParagraphEntityDetection(editor, paragraphPath);
     },
   },
@@ -293,30 +342,20 @@ export const entityPlugin = createPlatePlugin({
     node: { component: EntityLeaf },
   })
   .extendApi(({ editor }) => ({
+    runDirtyParagraphs: async () => {
+      await flushDirtyParagraphEntityDetection(editor);
+    },
     runDocument: async () => {
-      normalizeEntityMarks(editor);
-      const runtime = getRuntime(editor);
-      const paragraphEntries = [
-        ...editor.api.blocks({
-          match: (node) =>
-            !TextApi.isText(node) && (node as { type?: string }).type === "p",
-          mode: "lowest",
-        }),
-      ];
-
-      for (const [, paragraphPath] of paragraphEntries) {
-        await runEntityDetectionOnParagraph(editor, paragraphPath, {
-          shouldSkipCandidate: (params) =>
-            shouldSkipDismissedCandidate(editor, runtime, params),
-        });
-      }
+      await runFullDocumentPass(editor);
+    },
+    runFullDocumentPass: async () => {
+      await runFullDocumentPass(editor);
     },
     runParagraph: async (path: Path) => {
       normalizeEntityMarks(editor);
-      const runtime = getRuntime(editor);
       await runEntityDetectionOnParagraph(editor, path, {
         shouldSkipCandidate: (params) =>
-          shouldSkipDismissedCandidate(editor, runtime, params),
+          shouldSkipSuppressedCandidate(editor, params),
       });
     },
   }))
@@ -380,39 +419,8 @@ export const entityPlugin = createPlatePlugin({
     },
     dismiss: (entityId: string) => {
       normalizeEntityMarks(editor);
-      const rangeRef = getEntityRangeRefById(editor, entityId);
-      const range = rangeRef?.current;
-      const mark = getEntityMarkById(editor, entityId);
-      if (!rangeRef || !range || !mark) return;
-
-      try {
-        const paragraphPath = [range.anchor.path[0] ?? 0];
-        const offsets = rangeToOffsets(editor, paragraphPath, range);
-        if (!offsets) return;
-        const paragraphText = editor.api.string(paragraphPath);
-        const spanText = paragraphText.slice(offsets.start, offsets.end).trim();
-
-        const runtime = getRuntime(editor);
-        const dismissed = getDismissedForPath(runtime, paragraphPath);
-        dismissed.push({
-          end: offsets.end,
-          entityType: mark.entityType,
-          start: offsets.start,
-          text: spanText,
-        });
-        setDismissedForPath(editor, runtime, paragraphPath, dismissed);
-
-        debugLog("[Entity] Dismissed candidate", {
-          dismissed,
-          entityId,
-          offsets,
-          paragraphPath,
-          spanText,
-        });
-        clearEntityMark(editor, entityId);
-      } finally {
-        rangeRef.unref();
-      }
+      recordCandidateSuppression(editor, entityId);
+      clearEntityMark(editor, entityId);
     },
     remove: (entityId: string) => {
       normalizeEntityMarks(editor);
@@ -420,6 +428,7 @@ export const entityPlugin = createPlatePlugin({
         entityId,
         entityText: getEntityTextById(editor, entityId),
       });
+      recordCandidateSuppression(editor, entityId);
       clearEntityMark(editor, entityId);
     },
     setType: (entityId: string, type: EntityType) => {

@@ -1,13 +1,17 @@
 import { use$ } from "@legendapp/state/react";
+import { OpenRouter } from "@openrouter/sdk";
+import { useQuery } from "@tanstack/react-query";
 import {
   Bug,
   Cable,
+  Check,
   Layout,
   type LucideIcon,
+  RefreshCw,
   Settings,
   SlidersHorizontal,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ModelProperties } from "~/components/ModelProperties";
 import { ServerInfoComponent } from "~/components/ServerInfo";
 import { Button } from "~/components/ui/button";
@@ -26,21 +30,30 @@ import {
   SAMPLER_PRESETS,
   type SamplerPresetId,
 } from "~/lib/state/llm";
+import { serverStore$ } from "~/lib/state/server";
+import type { LLMBackend } from "~/lib/state/types";
 import {
   setActiveSamplerPreset,
   setAPIBackendEnabled,
+  setBrowserModelId,
   setDebugMode,
   setDocumentWidth,
   setEnableTokenProbabilities,
   setEntityAutoLinkStrictMatches,
   setEntityAutoRunOnIdle,
+  setEntityFullPassIntervalSeconds,
   setEntityPreloadModel,
   setHuggingfaceToken,
   setInlineCompletionEnabled,
+  setLLMBackend,
+  setOpenRouterApiKey,
+  setOpenRouterModelId,
+  setServerModelId,
   setTokenizerModelId,
   uiPreferences$,
 } from "~/lib/state/ui";
 import { testTokenizerMetadata } from "~/lib/tokenizer";
+import { getV1Models } from "~/llamacpp-client";
 
 interface SettingsModalProps {
   open: boolean;
@@ -63,6 +76,137 @@ interface TestStatus {
   success?: boolean;
 }
 
+type ModelPickerOption = {
+  description?: string;
+  id: string;
+  meta?: string;
+  title?: string;
+};
+
+type LocalModel = {
+  created?: number;
+  id: string;
+  owned_by?: string;
+};
+
+type OpenRouterModel = {
+  contextLength?: number | null;
+  id: string;
+  name: string;
+};
+
+const BROWSER_MODEL_OPTIONS: ModelPickerOption[] = [
+  {
+    id: "onnx-community/Qwen3-0.6B-ONNX",
+    title: "Qwen3 0.6B",
+    description: "Fastest startup, lowest local resource usage.",
+  },
+  {
+    id: "onnx-community/Qwen3-1.7B-ONNX",
+    title: "Qwen3 1.7B",
+    description: "Balanced quality and speed for in-browser inference.",
+  },
+  {
+    id: "onnx-community/SmolLM3-3B-ONNX",
+    title: "SmolLM3 3B",
+    description: "Higher quality for local responses, slower on weak devices.",
+  },
+];
+
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function CompactModelCardPicker({
+  emptyMessage,
+  errorMessage,
+  isLoading,
+  onSelect,
+  options,
+  selectedId,
+}: {
+  emptyMessage: string;
+  errorMessage?: string;
+  isLoading: boolean;
+  onSelect: (modelId: string) => void;
+  options: ModelPickerOption[];
+  selectedId: string;
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 rounded-md border border-zinc-700/80 bg-zinc-950/70 px-3 py-2 text-xs text-zinc-400">
+        <RefreshCw size={12} className="animate-spin" />
+        Loading models...
+      </div>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="rounded-md border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+        {errorMessage}
+      </div>
+    );
+  }
+
+  if (options.length === 0) {
+    return (
+      <div className="rounded-md border border-zinc-700/80 bg-zinc-950/70 px-3 py-2 text-xs text-zinc-500">
+        {emptyMessage}
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+      {options.map((option) => {
+        const isSelected = selectedId === option.id;
+        return (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => onSelect(option.id)}
+            className={`w-full rounded-md border px-3 py-2 text-left transition-colors ${
+              isSelected
+                ? "border-blue-600/60 bg-blue-500/10"
+                : "border-zinc-700 bg-zinc-950 hover:bg-zinc-900"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-zinc-100">
+                  {option.title || option.id}
+                </p>
+                <p className="mt-0.5 break-all text-[11px] text-zinc-400">
+                  {option.id}
+                </p>
+                {option.description ? (
+                  <p className="mt-1 text-[11px] text-zinc-500">
+                    {option.description}
+                  </p>
+                ) : null}
+                {option.meta ? (
+                  <p className="mt-1 text-[11px] text-zinc-500">
+                    {option.meta}
+                  </p>
+                ) : null}
+              </div>
+              {isSelected ? (
+                <Check size={14} className="mt-0.5 shrink-0 text-blue-400" />
+              ) : null}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     description: "Editor layout and inline assistance",
@@ -77,10 +221,10 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
     title: "Backends",
   },
   {
-    description: "Sampling controls and tokenizer",
+    description: "Sampling controls and tokenizer tools",
     icon: SlidersHorizontal,
     id: "models",
-    title: "Models",
+    title: "Model Settings",
   },
   {
     description: "Runtime logging and diagnostics",
@@ -136,16 +280,23 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const {
     activeSamplerPreset,
     apiBackendEnabled,
+    browserModelId,
     debugMode,
     documentWidth = 800,
     enableTokenProbabilities,
     huggingfaceToken,
     inlineCompletion,
+    llmBackend,
+    openRouterApiKey,
+    openRouterModelId,
     entityAutoLinkStrictMatches,
     entityAutoRunOnIdle,
+    entityFullPassIntervalSeconds = 10,
     entityPreloadModel,
+    serverModelId,
     tokenizerModelId,
   } = use$(uiPreferences$);
+  const { serverUrl } = use$(serverStore$);
   const [activeSection, setActiveSection] =
     useState<SettingsSectionId>("general");
   const [tokenizerTestStatus, setTokenizerTestStatus] = useState<TestStatus>({
@@ -157,16 +308,131 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [apiTestStatus, setApiTestStatus] = useState<TestStatus>({
     loading: false,
   });
+  const [openRouterTestStatus, setOpenRouterTestStatus] = useState<TestStatus>({
+    loading: false,
+  });
 
   const sectionMeta = useMemo(
     () => SETTINGS_SECTIONS.find((section) => section.id === activeSection),
     [activeSection],
   );
+  const trimmedOpenRouterKey = (openRouterApiKey || "").trim();
+  const hasValidServerUrl = isValidHttpUrl(serverUrl.trim());
+
+  const {
+    data: localModels = [],
+    isLoading: isLocalModelsLoading,
+    isFetching: isLocalModelsFetching,
+    isError: isLocalModelsError,
+    error: localModelsError,
+    refetch: refetchLocalModels,
+  } = useQuery({
+    queryKey: ["settings-local-models", serverUrl],
+    enabled: activeSection === "backends" && hasValidServerUrl,
+    queryFn: async (): Promise<LocalModel[]> => {
+      const response = await getV1Models();
+      if (response.error) {
+        const message =
+          response.error instanceof Error
+            ? response.error.message
+            : "Failed to fetch models from /v1/models";
+        throw new Error(message);
+      }
+
+      const data = response.data?.data ?? [];
+      return data
+        .filter((model): model is LocalModel => Boolean(model?.id))
+        .map((model) => ({
+          id: model.id as string,
+          created: model.created,
+          owned_by: model.owned_by,
+        }));
+    },
+    refetchInterval: 30000,
+  });
+
+  const {
+    data: openRouterModels = [],
+    isLoading: isOpenRouterModelsLoading,
+    isFetching: isOpenRouterModelsFetching,
+    isError: isOpenRouterModelsError,
+    error: openRouterModelsError,
+    refetch: refetchOpenRouterModels,
+  } = useQuery({
+    queryKey: ["settings-openrouter-models", trimmedOpenRouterKey],
+    enabled: activeSection === "backends" && trimmedOpenRouterKey.length > 0,
+    queryFn: async (): Promise<OpenRouterModel[]> => {
+      const openRouter = new OpenRouter({ apiKey: trimmedOpenRouterKey });
+      const response = await openRouter.models.list();
+      return (response.data || [])
+        .filter((model): model is OpenRouterModel => Boolean(model?.id))
+        .map((model) => ({
+          id: model.id,
+          name: model.name,
+          contextLength: model.contextLength,
+        }));
+    },
+    refetchInterval: 30000,
+  });
+
+  const localModelOptions = useMemo<ModelPickerOption[]>(
+    () =>
+      localModels.map((model) => ({
+        id: model.id,
+        meta:
+          model.created || model.owned_by
+            ? [model.owned_by, model.created]
+                .filter(Boolean)
+                .map((item) =>
+                  typeof item === "number"
+                    ? new Date(item * 1000).toLocaleDateString()
+                    : item,
+                )
+                .join(" • ")
+            : undefined,
+      })),
+    [localModels],
+  );
+
+  const openRouterModelOptions = useMemo<ModelPickerOption[]>(
+    () =>
+      openRouterModels.map((model) => ({
+        id: model.id,
+        title: model.name,
+        meta: model.contextLength
+          ? `Context: ${model.contextLength.toLocaleString()}`
+          : undefined,
+      })),
+    [openRouterModels],
+  );
+
+  useEffect(() => {
+    if (
+      localModels.length > 0 &&
+      !localModels.some((model) => model.id === (serverModelId || ""))
+    ) {
+      setServerModelId(localModels[0].id);
+    }
+  }, [localModels, serverModelId]);
+
+  useEffect(() => {
+    if (
+      openRouterModels.length > 0 &&
+      !openRouterModels.some((model) => model.id === openRouterModelId)
+    ) {
+      setOpenRouterModelId(openRouterModels[0].id);
+    }
+  }, [openRouterModels, openRouterModelId]);
 
   const handleApplyPreset = (presetId: SamplerPresetId) => {
     const applied = applySamplerPreset(presetId);
     if (!applied) return;
     setActiveSamplerPreset(presetId);
+  };
+
+  const handleBackendChange = (backend: LLMBackend) => {
+    setLLMBackend(backend);
+    setAPIBackendEnabled(backend !== "browser");
   };
 
   const handleTokenizerTest = async () => {
@@ -181,11 +447,19 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     });
   };
 
-  const runBackendTest = async (backend: "browser" | "server") => {
+  const runBackendTest = async (backend: LLMBackend) => {
     const setStatus =
-      backend === "browser" ? setBrowserTestStatus : setApiTestStatus;
+      backend === "browser"
+        ? setBrowserTestStatus
+        : backend === "server"
+          ? setApiTestStatus
+          : setOpenRouterTestStatus;
     const currentStatus =
-      backend === "browser" ? browserTestStatus : apiTestStatus;
+      backend === "browser"
+        ? browserTestStatus
+        : backend === "server"
+          ? apiTestStatus
+          : openRouterTestStatus;
 
     if (currentStatus.loading) return;
 
@@ -218,9 +492,44 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     }
 
     const output = result.value.response.content.trim();
+    const normalizedOutput = output
+      .toLowerCase()
+      .replace(/[’]/g, "'")
+      .replace(/\s+/g, " ")
+      .trim();
+    const failedResponsePhrases = [
+      "sorry, i couldn't generate a response.",
+      "sorry, i could not generate a response.",
+    ];
+    const emptyResponseDiagnosticPrefix = "no response text was returned by";
+    const hasValidOutput =
+      normalizedOutput.length > 0 &&
+      !failedResponsePhrases.includes(normalizedOutput) &&
+      !normalizedOutput.startsWith(emptyResponseDiagnosticPrefix);
+
+    if (!hasValidOutput) {
+      setStatus({
+        loading: false,
+        message:
+          backend === "browser"
+            ? "In-browser backend did not return a usable response."
+            : backend === "server"
+              ? "Server backend did not return a usable response."
+              : "OpenRouter backend did not return a usable response.",
+        output: output || "No output received.",
+        success: false,
+      });
+      return;
+    }
+
     setStatus({
       loading: false,
-      message: `${backend === "browser" ? "In-browser" : "API"} backend responded successfully.`,
+      message:
+        backend === "browser"
+          ? "In-browser backend responded successfully."
+          : backend === "server"
+            ? "Server backend responded successfully."
+            : "OpenRouter backend responded successfully.",
       output: output.slice(0, 180),
       success: true,
     });
@@ -291,6 +600,29 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   title="Entity auto-run on idle"
                   description="Auto-run entity detection on edited paragraphs after typing pauses."
                 />
+                <div className="flex items-center justify-between gap-4 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-zinc-100">
+                      Entity full-pass interval (seconds)
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      Run full-document entity detection periodically while
+                      auto-run is enabled.
+                    </p>
+                  </div>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={300}
+                    value={entityFullPassIntervalSeconds}
+                    onChange={(event) =>
+                      setEntityFullPassIntervalSeconds(
+                        Number(event.target.value),
+                      )
+                    }
+                    className="h-8 w-24 border-zinc-700 bg-zinc-950 text-right text-zinc-200"
+                  />
+                </div>
                 <ToggleRow
                   checked={entityAutoLinkStrictMatches}
                   onChange={setEntityAutoLinkStrictMatches}
@@ -334,89 +666,355 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             ) : null}
 
             {activeSection === "backends" ? (
-              <div className="space-y-3">
-                <ToggleRow
-                  checked={apiBackendEnabled}
-                  onChange={setAPIBackendEnabled}
-                  title="Enable API backend"
-                  description="When disabled, all requests use the in-browser model pipeline."
-                />
+              <div className="space-y-6">
+                <div className="space-y-3 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
+                  <div>
+                    <p className="text-sm font-medium text-zinc-100">
+                      Active backend
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      Choose which backend handles primary chat and generation
+                      requests.
+                    </p>
+                  </div>
 
-                <div className="rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4 text-xs text-zinc-400">
-                  <p>
-                    In-browser inference is always available. With API backend
-                    enabled, chat/document generation will use your configured
-                    server while lightweight tasks keep using browser inference.
-                  </p>
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                    {(
+                      [
+                        {
+                          id: "browser",
+                          title: "In-browser",
+                          description:
+                            "Runs locally in your browser with no external API key.",
+                        },
+                        {
+                          id: "server",
+                          title: "Local Server API",
+                          description:
+                            "Uses your configured server URL and model endpoint.",
+                        },
+                        {
+                          id: "openrouter",
+                          title: "OpenRouter",
+                          description:
+                            "Routes requests through OpenRouter using an API key.",
+                        },
+                      ] as const
+                    ).map((option) => {
+                      const isActive = llmBackend === option.id;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => handleBackendChange(option.id)}
+                          className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                            isActive
+                              ? "border-blue-600/60 bg-blue-500/10"
+                              : "border-zinc-700 bg-zinc-900 hover:bg-zinc-850"
+                          }`}
+                        >
+                          <p className="text-sm font-medium text-zinc-100">
+                            {option.title}
+                          </p>
+                          <p className="mt-1 text-[11px] text-zinc-500">
+                            {option.description}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="rounded-lg border border-zinc-700/80 bg-zinc-950/70 p-3 text-xs text-zinc-400">
+                    <p>
+                      Routing status:{" "}
+                      <span className="font-medium text-zinc-200">
+                        {apiBackendEnabled
+                          ? llmBackend === "openrouter"
+                            ? "OpenRouter active"
+                            : llmBackend === "server"
+                              ? "Server API active"
+                              : "In-browser active"
+                          : "In-browser active (API disabled)"}
+                      </span>
+                    </p>
+                  </div>
                 </div>
 
-                <ToggleRow
-                  checked={enableTokenProbabilities}
-                  onChange={setEnableTokenProbabilities}
-                  title="Token probabilities"
-                  description="Request token probability metadata from API responses when available."
-                />
-
-                <div className="overflow-hidden rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
-                  <ServerInfoComponent mode="backends" />
-                </div>
-
-                <div className="rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
-                  <div className="flex items-start justify-between gap-3">
+                <section className="space-y-3 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
+                  <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-sm font-medium text-zinc-100">
-                        Test in-browser backend
+                        In-browser backend
                       </p>
                       <p className="text-xs text-zinc-500">
-                        Runs a minimal completion through the browser model
-                        pipeline.
+                        Local generation that runs entirely in-browser.
                       </p>
                     </div>
                     <Button
                       type="button"
-                      variant="outline"
-                      onClick={() => void runBackendTest("browser")}
-                      disabled={browserTestStatus.loading}
-                      className="border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+                      variant={llmBackend === "browser" ? "default" : "outline"}
+                      onClick={() => handleBackendChange("browser")}
+                      className={
+                        llmBackend === "browser"
+                          ? "bg-blue-600 text-white hover:bg-blue-500"
+                          : "border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+                      }
                     >
-                      {browserTestStatus.loading ? "Running..." : "Run Test"}
+                      {llmBackend === "browser" ? "Active" : "Set Active"}
                     </Button>
                   </div>
-                  <TestResult status={browserTestStatus} />
-                </div>
 
-                <div className="rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <Label className="text-xs text-zinc-400">
+                        In-browser model picker
+                      </Label>
+                    </div>
+                    <CompactModelCardPicker
+                      options={BROWSER_MODEL_OPTIONS}
+                      selectedId={browserModelId}
+                      onSelect={setBrowserModelId}
+                      isLoading={false}
+                      emptyMessage="No in-browser models available."
+                    />
+                  </div>
+
+                  <div className="rounded-md border border-zinc-700/80 bg-zinc-950/70 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-zinc-100">
+                          Backend test
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          Runs a minimal completion through the browser model
+                          pipeline.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void runBackendTest("browser")}
+                        disabled={browserTestStatus.loading}
+                        className="border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+                      >
+                        {browserTestStatus.loading ? "Running..." : "Run Test"}
+                      </Button>
+                    </div>
+                    <TestResult status={browserTestStatus} />
+                  </div>
+                </section>
+
+                <section className="space-y-3 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
+                  <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-sm font-medium text-zinc-100">
-                        Test API backend
+                        Local server backend
                       </p>
                       <p className="text-xs text-zinc-500">
-                        Runs a minimal completion directly against the
-                        configured API backend.
+                        Uses your configured server URL and selected server
+                        model.
                       </p>
                     </div>
                     <Button
                       type="button"
-                      variant="outline"
-                      onClick={() => void runBackendTest("server")}
-                      disabled={apiTestStatus.loading}
-                      className="border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+                      variant={llmBackend === "server" ? "default" : "outline"}
+                      onClick={() => handleBackendChange("server")}
+                      className={
+                        llmBackend === "server"
+                          ? "bg-blue-600 text-white hover:bg-blue-500"
+                          : "border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+                      }
                     >
-                      {apiTestStatus.loading ? "Running..." : "Run Test"}
+                      {llmBackend === "server" ? "Active" : "Set Active"}
                     </Button>
                   </div>
-                  <TestResult status={apiTestStatus} />
-                </div>
+
+                  <ToggleRow
+                    checked={enableTokenProbabilities}
+                    onChange={setEnableTokenProbabilities}
+                    title="Token probabilities"
+                    description="Request token probability metadata from server responses when available."
+                  />
+
+                  <div className="overflow-hidden rounded-md border border-zinc-700/80 bg-zinc-950/70 p-3">
+                    <ServerInfoComponent mode="backends" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <Label className="text-xs text-zinc-400">
+                        Local server model picker
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void refetchLocalModels()}
+                        disabled={!hasValidServerUrl || isLocalModelsFetching}
+                        className="h-7 border-zinc-700 bg-zinc-900 text-[11px] hover:bg-zinc-800"
+                      >
+                        {isLocalModelsFetching ? "Loading..." : "Refresh"}
+                      </Button>
+                    </div>
+                    <CompactModelCardPicker
+                      options={localModelOptions}
+                      selectedId={serverModelId || ""}
+                      onSelect={setServerModelId}
+                      isLoading={isLocalModelsLoading}
+                      errorMessage={
+                        !hasValidServerUrl
+                          ? "Configure a valid server URL to load models."
+                          : isLocalModelsError
+                            ? localModelsError instanceof Error
+                              ? localModelsError.message
+                              : "Failed to load local models."
+                            : undefined
+                      }
+                      emptyMessage="No models returned by /v1/models."
+                    />
+                  </div>
+
+                  <div className="rounded-md border border-zinc-700/80 bg-zinc-950/70 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-zinc-100">
+                          Backend test
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          Runs a minimal completion directly against the
+                          configured local server backend.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void runBackendTest("server")}
+                        disabled={apiTestStatus.loading}
+                        className="border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+                      >
+                        {apiTestStatus.loading ? "Running..." : "Run Test"}
+                      </Button>
+                    </div>
+                    <TestResult status={apiTestStatus} />
+                  </div>
+                </section>
+
+                <section className="space-y-3 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-100">
+                        OpenRouter backend
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        Routes requests through OpenRouter with your API key and
+                        chosen model.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant={
+                        llmBackend === "openrouter" ? "default" : "outline"
+                      }
+                      onClick={() => handleBackendChange("openrouter")}
+                      className={
+                        llmBackend === "openrouter"
+                          ? "bg-blue-600 text-white hover:bg-blue-500"
+                          : "border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+                      }
+                    >
+                      {llmBackend === "openrouter" ? "Active" : "Set Active"}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="openrouter-key"
+                      className="text-xs text-zinc-400"
+                    >
+                      OpenRouter API key
+                    </Label>
+                    <Input
+                      id="openrouter-key"
+                      type="password"
+                      value={openRouterApiKey || ""}
+                      onChange={(event) =>
+                        setOpenRouterApiKey(event.target.value)
+                      }
+                      placeholder="sk-or-v1-..."
+                      className="h-8 border-zinc-700 bg-zinc-950 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <Label className="text-xs text-zinc-400">
+                        OpenRouter model picker
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void refetchOpenRouterModels()}
+                        disabled={
+                          trimmedOpenRouterKey.length === 0 ||
+                          isOpenRouterModelsFetching
+                        }
+                        className="h-7 border-zinc-700 bg-zinc-900 text-[11px] hover:bg-zinc-800"
+                      >
+                        {isOpenRouterModelsFetching ? "Loading..." : "Refresh"}
+                      </Button>
+                    </div>
+                    <CompactModelCardPicker
+                      options={openRouterModelOptions}
+                      selectedId={openRouterModelId}
+                      onSelect={setOpenRouterModelId}
+                      isLoading={isOpenRouterModelsLoading}
+                      errorMessage={
+                        trimmedOpenRouterKey.length === 0
+                          ? "Set an OpenRouter API key to load available models."
+                          : isOpenRouterModelsError
+                            ? openRouterModelsError instanceof Error
+                              ? openRouterModelsError.message
+                              : "Failed to load OpenRouter models."
+                            : undefined
+                      }
+                      emptyMessage="No OpenRouter models available for this key."
+                    />
+                  </div>
+
+                  <div className="rounded-md border border-zinc-700/80 bg-zinc-950/70 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-zinc-100">
+                          Backend test
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          Runs a minimal completion through OpenRouter with your
+                          configured key.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void runBackendTest("openrouter")}
+                        disabled={
+                          openRouterTestStatus.loading || !openRouterApiKey
+                        }
+                        className="border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+                      >
+                        {openRouterTestStatus.loading
+                          ? "Running..."
+                          : "Run Test"}
+                      </Button>
+                    </div>
+                    <TestResult status={openRouterTestStatus} />
+                  </div>
+                </section>
               </div>
             ) : null}
 
             {activeSection === "models" ? (
               <div className="space-y-6">
-                <div className="rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
-                  <ServerInfoComponent mode="models" />
-                </div>
-
                 <div className="space-y-3 rounded-lg border border-zinc-700/80 bg-zinc-900/60 p-4">
                   <div>
                     <p className="text-sm font-medium text-zinc-100">

@@ -1,6 +1,7 @@
 import { observable } from "@legendapp/state";
 import { ObservablePersistLocalStorage } from "@legendapp/state/persist-plugins/local-storage";
 import { syncObservable } from "@legendapp/state/sync";
+import { OpenRouter } from "@openrouter/sdk";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { postV1ChatCompletions } from "../../llamacpp-client";
 import { client } from "../../llamacpp-client/client.gen";
@@ -12,6 +13,7 @@ import { getRelatedDocuments } from "./graph";
 import type {
   Block,
   DocumentId,
+  LLMBackend,
   LLMMessage,
   LLMRequest,
   MessageType,
@@ -21,12 +23,20 @@ import type {
 import { uiPreferences$ } from "./ui";
 
 const DEFAULT_SERVER_MODEL_ID = "llama";
-const BROWSER_MODEL_ID = "onnx-community/Qwen3-0.6B-ONNX";
+const DEFAULT_BROWSER_MODEL_ID = "onnx-community/Qwen3-0.6B-ONNX";
+const DEFAULT_OPENROUTER_MODEL_ID = "openai/gpt-4o-mini";
+
+type EmptyResponseDiagnosticInput = {
+  backend: LLMBackend;
+  messageCount: number;
+  modelId: string;
+  rawResponse: string;
+};
 
 type LLMTaskType = "chat" | "inline" | "simple";
 
 export type BackendRoutingOptions = {
-  forceBackend?: "browser" | "server";
+  forceBackend?: LLMBackend;
   task?: LLMTaskType;
 };
 
@@ -53,9 +63,22 @@ type GeneratedTextMessage = {
 type GenerationOutputEntry = {
   generated_text?: string | GeneratedTextMessage[];
 };
+type BrowserGenerationResult = {
+  generatedText: string;
+  rawResultPreview: string;
+};
 
-let browserGenerationPipelinePromise: Promise<TextGenerator> | null = null;
-let browserGenerationPipelineReady = false;
+let browserGenerationPipelineState: {
+  modelId: string;
+  promise: Promise<TextGenerator>;
+  ready: boolean;
+} | null = null;
+let openRouterClientCache:
+  | {
+      apiKey: string;
+      client: OpenRouter;
+    }
+  | undefined;
 
 // Helper function to generate unique request IDs
 const generateRequestId = (): string => `req-${crypto.randomUUID()}`;
@@ -73,9 +96,14 @@ const createLLMRequest = (
   sourceMessages: [],
 });
 
-function getModelId(backend: "browser" | "server"): string {
+function getModelId(backend: LLMBackend): string {
   if (backend === "browser") {
-    return BROWSER_MODEL_ID;
+    const browserModelId = uiPreferences$.browserModelId.get().trim();
+    return browserModelId || DEFAULT_BROWSER_MODEL_ID;
+  }
+  if (backend === "openrouter") {
+    const openRouterModelId = uiPreferences$.openRouterModelId.get().trim();
+    return openRouterModelId || DEFAULT_OPENROUTER_MODEL_ID;
   }
   const serverModelId = uiPreferences$.serverModelId.get();
   return serverModelId || DEFAULT_SERVER_MODEL_ID;
@@ -83,21 +111,137 @@ function getModelId(backend: "browser" | "server"): string {
 
 function resolveBackend({
   apiBackendEnabled,
+  configuredBackend,
   forceBackend,
   task,
 }: {
   apiBackendEnabled: boolean;
-} & BackendRoutingOptions): "browser" | "server" {
+  configuredBackend?: LLMBackend;
+} & BackendRoutingOptions): LLMBackend {
   if (forceBackend) {
     return forceBackend;
-  }
-  if (!apiBackendEnabled) {
-    return "browser";
   }
   if (task === "inline" || task === "simple") {
     return "browser";
   }
+  if (!apiBackendEnabled) {
+    return "browser";
+  }
+  if (configuredBackend === "openrouter") {
+    return "openrouter";
+  }
+  if (configuredBackend === "browser") {
+    return "browser";
+  }
   return "server";
+}
+
+function getOpenRouterClient(apiKey: string): OpenRouter {
+  if (
+    openRouterClientCache &&
+    openRouterClientCache.apiKey === apiKey &&
+    openRouterClientCache.client
+  ) {
+    return openRouterClientCache.client;
+  }
+
+  const client = new OpenRouter({ apiKey });
+  openRouterClientCache = { apiKey, client };
+  return client;
+}
+
+function extractOpenRouterContentText(content: unknown): string {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (!Array.isArray(content)) {
+    return "";
+  }
+
+  const textParts: string[] = [];
+  for (const part of content) {
+    if (typeof part === "string") {
+      textParts.push(part);
+      continue;
+    }
+
+    if (!part || typeof part !== "object") {
+      continue;
+    }
+
+    const withText = part as { text?: unknown };
+    if (typeof withText.text === "string") {
+      textParts.push(withText.text);
+    }
+  }
+
+  return textParts.join("");
+}
+
+function toError(value: unknown): Error | undefined {
+  return value instanceof Error ? value : undefined;
+}
+
+function toSingleLineText(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function toPreviewText(value: string, maxLength = 1200): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, maxLength)}...(truncated)`;
+}
+
+function toRawValuePreview(value: unknown, maxLength = 1200): string {
+  if (typeof value === "string") {
+    return toPreviewText(toSingleLineText(value), maxLength);
+  }
+
+  if (value instanceof Error) {
+    const causeText = value.cause
+      ? ` | cause=${toRawValuePreview(value.cause, 400)}`
+      : "";
+    return toPreviewText(
+      `${value.name}: ${toSingleLineText(value.message)}${causeText}`,
+      maxLength,
+    );
+  }
+
+  if (value === undefined) {
+    return "undefined";
+  }
+
+  if (value === null) {
+    return "null";
+  }
+
+  try {
+    const serialized = JSON.stringify(value);
+    if (!serialized) {
+      return String(value);
+    }
+    return toPreviewText(toSingleLineText(serialized), maxLength);
+  } catch {
+    return toPreviewText(toSingleLineText(String(value)), maxLength);
+  }
+}
+
+function buildEmptyResponseDiagnostic({
+  backend,
+  messageCount,
+  modelId,
+  rawResponse,
+}: EmptyResponseDiagnosticInput): string {
+  const backendLabel =
+    backend === "browser"
+      ? "browser"
+      : backend === "openrouter"
+        ? "OpenRouter"
+        : "server";
+
+  return `No response text was returned by the ${backendLabel} model "${modelId}" for ${messageCount} input message(s). This may indicate a model refusal, safety filtering, invalid prompt formatting, token limits, or provider/network failure. Raw response: ${rawResponse}`;
 }
 
 function getWebGpuInfo() {
@@ -113,37 +257,52 @@ function getWebGpuInfo() {
   return { available: true, reason: "ok" };
 }
 
-async function getBrowserGenerationPipeline(): Promise<TextGenerator> {
-  if (!browserGenerationPipelinePromise) {
+async function getBrowserGenerationPipeline(
+  modelId: string,
+): Promise<TextGenerator> {
+  if (
+    !browserGenerationPipelineState ||
+    browserGenerationPipelineState.modelId !== modelId
+  ) {
     const webGpuInfo = getWebGpuInfo();
     debugInfo("[LLM] Initializing browser pipeline", {
-      model: BROWSER_MODEL_ID,
+      model: modelId,
       webGpuAvailable: webGpuInfo.available,
       webGpuReason: webGpuInfo.reason,
     });
 
-    browserGenerationPipelinePromise = (async () => {
-      const loadStart = performance.now();
-      const { pipeline } = await import("@huggingface/transformers");
-      const generator = await pipeline("text-generation", BROWSER_MODEL_ID, {
-        ...(webGpuInfo.available ? { device: "webgpu" } : {}),
-        dtype: "q4f16",
-      });
-      const loadMs = Math.round(performance.now() - loadStart);
-      browserGenerationPipelineReady = true;
+    const nextPipelineState = {
+      modelId,
+      ready: false,
+      promise: (async () => {
+        const loadStart = performance.now();
+        const { pipeline } = await import("@huggingface/transformers");
+        const generator = await pipeline("text-generation", modelId, {
+          ...(webGpuInfo.available ? { device: "webgpu" } : {}),
+          dtype: "q4f16",
+        });
+        const loadMs = Math.round(performance.now() - loadStart);
+        if (
+          browserGenerationPipelineState &&
+          browserGenerationPipelineState.modelId === modelId
+        ) {
+          browserGenerationPipelineState.ready = true;
+        }
 
-      debugInfo("[LLM] Browser pipeline ready", {
-        loadMs,
-        model: BROWSER_MODEL_ID,
-      });
+        debugInfo("[LLM] Browser pipeline ready", {
+          loadMs,
+          model: modelId,
+        });
 
-      return generator as TextGenerator;
-    })();
-  } else if (browserGenerationPipelineReady) {
+        return generator as TextGenerator;
+      })(),
+    };
+    browserGenerationPipelineState = nextPipelineState;
+  } else if (browserGenerationPipelineState.ready) {
     debugLog("[LLM] Reusing cached browser pipeline");
   }
 
-  return browserGenerationPipelinePromise;
+  return browserGenerationPipelineState.promise;
 }
 
 function buildPromptFromMessages(
@@ -209,11 +368,12 @@ function splitIntoChunks(text: string, size = 60): string[] {
 async function generateBrowserResponse(
   messages: { content: string; role: MessageType }[],
   modelProperties: ModelProperties,
-): Promise<string> {
+): Promise<BrowserGenerationResult> {
+  const browserModelId = getModelId("browser");
   const generationRunId = `browser-gen-${crypto.randomUUID()}`;
   const runStart = performance.now();
   const pipelineStart = performance.now();
-  const generator = await getBrowserGenerationPipeline();
+  const generator = await getBrowserGenerationPipeline(browserModelId);
   const pipelineMs = Math.round(performance.now() - pipelineStart);
   const prompt = buildPromptFromMessages(messages);
   const approxPromptTokens = Math.round(prompt.length / 4);
@@ -239,6 +399,7 @@ async function generateBrowserResponse(
   const totalMs = Math.round(performance.now() - runStart);
 
   const generated = extractGeneratedText(result).trim();
+  const rawResultPreview = toRawValuePreview(result);
   const approxGeneratedTokens = Math.round(generated.length / 4);
   const tokensPerSecond =
     inferenceMs > 0
@@ -253,7 +414,10 @@ async function generateBrowserResponse(
     totalMs,
   });
 
-  return generated;
+  return {
+    generatedText: generated,
+    rawResultPreview,
+  };
 }
 
 function buildMessagesForLLM(
@@ -432,6 +596,7 @@ export async function callLLM(
   const backend = resolveBackend({
     ...routing,
     apiBackendEnabled: uiPrefs.apiBackendEnabled,
+    configuredBackend: uiPrefs.llmBackend,
   });
   const modelId = getModelId(backend);
 
@@ -441,9 +606,78 @@ export async function callLLM(
 
   if (backend === "browser") {
     try {
-      const assistantContent = await generateBrowserResponse(
+      const generation = await generateBrowserResponse(
         messagesForAPI,
         modelProperties,
+      );
+      const assistantContent = generation.generatedText;
+
+      request.duration = Date.now() - startTime;
+      request.success = true;
+
+      return ok({
+        response: {
+          content:
+            assistantContent ||
+            buildEmptyResponseDiagnostic({
+              backend,
+              messageCount: messagesForAPI.length,
+              modelId,
+              rawResponse: generation.rawResultPreview,
+            }),
+        },
+        request,
+      });
+    } catch (error) {
+      request.duration = Date.now() - startTime;
+      request.success = false;
+      request.error = toRawValuePreview(error);
+
+      return err(
+        createLLMError(
+          `Failed to run browser LLM. Raw error: ${toRawValuePreview(error)}`,
+          modelId,
+          toError(error),
+        ),
+      );
+    }
+  }
+
+  if (backend === "openrouter") {
+    const apiKey = uiPrefs.openRouterApiKey?.trim() || "";
+    if (!apiKey) {
+      request.duration = Date.now() - startTime;
+      request.success = false;
+      request.error = "OpenRouter API key is not configured";
+      return err(
+        createLLMError(
+          "OpenRouter API key is not configured",
+          modelId,
+          undefined,
+        ),
+      );
+    }
+
+    try {
+      const openRouter = getOpenRouterClient(apiKey);
+      const openRouterResponse = await openRouter.chat.send({
+        chatGenerationParams: {
+          messages: messagesForAPI.map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
+          model: modelId,
+          stream: false,
+          temperature: modelProperties.temperature,
+          topP: modelProperties.top_p,
+          maxTokens: modelProperties.n_predict,
+          presencePenalty: modelProperties.presence_penalty,
+          frequencyPenalty: modelProperties.frequency_penalty,
+        },
+      });
+
+      const assistantContent = extractOpenRouterContentText(
+        openRouterResponse.choices?.[0]?.message?.content,
       );
 
       request.duration = Date.now() - startTime;
@@ -451,20 +685,26 @@ export async function callLLM(
 
       return ok({
         response: {
-          content: assistantContent || "Sorry, I couldn't generate a response.",
+          content:
+            assistantContent ||
+            buildEmptyResponseDiagnostic({
+              backend,
+              messageCount: messagesForAPI.length,
+              modelId,
+              rawResponse: toRawValuePreview(openRouterResponse),
+            }),
         },
         request,
       });
     } catch (error) {
       request.duration = Date.now() - startTime;
       request.success = false;
-      request.error = error instanceof Error ? error.message : "Unknown error";
-
+      request.error = toRawValuePreview(error);
       return err(
         createLLMError(
-          "Failed to run browser LLM",
-          BROWSER_MODEL_ID,
-          error instanceof Error ? error : undefined,
+          `Failed to call OpenRouter. Raw error: ${toRawValuePreview(error)}`,
+          modelId,
+          toError(error),
         ),
       );
     }
@@ -490,12 +730,23 @@ export async function callLLM(
       },
     }),
     (error) =>
-      createLLMError("Failed to call LLM API", modelId, error as Error),
+      createLLMError(
+        `Failed to call LLM API. Raw error: ${toRawValuePreview(error)}`,
+        modelId,
+        toError(error),
+      ),
   )
     .andThen((response) => {
       const assistantContent =
-        response.data?.choices?.[0]?.message?.content ||
-        "Sorry, I couldn't generate a response.";
+        extractOpenRouterContentText(
+          response.data?.choices?.[0]?.message?.content,
+        ) ||
+        buildEmptyResponseDiagnostic({
+          backend,
+          messageCount: messagesForAPI.length,
+          modelId,
+          rawResponse: toRawValuePreview(response.data),
+        });
 
       const data = response.data as Record<string, unknown>;
       const choices = data.choices as unknown[];
@@ -521,7 +772,7 @@ export async function callLLM(
       request.error = error.message;
 
       return createLLMError(
-        "Failed to get response from LLM server",
+        `Failed to get response from LLM server. Raw error: ${error.message}${error.cause ? ` | cause: ${toRawValuePreview(error.cause)}` : ""}`,
         modelId,
         error.cause,
       );
@@ -572,6 +823,7 @@ export async function* callLLMStreaming(
   const backend = resolveBackend({
     ...routing,
     apiBackendEnabled: uiPrefs.apiBackendEnabled,
+    configuredBackend: uiPrefs.llmBackend,
   });
   const modelId = getModelId(backend);
 
@@ -594,10 +846,11 @@ export async function* callLLMStreaming(
 
   if (backend === "browser") {
     try {
-      const content = await generateBrowserResponse(
+      const generation = await generateBrowserResponse(
         messagesForAPI,
         modelProperties,
       );
+      const content = generation.generatedText;
       const chunks = splitIntoChunks(content);
       debugInfo("[LLM Streaming] Browser response ready", {
         chunkCount: chunks.length,
@@ -671,7 +924,113 @@ export async function* callLLMStreaming(
       yield err(
         createLLMError(
           "Failed to initialize browser LLM",
-          BROWSER_MODEL_ID,
+          modelId,
+          error instanceof Error ? error : undefined,
+        ),
+      );
+      return;
+    }
+  }
+
+  if (backend === "openrouter") {
+    const apiKey = uiPrefs.openRouterApiKey?.trim() || "";
+    if (!apiKey) {
+      request.duration = Date.now() - startTime;
+      request.success = false;
+      request.error = "OpenRouter API key is not configured";
+      yield err(
+        createLLMError(
+          "OpenRouter API key is not configured",
+          modelId,
+          undefined,
+        ),
+      );
+      return;
+    }
+
+    try {
+      const openRouter = getOpenRouterClient(apiKey);
+      const stream = await openRouter.chat.send({
+        chatGenerationParams: {
+          messages: messagesForAPI.map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
+          model: modelId,
+          stream: true,
+          temperature: modelProperties.temperature,
+          topP: modelProperties.top_p,
+          maxTokens: modelProperties.n_predict,
+          presencePenalty: modelProperties.presence_penalty,
+          frequencyPenalty: modelProperties.frequency_penalty,
+        },
+      });
+
+      for await (const event of stream) {
+        const now = performance.now();
+        if (firstChunkAt === null) {
+          firstChunkAt = now;
+          debugInfo("[LLM Streaming] First OpenRouter event received", {
+            requestId: request.id,
+            timeToFirstEventMs: Math.round(now - perfStart),
+          });
+        }
+        const gapMs = lastChunkAt === null ? 0 : Math.round(now - lastChunkAt);
+        lastChunkAt = now;
+
+        const content = event.choices?.[0]?.delta?.content ?? "";
+        if (content.length > 0) {
+          nonEmptyChunkCount += 1;
+          totalContentChars += content.length;
+        } else {
+          emptyChunkCount += 1;
+        }
+        debugLog("[LLM Streaming] OpenRouter chunk", {
+          chunkGapMs: gapMs,
+          contentLength: content.length,
+          emptyChunkCount,
+          nonEmptyChunkCount,
+          requestId: request.id,
+        });
+
+        yield ok({
+          response: {
+            content,
+            done: false,
+          },
+          request,
+        });
+      }
+
+      request.duration = Date.now() - startTime;
+      request.success = true;
+      const totalStreamMs = Math.round(performance.now() - perfStart);
+      const throughputCharsPerSecond =
+        totalStreamMs > 0
+          ? +((totalContentChars / totalStreamMs) * 1000).toFixed(3)
+          : 0;
+      debugInfo("[LLM Streaming] OpenRouter stream completed", {
+        durationMs: request.duration,
+        emptyChunkCount,
+        nonEmptyChunkCount,
+        throughputCharsPerSecond,
+        timeToFirstEventMs:
+          firstChunkAt === null ? null : Math.round(firstChunkAt - perfStart),
+        totalContentChars,
+        totalStreamMs,
+        requestId: request.id,
+      });
+
+      yield ok({ response: { content: "", done: true }, request });
+      return;
+    } catch (error) {
+      request.duration = Date.now() - startTime;
+      request.success = false;
+      request.error = error instanceof Error ? error.message : "Unknown error";
+      yield err(
+        createLLMError(
+          "Failed to initialize OpenRouter streaming connection",
+          modelId,
           error instanceof Error ? error : undefined,
         ),
       );
