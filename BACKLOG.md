@@ -11,21 +11,20 @@
 - Preserve AI segments during sync
 - Prevent conversion to plain text
 
-### Entity Candidates
-- [x] Hard rename from `ner` to `entity`/`candidate` across code + UI.
-- [x] Settings/state rename: `entityAutoRunOnIdle`, `entityAutoLinkStrictMatches`, `entityPreloadModel`.
-- [x] Legacy mark migration on normalization (`ner*` -> `entity*`, id generation for legacy leaves).
-- [x] Keep editor model as canonical persistence; markdown export/import may be lossy for editor-only candidate data.
-- [x] Assume external links are absolute URLs for now.
-- [ ] Fix remaining boundary-adjust edge case where a stale range can still resolve wider than expected in specific mutation sequences.
-
 ## ✨ Improvements
 
 ### Placeholder Block Completion
 - [x] Complete placeholder block implementation before other document-overhaul features.
 - [x] Ensure dedicated block type behavior is production-ready (insert via slash menu, click-to-select, transform to paragraph on type).
+- [ ] Validate placeholder blocks - create and test out a template using them
 - [ ] Add acceptance tests for template-driven placeholder insertion and editing flows.
 - [ ] Add bulk-replace flow for template placeholders.
+
+### Testing overhaul
+
+Identify key complex areas, write tests. ld
+
+Add unit tests, add some integration tests.
 
 ### Document Overhaul Prerequisites (Phase A)
 Status: Foundation implementation complete in code. Formal acceptance tests and regression coverage still pending.
@@ -107,46 +106,12 @@ Status: Foundation implementation complete in code. Formal acceptance tests and 
 - Folder removal/navigation rewrite is deferred to later phases, but indexes/selectors are added now.
 - Frontmatter-heavy authoring UX and placeholder block UX are deferred to later phases.
 
-### Entity Candidate Overhaul (Phases 1-2)
-Status: Core implementation complete. Remaining work is targeted stabilization and test coverage.
-
-- [x] Phase 1 safeguards:
-  - [x] Link-intersection skip logic during candidate application.
-  - [x] Candidate overlap rejection policy.
-  - [x] Boundary adjustment controls (expand/contract left/right).
-- [x] Phase 2 lifecycle:
-  - [x] Candidate dismiss transform.
-  - [x] Runtime dismissal registry (editor-only, non-durable).
-  - [x] Rerun suppression for dismissed candidates in unchanged windows.
-- [x] Transform/API work:
-  - [x] `editor.api.entity.runDocument` and `runParagraph`.
-  - [x] `editor.tf.entity.setType/remove/convertToLink/adjustBoundary/dismiss`.
-- [x] Refactor to Slate refs:
-  - [x] Use `RangeRef`/`PathRef` in entity transforms and queue/dismiss runtime tracking.
-  - [x] Validation path moved to ref-first lookups.
-- [x] Debug instrumentation:
-  - [x] Global debug-gated logs throughout entity flows.
-  - [x] Log verbosity reduced to operation before/after offsets + selected text.
-- [ ] Add focused regression tests for boundary adjust under tree-splitting mutations.
-- [ ] Add integration tests for dismiss+rerun suppression and mixed linked/unlinked paragraphs.
-
 ### Entity UX Enhancements
 - [ ] Make entity highlights more visible.
 - [ ] Differentiate linked vs unlinked entity candidates visually (clear styling/state distinction when `href` exists).
 - [ ] Auto-load entity model.
 - [ ] Add mention syntax (`@Ardelia`) with dropdown for existing documents.
 - [ ] Evaluate optional sidecar persistence for editor-only candidate state (not required for current overhaul).
-
-### Settings Redesign (Completed)
-- [x] Reduce sidebar clutter
-- [x] Redesign modal with wider two-level structure
-- [x] Rework AI Runtime selector to API backend enable/disable
-- [x] Add model testing/debug tools
-- [x] Add reusable presets
-- [x] Add global debug mode with gated verbose logging
-- [x] Remove separate Server tab, fold into settings
-- [x] Collapse sidebar model picker to dropdown with quick preset switching
-- [ ] Add individual feature toggles (global AI master switch removed)
 
 ### Settings/UI Follow-ups
 - [ ] Fix OpenRouter/local model selector UX: control appears cut off and page scrolling is difficult while configuring models.
