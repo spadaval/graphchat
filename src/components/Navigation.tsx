@@ -24,7 +24,7 @@ export function Navigation() {
         )}
       >
         {isActive("/") && (
-          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500" />
         )}
         <MessageSquare
           size={16}
@@ -35,7 +35,7 @@ export function Navigation() {
           }
         />
         <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
-          Terminal
+          Chat
         </span>
       </Link>
       <Link
@@ -48,7 +48,7 @@ export function Navigation() {
         )}
       >
         {isActive("/documents") && (
-          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500" />
         )}
         <FileText
           size={16}
@@ -59,7 +59,7 @@ export function Navigation() {
           }
         />
         <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
-          Archives
+          Documents
         </span>
       </Link>
     </div>

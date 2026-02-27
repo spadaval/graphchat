@@ -14,8 +14,8 @@ export function SidebarHeader() {
   return (
     <div className="p-5 border-b border-zinc-800/50">
       <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
-        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
-        Recent Comms
+        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50" />
+        History
       </div>
     </div>
   );
@@ -53,7 +53,7 @@ function ThreadItem({
       }`}
     >
       {isActive && (
-        <div className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+        <div className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 bg-emerald-500" />
       )}
       <button
         type="button"
@@ -235,7 +235,7 @@ function EditNameModal({
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-[#0a0a0a] rounded-xl p-6 w-full max-w-sm border border-zinc-800 shadow-2xl transition-all animate-in fade-in zoom-in-95 duration-200">
         <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-500 mb-6">
-          Re-designate Session
+          Rename Session
         </h3>
         <form onSubmit={handleSubmit} className="space-y-6">
           <input
@@ -257,7 +257,7 @@ function EditNameModal({
               type="submit"
               className="px-6 py-2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded-md hover:bg-emerald-500/30 transition-all"
             >
-              Commit
+              Save
             </button>
           </div>
         </form>
@@ -286,16 +286,16 @@ function DeleteAllButton({
         onBlur={onBlur}
         className={`w-full py-2.5 text-[10px] font-bold uppercase tracking-[0.2em] rounded-md transition-all duration-300 focus:outline-none border ${
           confirmation
-            ? "bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-[0_0_15px_-5px_rgba(244,63,94,0.2)]"
+            ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
             : "text-zinc-700 hover:text-rose-400/60 border-transparent"
         }`}
         title={
           confirmation
-            ? "Confirm destruction of all sessions"
-            : "Purge session history"
+            ? "Confirm delete all sessions"
+            : "Delete all history"
         }
       >
-        {confirmation ? "Confirm Purge" : "Purge History"}
+        {confirmation ? "Confirm Delete" : "Clear History"}
       </button>
     </div>
   );

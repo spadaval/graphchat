@@ -27,7 +27,7 @@ export function ChatHeader({ title }: ChatHeaderProps) {
   return (
     <div className="p-4 border-b border-zinc-800/50 bg-[#0a0a0a]/80 backdrop-blur-md">
       <div className="flex items-center gap-3">
-        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
+        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50" />
         <h1 className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500/80">
           {title}
         </h1>
@@ -47,10 +47,10 @@ export function EmptyState({ sendMessage }: EmptyStateProps) {
       <div className="mb-12 space-y-3">
         <div className="mx-auto h-1 w-8 rounded-full bg-emerald-500/20 mb-6" />
         <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-zinc-500">
-          Terminal Interface Active
+          Select a Chat
         </h2>
         <p className="text-[11px] font-medium text-zinc-600 uppercase tracking-widest">
-          Select entry point or initialize stream
+          Choose a sample prompt below or start a new session.
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
@@ -120,7 +120,7 @@ export function MessagesList({ threadId }: MessagesListProps) {
       ))}
       {blockIds.length === 0 && (
         <div className="text-center text-zinc-700 py-12 text-[10px] font-bold uppercase tracking-widest">
-          Awaiting link established...
+          No messages yet.
         </div>
       )}
     </div>

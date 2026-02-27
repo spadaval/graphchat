@@ -304,7 +304,7 @@ const InlineComboboxContent: typeof ComboboxPopover = ({
     <Portal>
       <ComboboxPopover
         className={cn(
-          "z-500 max-h-[320px] w-[340px] overflow-x-hidden overflow-y-auto rounded-xl border border-cyan-200/20 bg-slate-950/95 p-1.5 text-slate-100 shadow-[0_18px_60px_-24px_rgba(8,145,178,0.6)] backdrop-blur-xl",
+          "z-500 max-h-[320px] w-[340px] overflow-x-hidden overflow-y-auto rounded-xl border border-zinc-800 bg-[#0d0d0d] p-1.5 text-zinc-300 shadow-2xl backdrop-blur-xl",
           className,
         )}
         onKeyDownCapture={handleKeyDown}
@@ -315,7 +315,7 @@ const InlineComboboxContent: typeof ComboboxPopover = ({
 };
 
 const comboboxItemVariants = cva(
-  "relative flex min-h-10 select-none items-center gap-3 rounded-lg px-2.5 py-2 text-slate-100 text-sm outline-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "relative flex min-h-10 select-none items-center gap-3 rounded-lg px-2.5 py-2 text-zinc-300 text-sm outline-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     defaultVariants: {
       interactive: true,
@@ -323,7 +323,7 @@ const comboboxItemVariants = cva(
     variants: {
       interactive: {
         false: "",
-        true: "cursor-pointer transition-all duration-150 hover:bg-white/8 data-[active-item=true]:bg-cyan-500/18 data-[active-item=true]:text-cyan-100 data-[active-item=true]:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.35)]",
+        true: "cursor-pointer transition-all duration-150 hover:bg-white/8 data-[active-item=true]:bg-emerald-500/5 data-[active-item=true]:text-emerald-400",
       },
     },
   },
@@ -423,7 +423,7 @@ function InlineComboboxGroupLabel({
     <ComboboxGroupLabel
       {...props}
       className={cn(
-        "mb-1 px-2.5 pt-1 font-semibold text-[11px] text-cyan-100/75 tracking-[0.14em] uppercase",
+        "mb-1 px-2.5 pt-1 font-semibold text-[11px] text-zinc-500 tracking-[0.14em] uppercase",
         className,
       )}
     />

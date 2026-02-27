@@ -113,7 +113,7 @@ export function ServerInfoComponent({
             htmlFor="server-url"
             className="text-[11px] font-semibold text-muted-foreground/50"
           >
-            Endpoint URL
+            Server URL
           </label>
           <div className="flex gap-2">
             <input
@@ -149,8 +149,8 @@ export function ServerInfoComponent({
                 !hasValidServerUrl || isError
                   ? "bg-destructive/60"
                   : models && models.length > 0
-                    ? "bg-primary/60 shadow-[0_0_8px_rgba(var(--primary),0.3)]"
-                    : "bg-muted-foreground/30 animate-pulse"
+                    ? "bg-primary/60"
+                    : "bg-muted-foreground/30"
               }`}
             />
             <span className="text-[11px] font-semibold text-muted-foreground/50">
@@ -185,7 +185,7 @@ export function ServerInfoComponent({
       {isError ? (
         <div className="flex gap-2 rounded border border-destructive/10 bg-destructive/5 p-2.5 text-xs text-destructive/70 leading-relaxed">
           <XCircle size={14} className="shrink-0 mt-0.5" />
-          <p>{error instanceof Error ? error.message : "Handshake failure."}</p>
+          <p>{error instanceof Error ? error.message : "Connection failed."}</p>
         </div>
       ) : null}
 
@@ -231,11 +231,11 @@ export function ServerInfoComponent({
       {showReadonlyList ? (
         <div className="space-y-3 rounded border border-border/40 bg-white/[0.01] p-3.5">
           <p className="text-[11px] font-semibold text-muted-foreground/40 uppercase tracking-wider">
-            Available Nodes
+            Available Models
           </p>
           {!models || models.length === 0 ? (
             <p className="text-xs text-muted-foreground/30 font-medium italic">
-              Registry empty.
+              No models found.
             </p>
           ) : (
             <div className="max-h-52 space-y-1.5 overflow-y-auto pr-1 scrollbar-hide">

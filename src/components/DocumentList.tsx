@@ -98,8 +98,8 @@ export function DocumentList({
       <div className="p-5 border-b border-zinc-800/50 space-y-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
-            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
-            Archives
+            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50" />
+            Documents
           </div>
           <Button
             variant="ghost"
@@ -113,8 +113,8 @@ export function DocumentList({
         <div className="relative">
           <input
             type="text"
-            placeholder="Filter archives..."
-            className="w-full h-9 px-3 font-mono text-[11px] border border-zinc-800 bg-zinc-900/50 text-emerald-400 placeholder:text-zinc-700 focus:outline-none focus:border-emerald-500/50 transition-colors rounded-md"
+            placeholder="Search documents..."
+            className="w-full h-9 px-3 font-mono text-[11px] border border-zinc-800 bg-zinc-900/50 text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-zinc-700 transition-colors rounded-md"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -187,12 +187,12 @@ function DocumentListItem({
           }}
           className={`group relative w-full flex flex-col gap-1 p-4 rounded-md transition-all cursor-pointer text-left border mb-1 ${
             isActive
-              ? "bg-emerald-500/5 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_-5px_rgba(16,185,129,0.1)]"
+              ? "bg-emerald-500/5 text-emerald-400 border-emerald-500/20"
               : "text-zinc-500 hover:bg-zinc-800/40 hover:text-zinc-300 border-transparent"
           }`}
         >
           {isActive && (
-            <div className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+            <div className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 bg-emerald-500" />
           )}
           <div className="flex items-center gap-2.5">
             <IconComponent
@@ -218,7 +218,7 @@ function DocumentListItem({
               </span>
             )}
             {isActive && !isRenaming && (
-              <div className="h-1 w-1 shrink-0 animate-pulse rounded-full bg-emerald-500" />
+              <div className="h-1 w-1 shrink-0 rounded-full bg-emerald-500" />
             )}
           </div>
           {!isRenaming &&
@@ -266,7 +266,7 @@ function DocumentListItem({
           onClick={() => deleteDocument(document.id)}
           className="text-[11px] font-bold uppercase tracking-wider py-2 rounded text-rose-400/80 hover:bg-rose-500/10 hover:text-rose-400"
         >
-          Purge Archive
+          Delete Document
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

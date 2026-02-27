@@ -27,11 +27,11 @@ import { useIsTouchDevice } from "~/hooks/use-is-touch-device";
 type Value = "askAI" | null;
 
 const menuItemClass =
-  "min-h-10 rounded-lg px-2.5 py-2 font-medium text-slate-100 data-[highlighted]:bg-cyan-500/18 data-[highlighted]:text-cyan-100 data-[highlighted]:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.35)]";
+  "min-h-10 rounded-lg px-2.5 py-2 font-medium text-zinc-300 data-[highlighted]:bg-emerald-500/5 data-[highlighted]:text-emerald-400";
 const menuSubTriggerClass =
-  "min-h-10 rounded-lg px-2.5 py-2 font-medium text-slate-100 data-[state=open]:bg-cyan-500/18 data-[state=open]:text-cyan-100 data-[state=open]:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.35)] data-[highlighted]:bg-cyan-500/18 data-[highlighted]:text-cyan-100 data-[highlighted]:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.35)]";
+  "min-h-10 rounded-lg px-2.5 py-2 font-medium text-zinc-300 data-[state=open]:bg-emerald-500/5 data-[state=open]:text-emerald-400 data-[highlighted]:bg-emerald-500/5 data-[highlighted]:text-emerald-400";
 const menuSubContentClass =
-  "w-52 overflow-hidden rounded-xl border border-cyan-200/20 bg-slate-950/95 p-1.5 text-slate-100 shadow-[0_20px_70px_-24px_rgba(8,145,178,0.62)] backdrop-blur-xl";
+  "w-52 overflow-hidden rounded-xl border border-zinc-800 bg-[#0d0d0d] p-1.5 text-zinc-300 shadow-2xl backdrop-blur-xl";
 
 export function BlockContextMenu({ children }: { children: React.ReactNode }) {
   const { api, editor } = useEditorPlugin(BlockMenuPlugin);
@@ -104,7 +104,7 @@ export function BlockContextMenu({ children }: { children: React.ReactNode }) {
       </ContextMenuTrigger>
       {isOpen && (
         <ContextMenuContent
-          className="w-72 overflow-hidden rounded-xl border border-cyan-200/20 bg-slate-950/95 p-1.5 text-slate-100 shadow-[0_20px_70px_-24px_rgba(8,145,178,0.62)] backdrop-blur-xl"
+          className="w-72 overflow-hidden rounded-xl border border-zinc-800 bg-[#0d0d0d] p-1.5 text-zinc-300 shadow-2xl backdrop-blur-xl"
           onCloseAutoFocus={(e) => {
             e.preventDefault();
             editor.getApi(BlockSelectionPlugin).blockSelection.focus();
@@ -116,7 +116,7 @@ export function BlockContextMenu({ children }: { children: React.ReactNode }) {
             setValue(null);
           }}
         >
-          <ContextMenuLabel className="mb-1 px-2.5 pt-1 font-semibold text-[11px] text-cyan-100/75 tracking-[0.14em] uppercase">
+          <ContextMenuLabel className="mb-1 px-2.5 pt-1 font-semibold text-[11px] text-zinc-500 tracking-[0.14em] uppercase">
             Actions
           </ContextMenuLabel>
           <ContextMenuGroup className="space-y-0.5">
@@ -197,7 +197,7 @@ export function BlockContextMenu({ children }: { children: React.ReactNode }) {
           </ContextMenuGroup>
 
           <ContextMenuSeparator className="my-1.5 bg-white/10" />
-          <ContextMenuLabel className="mb-1 px-2.5 pt-0.5 font-semibold text-[11px] text-cyan-100/75 tracking-[0.14em] uppercase">
+          <ContextMenuLabel className="mb-1 px-2.5 pt-0.5 font-semibold text-[11px] text-zinc-500 tracking-[0.14em] uppercase">
             Layout
           </ContextMenuLabel>
           <ContextMenuGroup className="space-y-0.5">

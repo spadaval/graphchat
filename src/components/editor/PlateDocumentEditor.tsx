@@ -737,14 +737,14 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
           className="mx-auto w-full p-6 pb-32 transition-all duration-300 ease-in-out md:p-12"
           style={{ maxWidth: `${documentWidth}px` }}
         >
-          <div className="rounded-3xl border border-zinc-800/50 bg-[#0a0a0a]/90 px-8 py-10 shadow-[0_40px_100px_rgba(0,0,0,0.8)] backdrop-blur-xl md:px-12">
+          <div className="rounded-3xl border border-zinc-800/50 bg-[#0a0a0a]/50 px-8 py-10 shadow-2xl backdrop-blur-xl md:px-12">
             <div className="mb-10 flex items-center gap-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:text-emerald-400"
-                    title="Re-designate Archive Type"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition-all hover:border-zinc-700 hover:bg-zinc-800/40 hover:text-zinc-200"
+                    title="Change Document Type"
                     aria-label="Change document type"
                   >
                     <CurrentTypeIcon className="size-5" />
@@ -755,7 +755,7 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
                   className="w-64 border border-zinc-800 bg-[#0d0d0d] text-zinc-300 shadow-2xl p-1"
                 >
                   <div className="px-3 py-2 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] border-b border-zinc-800/50 mb-1">
-                    Designation Registry
+                    Document Types
                   </div>
                   {availableTypes.map((typeDef) => {
                     const TypeIcon =
@@ -793,14 +793,14 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
                   updateDocument(docId, { title: e.target.value })
                 }
                 className="w-full border-none bg-transparent text-3xl font-bold text-zinc-100 outline-none placeholder:text-zinc-800 md:text-4xl tracking-tight"
-                placeholder="Initialize Designation..."
+                placeholder="Document Title..."
               />
             </div>
 
             <Plate editor={editor} onChange={handleContentChange}>
               <PlateContent
-                className="min-h-[600px] px-1 text-zinc-200 outline-none text-lg leading-relaxed selection:bg-emerald-500/30 selection:text-emerald-200"
-                placeholder="Awaiting input..."
+                className="min-h-[600px] px-1 text-zinc-200 outline-none text-lg leading-relaxed selection:bg-zinc-700 selection:text-zinc-100"
+                placeholder="Start typing..."
                 onKeyDownCapture={preventBackspaceNavigation}
               />
             </Plate>
@@ -816,16 +816,16 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               {isGenerating && (
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-400">
+                <span className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                   <Loader2 size={12} className="animate-spin" />
-                  Stream Active
+                  Generating...
                 </span>
               )}
               <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-600">
                 <div
-                  className={`h-1.5 w-1.5 rounded-full ${isGenerating ? "bg-emerald-500 animate-pulse" : "bg-emerald-500/30"}`}
+                  className={`h-1.5 w-1.5 rounded-full ${isGenerating ? "bg-emerald-500" : "bg-zinc-800"}`}
                 />
-                SYSTEM {isGenerating ? "BUSY" : "READY"}
+                {isGenerating ? "BUSY" : "READY"}
               </div>
             </div>
 
@@ -833,22 +833,21 @@ export function PlateDocumentEditor({ document$ }: PlateDocumentEditorProps) {
               type="button"
               onClick={() => void runDocumentEntityDetection()}
               disabled={isGenerating || isRunningEntityDetection}
-              className="group relative overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/50 px-4 py-2 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/5 disabled:opacity-50"
-              title="Re-run entity detection for the whole document"
+              className="group relative overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/50 px-4 py-2 transition-all hover:border-zinc-700 hover:bg-zinc-800/40 disabled:opacity-50"
+              title="Scan document for entities"
             >
-              <span className="relative z-10 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 group-hover:text-emerald-400 transition-colors">
+              <span className="relative z-10 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 group-hover:text-zinc-200 transition-colors">
                 {isRunningEntityDetection ? (
                   <Loader2
                     size={12}
-                    className="animate-spin text-emerald-500"
+                    className="animate-spin"
                   />
                 ) : (
                   <WandSparkles
                     size={12}
-                    className="group-hover:text-emerald-500"
                   />
                 )}
-                Run Diagnostics
+                Scan Entities
               </span>
             </button>
           </div>

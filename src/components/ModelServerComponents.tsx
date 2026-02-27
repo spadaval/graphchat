@@ -81,8 +81,8 @@ export function SettingsPanelContent() {
             <QuickToggleRow
               checked={apiBackendEnabled}
               onChange={setAPIBackendEnabled}
-              title="Remote Mesh"
-              description="Offload inference to high-performance host mesh."
+              title="OpenRouter"
+              description="Enable cloud-based inference via OpenRouter."
             />
 
             <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/20 p-4">
@@ -90,7 +90,7 @@ export function SettingsPanelContent() {
                 htmlFor="preset-select"
                 className="mb-3 block text-[10px] font-bold text-zinc-500 uppercase tracking-widest"
               >
-                Cognitive Profile
+                Sampler Profile
               </label>
               <select
                 id="preset-select"
@@ -118,7 +118,7 @@ export function SettingsPanelContent() {
         <div>
           <h3 className="mb-5 flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
             <Cable size={14} className="text-emerald-500/60" />
-            Host Status
+            Server Status
           </h3>
           <div className="overflow-hidden rounded-lg border border-zinc-800/50 bg-zinc-900/10">
             <ServerInfoComponent mode="sidebar" />
@@ -127,8 +127,7 @@ export function SettingsPanelContent() {
 
         <div className="rounded-lg border border-emerald-500/10 bg-emerald-500/5 p-5 text-[11px] font-medium text-zinc-500 leading-relaxed">
           <p className="italic">
-            Extended parameters and diagnostic utilities are restricted to the
-            full system configuration.
+            More settings available in full configuration.
           </p>
         </div>
       </div>
@@ -140,7 +139,7 @@ export function SettingsPanelContent() {
           className="w-full h-10 border-zinc-800 bg-zinc-900/50 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 hover:bg-emerald-500/5 hover:text-emerald-400 hover:border-emerald-500/30 transition-all shadow-lg"
         >
           <Settings size={14} />
-          Terminal Config
+          Settings
         </Button>
       </div>
 

@@ -174,7 +174,7 @@ function CompactModelCardPicker({
             onClick={() => onSelect(option.id)}
             className={`group w-full rounded-md border px-3 py-2.5 text-left transition-all duration-200 ${
               isSelected
-                ? "border-emerald-500/40 bg-emerald-500/5 shadow-[0_0_15px_-5px_rgba(16,185,129,0.1)]"
+                ? "border-emerald-500/40 bg-emerald-500/5"
                 : "border-zinc-800/50 bg-zinc-900/20 hover:border-zinc-700 hover:bg-zinc-800/40"
             }`}
           >
@@ -187,7 +187,7 @@ function CompactModelCardPicker({
                     {option.title || option.id}
                   </p>
                   {isSelected && (
-                    <div className="h-1 w-1 animate-pulse rounded-full bg-emerald-500" />
+                    <div className="h-1 w-1 rounded-full bg-emerald-500" />
                   )}
                 </div>
                 <p className="mt-0.5 truncate font-mono text-[10px] text-zinc-500">
@@ -225,25 +225,25 @@ function CompactModelCardPicker({
 
 const SETTINGS_SECTIONS: SettingsSection[] = [
   {
-    description: "Editor layout and inline assistance",
+    description: "Editor layout and behavior",
     icon: Layout,
     id: "general",
-    title: "General",
+    title: "Interface",
   },
   {
-    description: "Backend engines and model selection",
+    description: "Inference backends and models",
     icon: Cable,
     id: "backends",
     title: "Backends",
   },
   {
-    description: "Sampling controls and tokenizer tools",
+    description: "Sampler and tokenizer settings",
     icon: SlidersHorizontal,
     id: "models",
     title: "Models",
   },
   {
-    description: "Runtime logging and diagnostics",
+    description: "Logging and diagnostics",
     icon: Bug,
     id: "debug",
     title: "Debug",
@@ -585,7 +585,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="h-[80vh] max-h-[80vh] overflow-hidden border-zinc-800 bg-[#0a0a0a] p-0 text-zinc-300 sm:max-w-[900px]">
         <DialogHeader className="sr-only">
-          <DialogTitle>Terminal Configuration</DialogTitle>
+          <DialogTitle>Settings</DialogTitle>
           <DialogDescription>
             Adjust editor preferences, inference backends, and model sampling
             parameters.
@@ -597,7 +597,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             <div className="mb-8 px-2">
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
                 <Settings size={12} className="text-emerald-500" />
-                Terminal Config
+                Settings
               </div>
             </div>
 
@@ -618,7 +618,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     }`}
                   >
                     {isActive && (
-                      <div className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                      <div className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 bg-emerald-500" />
                     )}
                     <Icon
                       size={16}
@@ -639,7 +639,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             <div className="mt-auto border-t border-zinc-800 pt-4 px-2">
               <div className="flex items-center gap-2 text-[9px] font-mono text-zinc-600">
                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50" />
-                SYSTEM READY
+                v1.0.0
               </div>
             </div>
           </aside>
@@ -649,22 +649,22 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               {activeSection === "general" ? (
                 <div className="space-y-8 max-w-2xl">
                   <SectionHeader
-                    title="Interface Preferences"
-                    description="Tailor the editor behavior and layout to your workflow."
+                    title="Interface"
+                    description="Configure editor behavior and layout."
                   />
 
                   <div className="divide-y divide-zinc-800/50">
                     <ToggleRow
                       checked={inlineCompletion}
                       onChange={setInlineCompletionEnabled}
-                      title="Ghost-Text Predictions"
-                      description="Display subtle, inline suggestions as you compose text."
+                      title="Inline Suggestions"
+                      description="Display ghost-text suggestions while typing."
                     />
                     <ToggleRow
                       checked={entityAutoRunOnIdle}
                       onChange={setEntityAutoRunOnIdle}
-                      title="Passive Entity Scanning"
-                      description="Analyze document context for entities during natural typing pauses."
+                      title="Auto-Scanning"
+                      description="Analyze document for entities during pauses."
                     />
                     <div className="group flex items-center justify-between gap-4 py-3">
                       <div className="space-y-0.5">
@@ -672,7 +672,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           Scanning Interval
                         </p>
                         <p className="text-[11px] text-zinc-500">
-                          Wait duration before a full document pass occurs.
+                          Idle time before a background scan occurs.
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -696,14 +696,14 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     <ToggleRow
                       checked={entityAutoLinkStrictMatches}
                       onChange={setEntityAutoLinkStrictMatches}
-                      title="Strict Link Synthesis"
-                      description="Automatically transform high-confidence entity matches into document links."
+                      title="Auto-Link Entities"
+                      description="Automatically link high-confidence entity matches."
                     />
                     <ToggleRow
                       checked={entityPreloadModel}
                       onChange={setEntityPreloadModel}
-                      title="Model Warm-up"
-                      description="Keep the entity extraction model active in memory for instant responses."
+                      title="Keep Model Loaded"
+                      description="Maintain the entity extraction model in memory for instant responses."
                     />
                   </div>
 
@@ -711,10 +711,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <p className="text-sm font-medium text-zinc-200">
-                          Viewport Constraint
+                          Max Width
                         </p>
                         <p className="text-[11px] text-zinc-500">
-                          Maximum horizontal span of the primary editor surface.
+                          Limit the horizontal width of the editor.
                         </p>
                       </div>
                       <span className="font-mono text-[11px] text-emerald-500 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/20">
@@ -739,8 +739,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               {activeSection === "backends" ? (
                 <div className="space-y-10 max-w-3xl">
                   <SectionHeader
-                    title="Inference Engines"
-                    description="Configure the underlying models powering your creative session."
+                    title="Backends"
+                    description="Configure the models powering the editor."
                   />
 
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -748,21 +748,21 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       [
                         {
                           id: "browser",
-                          title: "Local/Edge",
+                          title: "Browser",
                           description:
-                            "Zero-latency. Runs entirely in your browser memory.",
+                            "Zero latency. Runs locally in your browser.",
                         },
                         {
                           id: "server",
-                          title: "Remote Host",
+                          title: "Local Server",
                           description:
-                            "Professional grade. Connects to your dedicated server.",
+                            "Connect to a local server or host.",
                         },
                         {
                           id: "openrouter",
                           title: "OpenRouter",
                           description:
-                            "Global mesh. Access 100+ state-of-the-art models.",
+                            "Cloud access to 100+ AI models.",
                         },
                       ] as const
                     ).map((option) => {
@@ -774,13 +774,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           onClick={() => handleBackendChange(option.id)}
                           className={`group relative overflow-hidden rounded-lg border p-4 text-left transition-all duration-300 ${
                             isActive
-                              ? "border-emerald-500/40 bg-emerald-500/5 shadow-[0_0_20px_-10px_rgba(16,185,129,0.2)]"
+                              ? "border-emerald-500/40 bg-emerald-500/5"
                               : "border-zinc-800/80 bg-zinc-900/30 hover:border-zinc-700 hover:bg-zinc-800/40"
                           }`}
                         >
                           {isActive && (
                             <div className="absolute top-0 right-0 p-2">
-                              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                             </div>
                           )}
                           <p
@@ -801,7 +801,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between border-b border-zinc-800/50 pb-2">
                         <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                          Edge Registry
+                          Browser Models
                         </h3>
                         <Button
                           type="button"
@@ -819,7 +819,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           />
                           {browserTestStatus.loading
                             ? "Testing..."
-                            : "Diagnostic Test"}
+                            : "Test"}
                         </Button>
                       </div>
 
@@ -828,7 +828,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         selectedId={browserModelId}
                         onSelect={setBrowserModelId}
                         isLoading={false}
-                        emptyMessage="No edge models discovered."
+                        emptyMessage="No browser models found."
                       />
                       <TestResult status={browserTestStatus} />
                     </div>
@@ -837,7 +837,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between border-b border-zinc-800/50 pb-2">
                         <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                          Host Endpoint
+                          Local Server
                         </h3>
                         <div className="flex items-center gap-2">
                           <Button
@@ -856,7 +856,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                                 isLocalModelsFetching ? "animate-spin" : ""
                               }
                             />
-                            Re-scan
+                            Refresh
                           </Button>
                           <Button
                             type="button"
@@ -866,7 +866,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                             disabled={apiTestStatus.loading}
                             className="h-6 gap-1.5 px-2 text-[10px] uppercase tracking-wider text-zinc-400 hover:text-emerald-400"
                           >
-                            Test Connection
+                            Test
                           </Button>
                         </div>
                       </div>
@@ -882,19 +882,19 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           isLoading={isLocalModelsLoading}
                           errorMessage={
                             !hasValidServerUrl
-                              ? "Valid host address required."
+                              ? "Server URL required."
                               : isLocalModelsError
-                                ? "Host connection failed."
+                                ? "Server connection failed."
                                 : undefined
                           }
-                          emptyMessage="No available models on host."
+                          emptyMessage="No models found on server."
                         />
                         <div className="px-1">
                           <ToggleRow
                             checked={enableTokenProbabilities}
                             onChange={setEnableTokenProbabilities}
-                            title="Probability Metadata"
-                            description="Stream confidence scores for each generated token."
+                            title="Token Probabilities"
+                            description="Stream confidence scores for generated tokens."
                           />
                         </div>
                       </div>
@@ -905,7 +905,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between border-b border-zinc-800/50 pb-2">
                         <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                          Cloud Mesh (OpenRouter)
+                          OpenRouter
                         </h3>
                         <div className="flex items-center gap-2">
                           <Button
@@ -925,7 +925,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                                 isOpenRouterModelsFetching ? "animate-spin" : ""
                               }
                             />
-                            Sync Registry
+                            Refresh
                           </Button>
                           <Button
                             type="button"
@@ -937,7 +937,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                             }
                             className="h-6 gap-1.5 px-2 text-[10px] uppercase tracking-wider text-zinc-400 hover:text-emerald-400"
                           >
-                            Auth Test
+                            Test Key
                           </Button>
                         </div>
                       </div>
@@ -948,7 +948,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                             htmlFor="openrouter-key"
                             className="font-mono text-[10px] uppercase tracking-wider text-zinc-600"
                           >
-                            Access Token
+                            API Key
                           </Label>
                           <Input
                             id="openrouter-key"
@@ -968,12 +968,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           isLoading={isOpenRouterModelsLoading}
                           errorMessage={
                             trimmedOpenRouterKey.length === 0
-                              ? "API token required for cloud mesh."
+                              ? "API key required."
                               : isOpenRouterModelsError
-                                ? "Mesh synchronization failed."
+                                ? "Failed to sync models."
                                 : undefined
                           }
-                          emptyMessage="No remote models discovered."
+                          emptyMessage="No remote models found."
                         />
                       </div>
                       <TestResult status={openRouterTestStatus} />
@@ -985,14 +985,14 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               {activeSection === "models" ? (
                 <div className="space-y-10 max-w-2xl">
                   <SectionHeader
-                    title="Sampling & Tokenization"
-                    description="Fine-tune the mathematical behavior of the generative process."
+                    title="Sampling"
+                    description="Configure model sampling parameters."
                   />
 
                   <div className="space-y-6">
                     <div className="space-y-4">
                       <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 border-b border-zinc-800/50 pb-2">
-                        Behavioral Profiles
+                        Presets
                       </h3>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                         {SAMPLER_PRESETS.map((preset) => {
@@ -1027,7 +1027,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           onClick={() => setActiveSamplerPreset(undefined)}
                           className="h-6 px-2 text-[9px] uppercase tracking-widest text-zinc-600 hover:text-rose-400 transition-colors"
                         >
-                          Reset to custom profile
+                          Reset to custom
                         </Button>
                       )}
                     </div>
@@ -1038,7 +1038,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
                     <div className="space-y-4">
                       <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 border-b border-zinc-800/50 pb-2">
-                        Lexicon Mapping
+                        Tokenizer
                       </h3>
                       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div className="space-y-1.5">
@@ -1046,7 +1046,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                             htmlFor="tokenizer-model"
                             className="font-mono text-[10px] uppercase tracking-wider text-zinc-600"
                           >
-                            Vocabulary ID
+                            Model ID
                           </Label>
                           <div className="flex gap-2">
                             <Input
@@ -1058,7 +1058,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                                   setTokenizerTestStatus({ loading: false });
                                 }
                               }}
-                              placeholder="HuggingFace repository path..."
+                              placeholder="HuggingFace path..."
                               className="h-8 flex-1 border-zinc-800 bg-zinc-900/50 px-3 font-mono text-[11px] text-emerald-400 focus:border-emerald-500/50 focus:ring-0 placeholder:text-zinc-800"
                             />
                             <Button
@@ -1103,16 +1103,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               {activeSection === "debug" ? (
                 <div className="space-y-8 max-w-2xl">
                   <SectionHeader
-                    title="Diagnostic Tools"
-                    description="Monitor internal engine states and verbose execution logs."
+                    title="Debug"
+                    description="View system logs and diagnostic info."
                   />
 
                   <div className="divide-y divide-zinc-800/50">
                     <ToggleRow
                       checked={debugMode}
                       onChange={setDebugMode}
-                      title="Verbose Stream Analysis"
-                      description="Expose detailed runtime logs for LLM operations and entity resolution in the system console."
+                      title="Verbose Logging"
+                      description="Enable detailed logging in the browser console."
                     />
                   </div>
 
@@ -1121,12 +1121,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       <Bug size={14} className="mt-0.5 text-emerald-500" />
                       <div className="space-y-1">
                         <p className="text-[11px] font-medium text-emerald-400/80 uppercase tracking-wider">
-                          System Advisory
+                          Note
                         </p>
                         <p className="text-[11px] leading-relaxed text-zinc-500">
                           Enabling verbose logging may impact performance during
-                          high-frequency text generation. Logs are routed
-                          directly to the browser's developer environment.
+                          high-frequency generation. Logs are sent to the
+                          browser's console.
                         </p>
                       </div>
                     </div>
